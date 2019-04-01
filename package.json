@@ -1,0 +1,30 @@
+{
+    "name": "webauthntest",
+    "description": "WebAuthn Test App",
+    "license": "MIT",
+    "author": "Ibrahim Damlaj <idamlaj@gmail.com>",
+    "version": "0.0.1",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js"
+    },
+    "dependencies": {
+        "@types/base64url": "^2.0.0",
+        "@types/jquery": "^3.3.29",
+        "@types/js-cookie": "^2.2.1",
+        "base64-url": "^2.2.0",
+        "body-parser": "^1.18.3",
+        "cbor": "^4.1.5",
+        "cookie-parser": "^1.4.3",
+        "express": "^4.16.4",
+        "express-sslify": "^1.2.0",
+        "jsonwebtoken": "^8.5.0",
+        "jsrsasign": "^8.0.12",
+        "jwk-to-pem": "^2.0.1",
+        "mongoose": "^5.4.18",
+        "uuid-parse": "^1.1.0"
+    },
+    "engines": {
+        "node": ">=8.9.4"
+    }
+}

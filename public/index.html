@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>WebAuthn Test App</title>
+
+    <link rel="shortcut icon" href="images/favicon.png">
+
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/getmdl-select@2.0.1/getmdl-select.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.css">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base cloak">
+    <dialog class="mdl-dialog" id="createDialog">
+        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate cloak"></div>
+        <h3 class="mdl-dialog__title">Create Credential Options</h3>
+        <div class="mdl-dialog__content">
+            <span>
+                <span>RP Info</span>
+                <select name="create_rpInfo" id="create_rpInfo" class="float-right">
+                    <option value="undefined" selected>Undefined RP ID</option>
+                    <option value="normal">This domain</option>
+                    <option value="suffix">Suffix to this domain</option>
+                    <option value="securityerror">foo.com</option>
+                    <option value="emptyrpid">Empty RP ID</option>
+                    <option value="emptyrpname">Empty RP Name</option>
+                    <option value="emptyrpicon">Empty RP Icon</option>
+                </select>
+            </span>
+            <hr>
+            <span>
+                <span>User Info</span>
+                <select name="create_userInfo" id="create_userInfo" class="float-right">
+                    <option value="bob" selected>Bob</option>
+                    <option value="alice">Alice</option>
+                    <option value="stella">Stella</option>
+                    <option value="mike">Mike</option>
+                    <option value="john">John</option>
+                    <option value="empty">Empty userInfo</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>Attachment</span>
+                <select name="create_authenticatorAttachment" id="create_authenticatorAttachment" class="float-right">
+                    <option value="undefined">Undefined</option>
+                    <option value="platform">Platform</option>
+                    <option value="cross-platform" selected>Cross-Platform</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>Require Resident Key</span>
+                <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>User Verification</span>
+                <select name="create_userVerification" id="create_userVerification" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="discouraged">Discouraged</option>
+                    <option value="preferred">Preferred</option>
+                    <option value="required">Required</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>Attestation</span>
+                <select name="create_attestation" id="create_attestation" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="none">None</option>
+                    <option value="indirect">Indirect</option>
+                    <option value="direct">Direct</option>
+                </select>
+            </span>
+            <hr>
+
+            <div class="mdl-grid mdl-grid--no-spacing">
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES256">
+                    <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
+                    <span class="mdl-checkbox__label">Use ES256</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_RS256">
+                    <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
+                    <span class="mdl-checkbox__label">Use RS256</span>
+                </label>
+            </div>
+
+            <hr>
+
+            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
+                <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
+                <span class="mdl-checkbox__label">Use excludeCredentials</span>
+            </label>
+            <hr>
+        </div>
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button" id="createDialog_createButton">Create</button>
+            <button type="button" class="mdl-button close" id="createDialog_cancelButton">Cancel</button>
+        </div>
+    </dialog>
+
+    <dialog class="mdl-dialog" id="getDialog">
+        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate cloak"></div>
+        <h3 class="mdl-dialog__title">Get Credential Options</h3>
+        <div class="mdl-dialog__content">
+            <span>
+                <span>RP ID</span>
+                <select name="get_rpId" id="get_rpId" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="normal">This domain</option>
+                    <option value="suffix">Suffix to this domain</option>
+                    <option value="securityerror">Security Error</option>
+                </select>
+            </span>
+            <hr>
+            <span>
+                <span>User Verification</span>
+                <select name="get_userVerification" id="get_userVerification" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="discouraged">Discouraged</option>
+                    <option value="preferred">Preferred</option>
+                    <option value="required">Required</option>
+                </select>
+            </span>
+            <hr>
+            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_allowCredentials">
+                <input type="checkbox" id="get_allowCredentials" class="mdl-checkbox__input" checked>
+                <span class="mdl-checkbox__label">Use allowCredentials</span>
+            </label>
+            <hr>
+        </div>
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button" id="getDialog_getButton">Get</button>
+            <button type="button" class="mdl-button close" id="getDialog_cancelButton">Cancel</button>
+        </div>
+    </dialog>
+
+    <dialog class="mdl-dialog" id="creationDataDialog">
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="creationDataDialog_xButton">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <h3 class="mdl-dialog__title">Credential Creation Data</h3>
+        <div class="mdl-dialog__content">
+            <p>
+                <b>Require Resident Key</b>
+                <br>
+                <span id="creationData_residentKey"></span>
+            </p>
+            <p>
+                <b>Authenticator Data</b>
+                <br>
+                <span id="creationData_authenticatorData"></span>
+            </p>
+            <p>
+                <b>Authenticator Data in Hex</b>
+                <br>
+                <span id="creationData_authenticatorDataHex"></span>
+            </p>
+            <p>
+                <b>Public Key</b>
+                <br>
+                <span id="creationData_publicKey"></span>
+            </p>
+            <p>
+                <b>Extension Data</b>
+                <br>
+                <span id="creationData_extensionData"></span>
+            </p>
+            <p>
+                <b>Attestation Statement Chain</b>
+                <br>
+                <span id="creationData_attestationStatementChainJSON"></span>
+            </p>
+            <p>
+                <b>Attestation Statement in Hex</b>
+                <br>
+                <span id="creationData_attestationStatementHex"></span>
+            </p>
+
+        </div>
+
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="creationDataDialog_closeButton">
+                Close
+            </button>
+        </div>
+    </dialog>
+
+    <dialog class="mdl-dialog" id="authenticationDataDialog">
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="authenticationDataDialog_xButton">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <h3 class="mdl-dialog__title">Authentication Data</h3>
+        <div class="mdl-dialog__content">
+            <p>
+                <b>User Handle</b>
+                <br>
+                <span id="authenticationData_userHandleHex"></span>
+            </p>
+            <p>
+                <b>Authenticator Data</b>
+                <br>
+                <span id="authenticationData_authenticatorDataHex"></span>
+            </p>
+            <p>
+                <b>Client Data JSON</b>
+                <br>
+                <span id="authenticationData_clientDataJSONHex"></span>
+            </p>
+            <p>
+                <b>Signature</b>
+                <br>
+                <span id="authenticationData_signatureHex"></span>
+            </p>
+        </div>
+
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="authenticationDataDialog_closeButton">
+                Close
+            </button>
+        </div>
+    </dialog>
+
+    <dialog class="mdl-dialog" id="moreDialog">
+        <h3 class="mdl-dialog__title">More Options</h3>
+        <div class="mdl-dialog__content">
+            <span>
+                <span>Platform authenticator</span>
+                <span class="float-right" id="moreDialog_platformAuthenticatorAvailable">
+                    Not defined
+                </span>
+            </span>
+            <hr>
+            <span>
+                <span>CTAP2 support (Firefox)</span>
+                <span class="float-right" id="moreDialog_ctap2Supported">
+                    Not defined
+                </span>
+            </span>
+            <hr>
+        </div>
+
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="moreDialog_closeButton">
+                Close
+            </button>
+        </div>
+    </dialog>
+
+
+
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+        <header class="mdl-layout__header mdl-layout__header--scroll mdl-color--primary">
+            <div class="mdl-layout__header-row">
+            </div>
+            <div class="mdl-layout__header-row">
+                <h3>WebAuthn Test App</h3>
+                <button class="mdl-button mdl-js-button mdl-js-ripple-effect" id="signOutButton">
+                    Sign Out
+                </button>
+            </div>
+            <div class="mdl-layout__header-row">
+            </div>
+            <div class="mdl-layout__tab-bar mdl-js-ripple-effect mdl-color--primary-dark">
+                <a href="#credentials" class="mdl-layout__tab is-active">Credentials</a>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
+                    id="createButton">
+                    <i class="material-icons" role="presentation">add</i>
+                </button>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
+                    id="getButton">
+                    <i class="material-icons" role="presentation">lock_open</i>
+                </button>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
+                id="moreButton">
+                <i class="material-icons" role="presentation">more_horiz</i>
+            </button>
+            </div>
+        </header>
+        <main class="mdl-layout__content">
+            <div class="mdl-layout__tab-panel is-active" id="credentials">
+                <div class="mdl-grid" id="credentialsContainer">
+
+                </div>
+            </div>
+
+
+            <div id="toast" class="mdl-js-snackbar mdl-snackbar">
+                <div class="mdl-snackbar__text"></div>
+                <button class="mdl-snackbar__action" type="button"></button>
+            </div>
+
+        </main>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.js"></script>
+    <script src="https://code.getmdl.io/1.3.0/material.min.js "></script>
+    <script src="https://cdn.jsdelivr.net/npm/getmdl-select@2.0.1/getmdl-select.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="index.js"></script>
+</body>
+
+</html>
