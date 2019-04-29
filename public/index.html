@@ -91,6 +91,27 @@
             </span>
             <hr>
 
+            <span>
+                <span>Credential Protection Level</span>
+                <select name="create_cred_protect" id="create_cred_protect" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="userVerificationOptional">UVOptional</option>
+                    <option value="userVerificationOptionalWithCredentialIDList">UVOptionalWithCredIDList</option>
+                    <option value="userVerificationRequired">UVRequired</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>Enforce Protection Level</span>
+                <select name="create_cred_protect_enforce" id="create_cred_protect_enforce" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+            </span>
+            <hr>
+
             <div class="mdl-grid mdl-grid--no-spacing">
                 <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES256">
                     <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>

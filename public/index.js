@@ -209,8 +209,7 @@
             authenticatorSelection: {},
             attestation: undefined,
             extensions: {
-                hmacCreateSecret: true,
-                authenticatorProtection: "UserVerificationOptional"
+                hmacCreateSecret: true
             }
         };
 
@@ -301,6 +300,16 @@
 
         if ($('#create_attestation').val() !== "undefined") {
             createCredentialOptions.attestation = $('#create_attestation').val();
+        }
+
+        if ($('#create_cred_protect').val() !== "undefined") {
+            var credProtect = $('#create_cred_protect').val();
+            createCredentialOptions.extensions.credentialProtectionPolicy = credProtect;
+        }
+
+        if ($('#create_cred_protect_enforce').val() !== "undefined") {
+            var enforceCredProtect = ($('#create_cred_protect_enforce').val() == "true");
+            createCredentialOptions.extensions.enforceCredentialProtectionPolicy = enforceCredProtect;
         }
 
         if ($('#create_requireResidentKey').val() !== "undefined") {
