@@ -92,7 +92,7 @@
             <hr>
 
             <span>
-                <span>Credential Protection Level</span>
+                <span>CredProtect Extension</span>
                 <select name="create_cred_protect" id="create_cred_protect" class="float-right">
                     <option value="undefined" selected>Undefined</option>
                     <option value="userVerificationOptional">UVOptional</option>
@@ -103,8 +103,18 @@
             <hr>
 
             <span>
-                <span>Enforce Protection Level</span>
+                <span>Enforce CredProtect</span>
                 <select name="create_cred_protect_enforce" id="create_cred_protect_enforce" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>HMAC Extension</span>
+                <select name="create_hmac_create" id="create_hmac_create" class="float-right">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>

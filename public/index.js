@@ -208,9 +208,7 @@
             excludeCredentials: [],
             authenticatorSelection: {},
             attestation: undefined,
-            extensions: {
-                hmacCreateSecret: true
-            }
+            extensions: {}
         };
 
         switch ($('#create_rpInfo').val()) {
@@ -302,6 +300,11 @@
             createCredentialOptions.attestation = $('#create_attestation').val();
         }
 
+        if ($('#create_requireResidentKey').val() !== "undefined") {
+            var requireResidentKey = ($('#create_requireResidentKey').val() == "true");
+            createCredentialOptions.authenticatorSelection.requireResidentKey = requireResidentKey;
+        }
+
         if ($('#create_cred_protect').val() !== "undefined") {
             var credProtect = $('#create_cred_protect').val();
             createCredentialOptions.extensions.credentialProtectionPolicy = credProtect;
@@ -312,9 +315,9 @@
             createCredentialOptions.extensions.enforceCredentialProtectionPolicy = enforceCredProtect;
         }
 
-        if ($('#create_requireResidentKey').val() !== "undefined") {
-            var requireResidentKey = ($('#create_requireResidentKey').val() == "true");
-            createCredentialOptions.authenticatorSelection.requireResidentKey = requireResidentKey;
+        if ($('#create_hmac_create').val() !== "undefined") {
+            var hmacCreateSecret = ($('#create_hmac_create').val() == "true");
+            createCredentialOptions.extensions.hmacCreateSecret = hmacCreateSecret;
         }
 
         return navigator.credentials.create({
