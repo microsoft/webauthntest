@@ -311,6 +311,11 @@
             createCredentialOptions.authenticatorSelection.requireResidentKey = requireResidentKey;
         }
 
+        if ($('#create_residentKey').val() !== "undefined") {
+            var residentKey = ($('#create_residentKey').val() == "true");
+            createCredentialOptions.authenticatorSelection.residentKey = residentKey;
+        }
+
         if ($('#create_cred_protect').val() !== "undefined") {
             var credProtect = $('#create_cred_protect').val();
             createCredentialOptions.extensions.credentialProtectionPolicy = credProtect;
