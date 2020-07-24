@@ -276,6 +276,12 @@
                 alg: -257
             });
         }
+        if ($('#create_EdDSA').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -8
+            });
+        }
 
         if ($('#create_excludeCredentials').is(":checked")) {
             var excludeCredentials = credentials.map(cred => {
