@@ -39,7 +39,11 @@ fidoAttestation.parse = (attestationObject, authenticatorData, clientDataHash) =
                 hex: "none"
             };
         default:
-            throw new Error("Unknown attestation format");
+            return {
+                summary:attestationObject.fmt,
+                chainJSON: "none",
+                hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
+            };
     }
 
 }
