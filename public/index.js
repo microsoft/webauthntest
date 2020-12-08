@@ -331,6 +331,11 @@
             createCredentialOptions.extensions.hmacCreateSecret = hmacCreateSecret;
         }
 
+        if ($('#create_minPinLength').val() !== "undefined") {
+            var minPinLength = ($('#create_minPinLength').val() == "true");
+            createCredentialOptions.extensions.minPinLength = minPinLength;
+        }
+
         return navigator.credentials.create({
             publicKey: createCredentialOptions
         }).then(attestation => {
