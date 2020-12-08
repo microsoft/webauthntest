@@ -336,6 +336,10 @@
             createCredentialOptions.extensions.minPinLength = minPinLength;
         }
 
+        if ($('#create_credBlob').val()) {
+            createCredentialOptions.extensions.credBlob = stringToArrayBuffer($('#create_credBlob').val());
+        }
+
         return navigator.credentials.create({
             publicKey: createCredentialOptions
         }).then(attestation => {
