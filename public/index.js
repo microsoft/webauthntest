@@ -419,6 +419,11 @@
             getAssertionOptions.userVerification = $('#get_userVerification').val();
         }
 
+        if ($('#get_credBlob').val() !== "undefined") {
+            var getCredBlob = ($('#get_credBlob').val() == "true");
+            getAssertionOptions.extensions.getCredBlob = getCredBlob;
+        }
+
         return navigator.credentials.get({
             publicKey: getAssertionOptions
         }).then(assertion => {
