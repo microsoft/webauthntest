@@ -149,7 +149,17 @@
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
                     <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
-                 </div>
+                </div>
+            </span>
+            <hr>
+
+            <span>
+                <span>LargeBlob Extension</span>
+                <select name="create_largeBlob" id="create_largeBlob" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="preferred">Preferred</option>
+                    <option value="required">Required</option>
+                </select>
             </span>
             <hr>
 
@@ -207,12 +217,29 @@
             </span>
             <hr>
             <span>
-                <span>CredBlob Extension</span>
+                <span>Get CredBlob</span>
                 <select name="get_credBlob" id="get_credBlob" class="float-right">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>
                 </select>
+            </span>
+            <hr>
+            <span>
+                <span>Get LargeBlob</span>
+                <select name="get_largeBlob" id="get_largeBlob" class="float-right">
+                    <option value="undefined" selected>Undefined</option>
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+            </span>
+            <hr>
+            <span>
+                <span>Write LargeBlob</span>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "get_largeBlobText">
+                    <label class = "mdl-textfield__label" for = "get_largeBlobText">LargeBlob...</label>
+                </div>
             </span>
             <hr>
             <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_allowCredentials">

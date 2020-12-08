@@ -340,6 +340,10 @@
             createCredentialOptions.extensions.credBlob = stringToArrayBuffer($('#create_credBlob').val());
         }
 
+        if ($('#create_largeBlob').val() !== "undefined") {
+            createCredentialOptions.extensions.largeBlob.support = $('#create_largeBlob').val();
+        }
+
         return navigator.credentials.create({
             publicKey: createCredentialOptions
         }).then(attestation => {
@@ -422,6 +426,14 @@
         if ($('#get_credBlob').val() !== "undefined") {
             var getCredBlob = ($('#get_credBlob').val() == "true");
             getAssertionOptions.extensions.getCredBlob = getCredBlob;
+        }
+
+        if ($('#get_largeBlob').val() !== "undefined") {
+            getAssertionOptions.extensions.largeBlob.read = $('#get_largeBlob').val();
+        }
+
+        if ($('#get_largeBlobText').val()) {
+            getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
         }
 
         return navigator.credentials.get({
