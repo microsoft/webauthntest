@@ -208,9 +208,7 @@
             excludeCredentials: [],
             authenticatorSelection: {},
             attestation: undefined,
-            extensions: {
-                largeBlob : {}
-            }
+            extensions: {}
         };
 
         switch ($('#create_rpInfo').val()) {
@@ -343,6 +341,7 @@
         }
 
         if ($('#create_largeBlob').val() !== "undefined") {
+            createCredentialOptions.extensions.largeBlob = {};
             createCredentialOptions.extensions.largeBlob.support = $('#create_largeBlob').val();
         }
 
@@ -384,6 +383,8 @@
     * @return {any} server response object
     */
     function getAssertion(challenge) {
+        var largeBlobPresent = false;
+
         if (typeof(PublicKeyCredential) === "undefined")
             return Promise.reject("Error: WebAuthn APIs are not present on this device");
 
@@ -393,9 +394,7 @@
             challenge: challenge,
             allowCredentials: [],
             userVerification: undefined,
-            extensions: {
-                largeBlob : {}
-            }
+            extensions: {}
         };
 
         switch ($('#get_rpId').val()) {
@@ -434,10 +433,15 @@
         }
 
         if ($('#get_largeBlob').val() !== "undefined") {
+            getAssertionOptions.extensions.largeBlob = {};
             getAssertionOptions.extensions.largeBlob.read = $('#get_largeBlob').val();
+            largeBlobPresent = true;
         }
 
         if ($('#get_largeBlobText').val()) {
+            if (!largeBlobPresent) {
+                getAssertionOptions.extensions.largeBlob = {};
+            }
             getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
         }
 
