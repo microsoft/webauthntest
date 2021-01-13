@@ -208,7 +208,9 @@
             excludeCredentials: [],
             authenticatorSelection: {},
             attestation: undefined,
-            extensions: {}
+            extensions: {
+                largeBlob : {}
+            }
         };
 
         switch ($('#create_rpInfo').val()) {
@@ -390,7 +392,10 @@
             timeout: 90000,
             challenge: challenge,
             allowCredentials: [],
-            userVerification: undefined
+            userVerification: undefined,
+            extensions: {
+                largeBlob : {}
+            }
         };
 
         switch ($('#get_rpId').val()) {
