@@ -59,7 +59,8 @@ utils.parseCertSubject = (subjectStr) => {
 utils.coseToJwk = buffer => {
     try {
         let publicKeyJwk = {};
-        const publicKeyCbor = cbor.decodeFirstSync(buffer);
+        publicKeyCbor = cbor.decodeAllSync(buffer);
+        publicKeyCbor = publicKeyCbor[0]; //first element
 
         if (publicKeyCbor.get(3) == -7) {
             publicKeyJwk = {
@@ -91,7 +92,8 @@ utils.coseToJwk = buffer => {
  */
 utils.coseToHex = buffer => {
     try {
-        const publicKeyCbor = cbor.decodeFirstSync(buffer);
+        publicKeyCbor = cbor.decodeAllSync(buffer);
+        publicKeyCbor = publicKeyCbor[0]; //first element
 
         return cbor.encode(publicKeyCbor).toString('hex').toUpperCase();
     } catch (e) {
