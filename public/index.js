@@ -270,6 +270,18 @@
                 alg: -7
             });
         }
+        if ($('#create_ES384').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -35
+            });
+        }
+        if ($('#create_ES512').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -36
+            });
+        }
         if ($('#create_RS256').is(":checked")) {
             createCredentialOptions.pubKeyCredParams.push({
                 type: "public-key",
