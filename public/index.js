@@ -312,8 +312,7 @@
         }
 
         if ($('#create_residentKey').val() !== "undefined") {
-            var residentKey = ($('#create_residentKey').val() == "true");
-            createCredentialOptions.authenticatorSelection.residentKey = residentKey;
+            createCredentialOptions.authenticatorSelection.residentKey = $('#create_residentKey').val();
         }
 
         if ($('#create_cred_protect').val() !== "undefined") {
