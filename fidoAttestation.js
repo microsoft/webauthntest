@@ -162,7 +162,7 @@ const parsePackedAttestation = (attestationObject, authenticatorData, clientData
         };
     });
 
-    const chainJSON = JSON.stringify(chain);    
+    const chainJSON = JSON.stringify(chain);
     const hex = cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase();
 
     return {
