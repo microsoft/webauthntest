@@ -575,15 +575,16 @@
         html += '     <p><b>RP ID</b><br/>' + credential.metadata.rpId + '</p>';
         html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
         html += '     <p>';
-        html += '         <b>Credential Creation Data</b>';
-        html += '         <a href="#" class="creationDataDetails" data-value="' + credential.id + '">[details]</a>';
+        html += '         <b>Credential Registration Data</b>';
+        html += '         <a href="#" class="creationDataDetails" data-value="' + credential.id + '">[more details]</a>';
         html += '         <br>Key Type: ' + credential.creationData.publicKeySummary;
-        html += '         <br>Attestation: ' + credential.creationData.attestationStatementSummary;
-        html += '         <br>Resident Key: ' + credential.metadata.residentKey;
+        html += '         <br>Discoverable Credential: ' + credential.metadata.residentKey;
+        html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
+        html += '         <br>' + credential.creationData.authenticatorDataSummary;
         html += '     </p>';
         html += '     <p>';
         html += '         <b>Last Authentication Data</b>';
-        html += '         <a href="#" class="authenticationDataDetails" data-value="' + credential.id + '">[details]</a>';
+        html += '         <a href="#" class="authenticationDataDetails" data-value="' + credential.id + '">[more details]</a>';
         html += '         <br>' + credential.authenticationData.authenticatorDataSummary;
         html += '     </p>';
         html += ' </div>';
@@ -642,6 +643,7 @@
 
         $("#authenticationData_userHandleHex").text(credential.authenticationData.userHandleHex);
         $("#authenticationData_authenticatorDataHex").text(credential.authenticationData.authenticatorDataHex);
+        $("#authenticationData_extensionData").text(credential.authenticationData.extensionDataHex);
         $("#authenticationData_clientDataJSONHex").text(credential.authenticationData.clientDataJSONHex);
         $("#authenticationData_signatureHex").text(credential.authenticationData.signatureHex);
 

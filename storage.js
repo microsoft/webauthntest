@@ -33,7 +33,8 @@ storage.Credentials = mongoose.model('Credential', new mongoose.Schema({
         userHandleHex: String,
         authenticatorDataHex: String,
         clientDataJSONHex: String,
-        signatureHex: String
+        signatureHex: String,
+        extensionDataHex: String,
     }
 }));
 

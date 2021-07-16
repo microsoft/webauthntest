@@ -121,6 +121,7 @@ fido.makeCredential = async (uid, attestation) => {
             signCount: authenticatorData.signCount,
             authenticatorDataSummary: "No authentications",
             authenticatorDataHex: "none",
+            extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
             clientDataJSONHex: "none",
             signatureHex: "none",
             userHandleHex: "none"
@@ -193,12 +194,43 @@ fido.verifyAssertion = async (uid, assertion) => {
     //that sig is a valid signature over the binary concatenation of authData
     //and hash.
     const publicKey = JSON.parse(credential.creationData.publicKey);
-    
-    const verify = (publicKey.kty === "RSA") ? crypto.createVerify('RSA-SHA256') : crypto.createVerify('sha256');
-    verify.update(authData);
-    verify.update(hash);
-    if (!verify.verify(jwkToPem(publicKey), sig))
-        throw new Error("Could not verify signature");
+
+    var verify;
+    if (publicKey.kty === "RSA")
+    {
+        verify = crypto.createVerify('RSA-SHA256');
+        verify.update(authData);
+        verify.update(hash);
+        if (!verify.verify(jwkToPem(publicKey), sig))
+            throw new Error("Could not verify signature");    
+    }
+    else if (publicKey.kty === "EC")
+    {
+        if (publicKey.crv === "P-256")
+        {
+            verify = crypto.createVerify('sha256');
+            verify.update(authData);
+            verify.update(hash);
+            if (!verify.verify(jwkToPem(publicKey), sig))
+                throw new Error("Could not verify signature");
+        }
+        else if (publicKey.crv === "P-384")
+        {
+            verify = crypto.createVerify('sha384');
+            verify.update(authData);
+            verify.update(hash);
+            if (!verify.verify(jwkToPem(publicKey), sig))
+                throw new Error("Could not verify signature");
+        }
+        else if (publicKey.crv === "P-521")
+        {
+            verify = crypto.createVerify('sha512');
+            verify.update(authData);
+            verify.update(hash);
+            if (!verify.verify(jwkToPem(publicKey), sig))
+                throw new Error("Could not verify signature");
+        }
+    }
 
     //Step 17: verify signCount
     if (authenticatorData.signCount != 0 &&
@@ -216,6 +248,7 @@ fido.verifyAssertion = async (uid, assertion) => {
                 authenticatorDataSummary: summarizeAuthenticatorData(authenticatorData),
                 signCount: authenticatorData.signCount,
                 authenticatorDataHex: Buffer.from(assertion.authenticatorData, 'base64').toString('hex').toUpperCase(),
+                extensionDataHex: authenticatorData.extensionDataHex,
                 clientDataJSONHex: Buffer.from(assertion.clientDataJSON, 'utf8').toString('hex').toUpperCase(),
                 signatureHex: Buffer.from(assertion.signature, 'base64').toString('hex').toUpperCase(),
                 userHandleHex: assertion.userHandle ?
@@ -318,6 +351,10 @@ function parseAuthenticatorData(authData) {
 
             authenticatorData.extensionDataHex = cbor.encode(extensionDataCbor).toString('hex').toUpperCase();
         }
+        else
+        {
+            authenticatorData.extensionDataHex = "No extension data";
+        }
 
         return authenticatorData;
     } catch (e) {
@@ -339,6 +376,10 @@ const summarizeAuthenticatorData = authenticatorData => {
         str += ", ";
         str += "UV=" + ((authenticatorData.flags & 4) ? "1" : "0");
         str += ", ";
+        str += "AT=" + ((authenticatorData.flags & 64) ? "1" : "0");
+        str += ", ";
+        str += "ED=" + ((authenticatorData.flags & 128) ? "1" : "0");
+        str += ", ";
         str += "SignCount=" + authenticatorData.signCount;
 
         return str;
@@ -346,7 +387,5 @@ const summarizeAuthenticatorData = authenticatorData => {
         throw new Error("Failed to interpret authenticator data.");
     }
 }
-
-
 
 module.exports = fido;

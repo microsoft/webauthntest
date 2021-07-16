@@ -10,18 +10,18 @@
     },
     "dependencies": {
         "@types/base64url": "^2.0.3",
-        "@types/jquery": "^3.5.5",
-        "@types/js-cookie": "^2.2.6",
+        "@types/jquery": "^3.5.6",
+        "@types/js-cookie": "^2.2.7",
         "base64-url": "^2.3.3",
         "body-parser": "^1.19.0",
-        "cbor": "^7.0.5",
+        "cbor": "^7.0.6",
         "cookie-parser": "^1.4.5",
         "express": "^4.17.1",
         "express-sslify": "^1.2.0",
         "jsonwebtoken": "^8.5.1",
-        "jsrsasign": "^10.2.0",
+        "jsrsasign": "^10.3.0",
         "jwk-to-pem": "^2.0.5",
-        "mongoose": "^5.12.4",
+        "mongoose": "^5.13.2",
         "uuid-parse": "^1.1.0"
     },
     "engines": {

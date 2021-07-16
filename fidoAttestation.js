@@ -32,12 +32,10 @@ fidoAttestation.parse = (attestationObject, authenticatorData, clientDataHash) =
             return parseAndroidSafetyNetAttestation(attestationObject, authenticatorData, clientDataHash);
         case "android-key":
             return parseAndroidKeyAttestation(attestationObject, authenticatorData, clientDataHash);
+        case "android-key":
+            return parseAppleAttestation(attestationObject, authenticatorData, clientDataHash);
         case "none":
-            return {
-                summary:"none",
-                chainJSON: "none",
-                hex: "none"
-            };
+            return parseNoneAttestation(attestationObject, authenticatorData, clientDataHash);
         default:
             return {
                 summary:attestationObject.fmt,
@@ -129,41 +127,57 @@ const parseU2FAttestation = (attestationObject, authenticatorData, clientDataHas
  * @returns {AttestationStatement}
  */
 const parsePackedAttestation = (attestationObject, authenticatorData, clientDataHash) => {
-    const summary = "packed";
+    summary = "packed";
+    chainJSON: "none";
+    const hex = cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase();
 
     //https://www.w3.org/TR/webauthn/#packed-attestation
 
-    if (!attestationObject.attStmt.x5c)
-        throw new Error("Self and ECDAA attestation statements are not supported")
+    if (attestationObject.attStmt.x5c)
+    {
+        const chain = attestationObject.attStmt.x5c.map(x5c => {
+            const p = derToPEM(x5c.toString('base64'));
+            const c = new jsrsasign.X509();
+            c.readCertPEM(p);
+            return {
+                version: c.getVersion(),
+                subject: c.getSubjectString(),
+                issuer: c.getIssuerString(),
+                extAaguid: c.getExtInfo("1.3.6.1.4.1.45724.1.1.4")
+            };
+        });
+        chainJSON = JSON.stringify(chain);
 
-    //Verify that sig is a valid signature over the concatenation of 
-    //authenticatorData and clientDataHash using the attestation public
-    //key in attestnCert with the algorithm specified in alg.
-    if (attestationObject.attStmt.alg !== -7)
-        throw new Error("Packed attestation statement with alg != ES256 not supported")
-    const attCert = attestationObject.attStmt.x5c[0];
-    const pem = derToPEM(attCert.toString('base64'));
-    const verify = crypto.createVerify('sha256');
-    verify.update(attestationObject.authData);
-    verify.update(clientDataHash);
-    if (!verify.verify(pem, attestationObject.attStmt.sig)) {
-        throw new Error("Attestation signature did not verify");
+        //Verify that sig is a valid signature over the concatenation of 
+        //authenticatorData and clientDataHash using the attestation public
+        //key in attestnCert with the algorithm specified in alg.
+        if (attestationObject.attStmt.alg == -7)
+        {
+            const attCert = attestationObject.attStmt.x5c[0];
+            const pem = derToPEM(attCert.toString('base64'));
+            const verify = crypto.createVerify('sha256');
+            verify.update(attestationObject.authData);
+            verify.update(clientDataHash);
+            if (!verify.verify(pem, attestationObject.attStmt.sig)) {
+                throw new Error("Attestation signature did not verify");
+            }
+        }
+        else if (attestationObject.attStmt.alg == -35)
+        {
+            const attCert = attestationObject.attStmt.x5c[0];
+            const pem = derToPEM(attCert.toString('base64'));
+            const verify = crypto.createVerify('sha384');
+            verify.update(attestationObject.authData);
+            verify.update(clientDataHash);
+            if (!verify.verify(pem, attestationObject.attStmt.sig)) {
+                throw new Error("Attestation signature did not verify");
+            }
+        }
     }
-
-    const chain = attestationObject.attStmt.x5c.map(x5c => {
-        const p = derToPEM(x5c.toString('base64'));
-        const c = new jsrsasign.X509();
-        c.readCertPEM(p);
-        return {
-            version: c.getVersion(),
-            subject: c.getSubjectString(),
-            issuer: c.getIssuerString(),
-            extAaguid: c.getExtInfo("1.3.6.1.4.1.45724.1.1.4")
-        };
-    });
-
-    const chainJSON = JSON.stringify(chain);
-    const hex = cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase();
+    else
+    {
+        summary = "packed (unverified)";
+    }
 
     return {
         summary,
@@ -197,6 +211,36 @@ const parseAndroidSafetyNetAttestation = (attestationObject, authenticatorData, 
 const parseAndroidKeyAttestation = (attestationObject, authenticatorData, clientDataHash) => {
     return {
         summary: "android-key (unverified)",
+        chainJSON: "none",
+        hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
+    }
+};
+
+/**
+ * Parses Apple attestation statement.
+ * @param {*} attestationObject 
+ * @param {AuthenticatorData} authenticatorData 
+ * @param {Buffer} clientDataHash 
+ * @returns {AttestationStatement}
+ */
+const parseAppleAttestation = (attestationObject, authenticatorData, clientDataHash) => {
+    return {
+        summary: "apple (unverified)",
+        chainJSON: "none",
+        hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
+    }
+};
+
+/**
+ * Parses Apple attestation statement.
+ * @param {*} attestationObject 
+ * @param {AuthenticatorData} authenticatorData 
+ * @param {Buffer} clientDataHash 
+ * @returns {AttestationStatement}
+ */
+const parseNoneAttestation = (attestationObject, authenticatorData, clientDataHash) => {
+    return {
+        summary: "none (unverified)",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
