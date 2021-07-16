@@ -49,6 +49,7 @@
  * @property {string} authenticationData.signatureHex raw signature of last authentication
  * @property {string} authenticationData.clientDataJSONHex raw clientDataJSON of last authentication
  * @property {string} authenticationData.userHandleHex raw userHandle of last authentication
+ * @property {string} authenticationData.extensionDataHex raw extension data of last authentication
  */
 
 /** 

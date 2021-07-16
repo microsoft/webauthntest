@@ -69,7 +69,22 @@ utils.coseToJwk = buffer => {
                 x: publicKeyCbor.get(-2).toString('base64'),
                 y: publicKeyCbor.get(-3).toString('base64')
             }
-        } else if (publicKeyCbor.get(3) == -257) {
+        } else if (publicKeyCbor.get(3) == -35) {
+            publicKeyJwk = {
+                kty: "EC",
+                crv: "P-384",
+                x: publicKeyCbor.get(-2).toString('base64'),
+                y: publicKeyCbor.get(-3).toString('base64')
+            }
+        } else if (publicKeyCbor.get(3) == -36) {
+            publicKeyJwk = {
+                kty: "EC",
+                crv: "P-521",
+                x: publicKeyCbor.get(-2).toString('base64'),
+                y: publicKeyCbor.get(-3).toString('base64')
+            }
+        }
+         else if (publicKeyCbor.get(3) == -257) {
             publicKeyJwk = {
                 kty: "RSA",
                 n: publicKeyCbor.get(-1).toString('base64'),
