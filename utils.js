@@ -1,4 +1,4 @@
-const jwkToPem = require('jwk-to-pem');
+const jwkToPem = require('jwk-to-pem')
 const crypto = require('crypto');
 const cbor = require('cbor');
 

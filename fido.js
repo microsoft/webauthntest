@@ -7,7 +7,6 @@ const uuid = require('uuid-parse');
 const storage = require('./storage.js');
 const fidoAttestation = require('./fidoAttestation.js');
 const {sha256, jwkToPem, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
-const { parseJwk } = require('jose/jwk/parse');
 
 const hostname = process.env.HOSTNAME || "localhost";
 const jwt_secret = process.env.JWTSECRET || "defaultsecret";
