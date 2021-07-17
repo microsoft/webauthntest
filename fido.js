@@ -194,6 +194,7 @@ fido.verifyAssertion = async (uid, assertion) => {
     //that sig is a valid signature over the binary concatenation of authData
     //and hash.
     const publicKey = JSON.parse(credential.creationData.publicKey);
+    const publicKeyEd = publicKey.key;
 
     var verify;
     if (publicKey.kty === "RSA")
@@ -202,7 +203,7 @@ fido.verifyAssertion = async (uid, assertion) => {
         verify.update(authData);
         verify.update(hash);
         if (!verify.verify(jwkToPem(publicKey), sig))
-            throw new Error("Could not verify signature");    
+            throw new Error("Could not verify signature");
     }
     else if (publicKey.kty === "EC")
     {
@@ -228,6 +229,17 @@ fido.verifyAssertion = async (uid, assertion) => {
             verify.update(authData);
             verify.update(hash);
             if (!verify.verify(jwkToPem(publicKey), sig))
+                throw new Error("Could not verify signature");
+        }
+    }
+    else if (publicKeyEd.kty === "OKP")
+    {
+        if (publicKeyEd.crv === "Ed25519")
+        {
+            var data = [authData, hash];
+            var dataBuf = Buffer.concat(data);
+            var pubKey = crypto.createPublicKey(publicKey);
+            if (!crypto.verify(null, dataBuf, pubKey, sig))
                 throw new Error("Could not verify signature");
         }
     }
