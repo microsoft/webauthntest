@@ -18,13 +18,14 @@
         "cookie-parser": "^1.4.5",
         "express": "^4.17.1",
         "express-sslify": "^1.2.0",
+        "jose": "^3.14.0",
         "jsonwebtoken": "^8.5.1",
         "jsrsasign": "^10.3.0",
         "jwk-to-pem": "^2.0.5",
-        "mongoose": "^5.13.2",
+        "mongoose": "^5.13.3",
         "uuid-parse": "^1.1.0"
     },
     "engines": {
-        "node": ">=8.9.4"
+        "node": ">=16.5.0"
     }
 }

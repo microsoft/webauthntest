@@ -1,4 +1,4 @@
-const jwkToPem = require('jwk-to-pem')
+const jwkToPem = require('jwk-to-pem');
 const crypto = require('crypto');
 const cbor = require('cbor');
 
@@ -83,12 +83,20 @@ utils.coseToJwk = buffer => {
                 x: publicKeyCbor.get(-2).toString('base64'),
                 y: publicKeyCbor.get(-3).toString('base64')
             }
-        }
-         else if (publicKeyCbor.get(3) == -257) {
+        } else if (publicKeyCbor.get(3) == -257) {
             publicKeyJwk = {
                 kty: "RSA",
                 n: publicKeyCbor.get(-1).toString('base64'),
                 e: publicKeyCbor.get(-2).toString('base64')
+            }
+        } else if (publicKeyCbor.get(3) == -8) {
+            publicKeyJwk = {
+                key : {
+                    kty: "OKP",
+                    crv: "Ed25519",
+                    x: publicKeyCbor.get(-2).toString('base64')
+                },
+                format: 'jwk'
             }
         } else {
             throw new Error("Unknown public key algorithm");
@@ -129,4 +137,5 @@ utils.defaultTo = (str, defaultStr) => {
         return str;
     }
 }
+
 module.exports = utils;
