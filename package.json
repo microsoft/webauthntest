@@ -19,7 +19,7 @@
         "express": "^4.17.1",
         "express-sslify": "^1.2.0",
         "jsonwebtoken": "^8.5.1",
-        "jsrsasign": "^10.3.0",
+        "jsrsasign": "^10.5.25",
         "jwk-to-pem": "^2.0.5",
         "mongoose": "^5.13.3",
         "uuid-parse": "^1.1.0"
