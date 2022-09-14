@@ -21,7 +21,7 @@
         "jsonwebtoken": "^8.5.1",
         "jsrsasign": "^10.5.25",
         "jwk-to-pem": "^2.0.5",
-        "mongoose": "^5.13.3",
+        "mongoose": "^5.13.15",
         "uuid-parse": "^1.1.0"
     },
     "engines": {
