@@ -78,6 +78,16 @@
                 });
             }
 
+            if (!PublicKeyCredential || typeof PublicKeyCredential.isConditionalMediationAvailable !== "function") {
+                $("#moreDialog_autofillUiSupported").text("Not defined");
+            } else {
+                PublicKeyCredential.isConditionalMediationAvailable().then(supported => {
+                    $("#moreDialog_autofillUiSupported").text(supported ? "Supported" : "Not supported");
+                }).catch(e => {
+                    $("#moreDialog_autofillUiSupported").text("Error");
+                });
+            }
+
             if (!PublicKeyCredential || typeof PublicKeyCredential.isExternalCTAP2SecurityKeySupported !== "function") {
                 $("#moreDialog_ctap2Supported").text("Not defined");
             } else {
