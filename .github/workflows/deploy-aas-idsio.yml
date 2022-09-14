@@ -1,3 +1,5 @@
+name: Deploy to Azure App Service - IDSIO tenant
+
 on:
   push:
     branches: [ "master" ]
