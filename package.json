@@ -3,7 +3,7 @@
     "description": "WebAuthn Test App",
     "license": "MIT",
     "author": "Ibrahim Damlaj <idamlaj@gmail.com>",
-    "version": "0.0.1",
+    "version": "2022.09.13",
     "main": "app.js",
     "scripts": {
         "start": "node app.js"
