@@ -8,9 +8,16 @@ const enforce = require('express-sslify');
 if (process.env.ENFORCE_SSL_AZURE === "true") {
     app.use(enforce.HTTPS({ trustAzureHeader: true }));
 }
+
+const appVersion = `${process.env.npm_package_version}` || 'unknown';
+
 app.use(express.static('public'));
 app.use(cookieParser());
 app.use(bodyParser.json());
+
+app.get('/metadata', (req, res) => {
+    res.status(200).json({ appVersion });
+  });
 
 app.get('/credentials', async (req, res) => {
     try {
