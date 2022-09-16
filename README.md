@@ -1,3 +1,6 @@
+## Live instance
+A live instance of this code is available at [aka.ms/webauthntest](https://aka.ms/webauthntest). This instance is for testing the WebAuthn API only. Do not submit personal data.
+
 ## Deploying a local instance
 1. Download and install [the latest NodeJS](https://nodejs.org/en/) 
 2. Download and install [VS Code](https://code.visualstudio.com/) 
