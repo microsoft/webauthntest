@@ -225,3 +225,41 @@ a {
 
 };
 
+.text-center {
+  text-align: center;
+}
+
+.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.text-italic {
+  font-style: italic;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+.mb-5 {
+  margin-bottom: 5px;
+}
+
+.mt-5 {
+  margin-top: 5px;
+}
+
+.mt-10 {
+  margin-top: 10px;
+}
+
+#loginHeader {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+#loginFooter {
+  text-align: center;
+  margin-top: 15px;
+}
