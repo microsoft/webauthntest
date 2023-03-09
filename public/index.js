@@ -214,7 +214,7 @@
             },
             challenge: challenge,
             pubKeyCredParams: [],
-            timeout: 90000,
+            timeout: 180000,
             excludeCredentials: [],
             authenticatorSelection: {},
             attestation: undefined,
@@ -411,7 +411,7 @@
 
         var getAssertionOptions = {
             rpId: undefined,
-            timeout: 90000,
+            timeout: 180000,
             challenge: challenge,
             allowCredentials: [],
             userVerification: undefined,
