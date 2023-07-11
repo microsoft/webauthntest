@@ -388,6 +388,10 @@ const summarizeAuthenticatorData = authenticatorData => {
         str += ", ";
         str += "UV=" + ((authenticatorData.flags & 4) ? "1" : "0");
         str += ", ";
+        str += "BE=" + ((authenticatorData.flags & 8) ? "1" : "0");
+        str += ", ";
+        str += "BS=" + ((authenticatorData.flags & 16) ? "1" : "0");
+        str += ", ";
         str += "AT=" + ((authenticatorData.flags & 64) ? "1" : "0");
         str += ", ";
         str += "ED=" + ((authenticatorData.flags & 128) ? "1" : "0");
