@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: idsio-webauthntest
+  AZURE_WEBAPP_NAME: idsio-prod-webauthntest-23a
   AZURE_WEBAPP_PACKAGE_PATH: '.'
-  NODE_VERSION: '16.x'
+  NODE_VERSION: '18.x'
 
 permissions:
   contents: read
