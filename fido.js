@@ -100,6 +100,7 @@ fido.makeCredential = async (uid, attestation) => {
         uid: uid,
         id: authenticatorData.attestedCredentialData.credentialId.toString('base64'),
         idHex: authenticatorData.attestedCredentialData.credentialId.toString('hex').toUpperCase(),
+        transports: attestation.transports,
         metadata: {
             rpId: defaultTo(attestation.metadata.rpId, hostname),
             userName: attestation.metadata.userName,
