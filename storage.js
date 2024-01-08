@@ -10,6 +10,7 @@ storage.Credentials = mongoose.model('Credential', new mongoose.Schema({
     uid: {type: String, index: true},
     id: {type: String, index: true},
     idHex: String,
+    transports: [{type: String}],
     metadata: {
         rpId: String,
         userName: String,

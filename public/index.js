@@ -374,6 +374,7 @@
                 id: base64encode(attestation.rawId),
                 clientDataJSON: arrayBufferToString(attestation.response.clientDataJSON),
                 attestationObject: base64encode(attestation.response.attestationObject),
+                transports: attestation.response.getTransports(),
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -590,6 +591,7 @@
         html += '         <br>Key Type: ' + credential.creationData.publicKeySummary;
         html += '         <br>Discoverable Credential: ' + credential.metadata.residentKey;
         html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
+        html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
         html += '         <br>' + credential.creationData.authenticatorDataSummary;
         html += '     </p>';
         html += '     <p>';

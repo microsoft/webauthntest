@@ -31,6 +31,7 @@
  * @property {string} metadata.userName user.name assigned to this credenital
  * @property {string} metadata.rpId rp.id assigned to this credential
  * @property {boolean} metadata.residentKey whether this is a resident key
+ * @property {Array<string>} metadata.transports
  * @property {Object} creationData
  * @property {Object} creationData.publicKey JWK represetation of cred public key
  * @property {string} creationData.publicKeySummary human readable summary of credential public key
