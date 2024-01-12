@@ -591,7 +591,9 @@
         html += '         <br>Key Type: ' + credential.creationData.publicKeySummary;
         html += '         <br>Discoverable Credential: ' + credential.metadata.residentKey;
         html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
-        html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
+        if (credential.hasOwnProperty('transports')) {
+            html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
+        }
         html += '         <br>' + credential.creationData.authenticatorDataSummary;
         html += '     </p>';
         html += '     <p>';
