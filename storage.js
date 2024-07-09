@@ -1,7 +1,7 @@
 
 const mongoose = require('mongoose');
 
-mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost/fido', {useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false, useCreateIndex: true});
+mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost/fido');
 
 var storage = {};
 
