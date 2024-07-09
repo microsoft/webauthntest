@@ -494,16 +494,29 @@
         }
 
         if ($('#get_prf_first').val() || $('#get_prf_second').val()) {
-            getAssertionOptions.extensions.prf = {};
-            getAssertionOptions.extensions.prf.eval = {};
+            var eval = {};
             if ($('#get_prf_first').val()) {
-                var first = $('#get_prf_first').val();
-                getAssertionOptions.extensions.prf.eval.first = stringToArrayBuffer(first);
+                eval.first = stringToArrayBuffer($('#get_prf_first').val());
             }
-    
             if ($('#get_prf_second').val()) {
-                var second = $('#get_prf_second').val();
-                getAssertionOptions.extensions.prf.eval.second = stringToArrayBuffer(second);
+                eval.second = stringToArrayBuffer($('#get_prf_second').val());
+            }
+            if ($('#get_prf_global').is(":checked") || $('#get_prf_per_credential').is(":checked")) {
+                getAssertionOptions.extensions.prf = {};
+                if ($('#get_prf_global').is(":checked")) {
+                    getAssertionOptions.extensions.prf.eval = eval;
+                }
+                if ($('#get_prf_per_credential').is(":checked")) {
+                    if (getAssertionOptions.allowCredentials.length > 0)
+                    {
+                        var evalByCredential = {};
+                        for (const cred of getAssertionOptions.allowCredentials) {
+                            var idBase64Url = base64EncodeURL(cred.id);
+                            evalByCredential[idBase64Url] = eval;
+                        }
+                        getAssertionOptions.extensions.prf.evalByCredential = evalByCredential;
+                    }
+                }
             }
         }
 
@@ -855,6 +868,15 @@
     function logVariable(name, text) {
         console.log(name + ": " + text);
     }
+
+    /**
+     * Helper: Base64Url Encoding
+     */
+    function base64EncodeURL(byteArray) {
+        return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
+          return String.fromCharCode(val);
+        }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
+      }
 
     //#endregion Helpers
 })();
