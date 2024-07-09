@@ -104,6 +104,67 @@
             <hr>
 
             <span>
+                <span>Algorithms<br><br></span>
+                <div class="mdl-grid mdl-grid--no-spacing">
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES256">
+                        <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
+                        <span class="mdl-checkbox__label">ES256</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES384">
+                        <input type="checkbox" id="create_ES384" class="mdl-checkbox__input" checked>
+                        <span class="mdl-checkbox__label">ES384</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES512">
+                        <input type="checkbox" id="create_ES512" class="mdl-checkbox__input" checked>
+                        <span class="mdl-checkbox__label">ES512</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_RS256">
+                        <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
+                        <span class="mdl-checkbox__label">RS256</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_EdDSA">
+                        <input type="checkbox" id="create_EdDSA" class="mdl-checkbox__input" checked>
+                        <span class="mdl-checkbox__label">EdDSA</span>
+                    </label>
+                </div>
+            </span>
+
+            <hr>
+            <span>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
+                    <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">Exclude Credentials?</span>
+                </label>
+            </span>
+            <hr>
+            <span>
+                <span>Overwrite Exclude Credentials Transports? <br><br></span>
+                <div class="mdl-grid mdl-grid--no-spacing">
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_internal">
+                        <input type="checkbox" id="create_internal" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">Internal</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_usb">
+                        <input type="checkbox" id="create_usb" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">USB</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_nfc">
+                        <input type="checkbox" id="create_nfc" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">NFC</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ble">
+                        <input type="checkbox" id="create_ble" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">BLE</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_hybrid">
+                        <input type="checkbox" id="create_hybrid" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">Hybrid</span>
+                    </label>
+                </div>
+            </span>
+            <hr>
+
+            <span>
                 <span>PRF Extension</span>
                 <select name="create_prf" id="create_prf" class="float-right">
                     <option value="undefined">Undefined</option>
@@ -111,11 +172,11 @@
                 </select>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "create_prf_first">
-                    <label class = "mdl-textfield__label" for = "create_prf_first">PRF First...</label>
+                    <label class = "mdl-textfield__label" for = "create_prf_first">First Salt/Nonce...</label>
                 </div>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "create_prf_second">
-                    <label class = "mdl-textfield__label" for = "create_prf_second">PRF Second...</label>
+                    <label class = "mdl-textfield__label" for = "create_prf_second">Second Salt/Nonce...</label>
                 </div>
             </span>
             <hr>
@@ -178,38 +239,8 @@
                 </div>
             </span>
             <hr>
-
-            <div class="mdl-grid mdl-grid--no-spacing">
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES256">
-                    <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use ES256</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES384">
-                    <input type="checkbox" id="create_ES384" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use ES384</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES512">
-                    <input type="checkbox" id="create_ES512" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use ES512</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_RS256">
-                    <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use RS256</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_EdDSA">
-                    <input type="checkbox" id="create_EdDSA" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use EdDSA</span>
-                </label>
-            </div>
-
-            <hr>
-
-            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
-                <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
-                <span class="mdl-checkbox__label">Use excludeCredentials</span>
-            </label>
-            <hr>
         </div>
+
         <div class="mdl-dialog__actions">
             <button type="button" class="mdl-button" id="createDialog_createButton">Create</button>
             <button type="button" class="mdl-button close" id="createDialog_cancelButton">Cancel</button>
@@ -241,14 +272,47 @@
             </span>
             <hr>
             <span>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_allowCredentials">
+                    <input type="checkbox" id="get_allowCredentials" class="mdl-checkbox__input" checked>
+                    <span class="mdl-checkbox__label">Use allowCredentials</span>
+                </label>
+            </span>
+            <hr>
+            <span>
+                <span>Overwrite AllowCredentials Transports? <br><br></span>
+                <div class="mdl-grid mdl-grid--no-spacing">
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_internal">
+                        <input type="checkbox" id="get_internal" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">Internal</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_usb">
+                        <input type="checkbox" id="get_usb" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">USB</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_nfc">
+                        <input type="checkbox" id="get_nfc" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">NFC</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_ble">
+                        <input type="checkbox" id="get_ble" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">BLE</span>
+                    </label>
+                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_hybrid">
+                        <input type="checkbox" id="get_hybrid" class="mdl-checkbox__input">
+                        <span class="mdl-checkbox__label">Hybrid</span>
+                    </label>
+                </div>
+            </span>
+            <hr>
+            <span>
                 <span>PRF Extension</span>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
-                    <label class = "mdl-textfield__label" for = "get_prf_first">PRF First...</label>
+                    <label class = "mdl-textfield__label" for = "get_prf_first">First Salt/Nonce...</label>
                 </div>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "get_prf_second">
-                    <label class = "mdl-textfield__label" for = "get_prf_second">PRF Second...</label>
+                    <label class = "mdl-textfield__label" for = "get_prf_second">Second Salt/Nonce...</label>
                 </div>
                 <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_global">
                     <input type="checkbox" id="get_prf_global" class="mdl-checkbox__input">
@@ -285,11 +349,6 @@
                     <label class = "mdl-textfield__label" for = "get_largeBlobText">LargeBlob...</label>
                 </div>
             </span>
-            <hr>
-            <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_allowCredentials">
-                <input type="checkbox" id="get_allowCredentials" class="mdl-checkbox__input" checked>
-                <span class="mdl-checkbox__label">Use allowCredentials</span>
-            </label>
             <hr>
         </div>
         <div class="mdl-dialog__actions">

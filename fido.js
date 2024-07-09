@@ -319,7 +319,7 @@ const validateClientData = (clientData, uid, type) => {
  */
 function parseAuthenticatorData(authData) {
     try {
-        const rpIdHash = authData.slice(0, 32);
+        const rpIdHash = authData.subarray(0, 32);
         const flags = authData[32];
         const signCount = (authData[33] << 24) | (authData[34] << 16) | (authData[35] << 8) | (authData[36]);
 
@@ -334,10 +334,10 @@ function parseAuthenticatorData(authData) {
 
         if (flags & 64) {
             //has attestation data
-            const aaguid = uuid.unparse(authData.slice(37, 53)).toUpperCase();
+            const aaguid = uuid.unparse(authData.subarray(37, 53)).toUpperCase();
             const credentialIdLength = (authData[53] << 8) | authData[54];
-            const credentialId = authData.slice(55, 55 + credentialIdLength);
-            const publicKeyBuffer = authData.slice(55 + credentialIdLength, authData.length);
+            const credentialId = authData.subarray(55, 55 + credentialIdLength);
+            const publicKeyBuffer = authData.subarray(55 + credentialIdLength, authData.length);
             const publicKeyHex = coseToHex(publicKeyBuffer);
             //convert public key to JWK for storage
             const publicKey = coseToJwk(publicKeyBuffer);
@@ -356,10 +356,10 @@ function parseAuthenticatorData(authData) {
             let extensionDataCbor;
 
             if (authenticatorData.attestedCredentialData) {
-                extensionDataCbor = cbor.decodeAllSync(authData.slice(55 + authenticatorData.attestedCredentialData.credentialIdLength, authData.length));
+                extensionDataCbor = cbor.decodeAllSync(authData.subarray(55 + authenticatorData.attestedCredentialData.credentialIdLength, authData.length));
                 extensionDataCbor = extensionDataCbor[1]; //second element
             } else {
-                extensionDataCbor = cbor.decodeFirstSync(authData.slice(37, authData.length));
+                extensionDataCbor = cbor.decodeFirstSync(authData.subarray(37, authData.length));
             }
 
             authenticatorData.extensionDataHex = cbor.encode(extensionDataCbor).toString('hex').toUpperCase();
