@@ -2,7 +2,7 @@
     "name": "webauthntest",
     "description": "WebAuthn Test App",
     "license": "MIT",
-    "author": "Ibrahim Damlaj <idamlaj@gmail.com>",
+    "author": "Akshay Kumar",
     "version": "2023.07.11",
     "main": "app.js",
     "scripts": {
