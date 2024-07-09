@@ -278,7 +278,7 @@ fido.getCredentials = async (uid) => {
 };
 
 fido.deleteCredential = async (uid, id) => {
-    await storage.Credentials.remove({ uid: uid, id: id });
+    await storage.Credentials.deleteOne({ uid: uid, id: id });
 };
 
 /**
