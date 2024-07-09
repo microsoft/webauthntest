@@ -352,6 +352,27 @@
             createCredentialOptions.extensions.hmacCreateSecret = hmacCreateSecret;
         }
 
+        if ($('#create_prf').val() !== "undefined") {
+            var prfEnable = ($('#create_prf').val() == "enable");
+            if (prfEnable) {
+                createCredentialOptions.extensions.prf = {};
+            }
+        }
+
+        if ($('#create_prf_first').val() || $('#create_prf_second').val()) {
+            createCredentialOptions.extensions.prf = {};
+            createCredentialOptions.extensions.prf.eval = {};
+            if ($('#create_prf_first').val()) {
+                var first = $('#create_prf_first').val();
+                createCredentialOptions.extensions.prf.eval.first = stringToArrayBuffer(first);
+            }
+
+            if ($('#create_prf_second').val()) {
+                var second = $('#create_prf_second').val();
+                createCredentialOptions.extensions.prf.eval.second = stringToArrayBuffer(second);
+            }
+        }
+
         if ($('#create_minPinLength').val() !== "undefined") {
             var minPinLength = ($('#create_minPinLength').val() == "true");
             createCredentialOptions.extensions.minPinLength = minPinLength;
@@ -372,9 +393,11 @@
             /** @type {EncodedAttestationResponse} */
             var credential = {
                 id: base64encode(attestation.rawId),
+                attachment: attestation.authenticatorAttachment,
+                extensionResults: attestation.getClientExtensionResults(),
+                transports: attestation.response.getTransports(),
                 clientDataJSON: arrayBufferToString(attestation.response.clientDataJSON),
                 attestationObject: base64encode(attestation.response.attestationObject),
-                transports: attestation.response.getTransports(),
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -382,10 +405,31 @@
                 },
             };
 
-            console.log("=== Attestation response ===");
-            logVariable("id (base64)", credential.id);
-            logVariable("clientDataJSON", credential.clientDataJSON);
-            logVariable("attestationObject (base64)", credential.attestationObject);
+
+            console.log("=== Create Options ===");
+            console.log(createCredentialOptions);
+            console.log("=== Create response ===");
+            console.log(attestation);
+            console.log("=== Create Extension Results ===");
+            console.log(credential.extensionResults);
+
+            if (typeof credential.extensionResults.prf !== 'undefined') {
+                if (typeof credential.extensionResults.prf.enabled !== 'undefined') {
+                    logVariable("PRF Enabled", credential.extensionResults.prf.enabled);
+                }
+                if (typeof credential.extensionResults.prf.results !== 'undefined') {
+                    if (typeof credential.extensionResults.prf.results.first !== 'undefined') {
+                        var firstHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.first)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                        logVariable("PRF First", firstHex);
+                    }
+                    if (typeof credential.extensionResults.prf.results.second !== 'undefined') {
+                        var secondHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.second)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                            logVariable("PRF Second", secondHex);
+                    }
+                }
+            }
 
             return rest_put("/credentials", credential);
         }).then(response => {
@@ -449,6 +493,20 @@
             getAssertionOptions.userVerification = $('#get_userVerification').val();
         }
 
+        if ($('#get_prf_first').val() || $('#get_prf_second').val()) {
+            getAssertionOptions.extensions.prf = {};
+            getAssertionOptions.extensions.prf.eval = {};
+            if ($('#get_prf_first').val()) {
+                var first = $('#get_prf_first').val();
+                getAssertionOptions.extensions.prf.eval.first = stringToArrayBuffer(first);
+            }
+    
+            if ($('#get_prf_second').val()) {
+                var second = $('#get_prf_second').val();
+                getAssertionOptions.extensions.prf.eval.second = stringToArrayBuffer(second);
+            }
+        }
+
         if ($('#get_credBlob').val() !== "undefined") {
             var getCredBlob = ($('#get_credBlob').val() == "true");
             getAssertionOptions.extensions.getCredBlob = getCredBlob;
@@ -473,6 +531,9 @@
             /** @type {EncodedAssertionResponse} */
             var credential = {
                 id: base64encode(assertion.rawId),
+                rawId: assertion.rawId,
+                attachment: assertion.authenticatorAttachment,
+                extensionResults: assertion.getClientExtensionResults(),
                 clientDataJSON: arrayBufferToString(assertion.response.clientDataJSON),
                 userHandle: base64encode(assertion.response.userHandle),
                 signature: base64encode(assertion.response.signature),
@@ -482,12 +543,27 @@
                 }
             };
 
-            console.log("=== Assertion response ===");
-            logVariable("id (base64)", credential.id);
-            logVariable("userHandle (base64)", credential.userHandle);
-            logVariable("authenticatorData (base64)", credential.authenticatorData);
-            logVariable("clientDataJSON", credential.clientDataJSON);
-            logVariable("signature (base64)", credential.signature);
+            console.log("=== Get Options ===");
+            console.log(getAssertionOptions);
+            console.log("=== Get response ===");
+            console.log(assertion);
+            console.log("=== Get Extension Results ===");
+            console.log(credential.extensionResults);
+
+            if (typeof credential.extensionResults.prf !== 'undefined') {
+                if (typeof credential.extensionResults.prf.results !== 'undefined') {
+                    if (typeof credential.extensionResults.prf.results.first !== 'undefined') {
+                        var firstHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.first)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                        logVariable("PRF First", firstHex);
+                    }
+                    if (typeof credential.extensionResults.prf.results.second !== 'undefined') {
+                        var secondHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.second)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                            logVariable("PRF Second", secondHex);
+                    }
+                }
+            }
 
             return rest_put("/assertion", credential);
         }).then(response => {

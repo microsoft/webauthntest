@@ -52,9 +52,9 @@
             <span>
                 <span>Attachment</span>
                 <select name="create_authenticatorAttachment" id="create_authenticatorAttachment" class="float-right">
-                    <option value="undefined">Undefined</option>
+                    <option value="undefined" selected>Undefined</option>
                     <option value="platform">Platform</option>
-                    <option value="cross-platform" selected>Cross-Platform</option>
+                    <option value="cross-platform">Cross-Platform</option>
                 </select>
             </span>
             <hr>
@@ -62,9 +62,9 @@
             <span>
                 <span>Require Resident Key</span>
                 <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
-                    <option value="undefined" selected>Undefined</option>
+                    <option value="undefined">Undefined</option>
                     <option value="false">False</option>
-                    <option value="true">True</option>
+                    <option value="true" selected>True</option>
                 </select>
             </span>
             <hr>
@@ -72,10 +72,10 @@
             <span>
                 <span>Resident Key (L2)</span>
                 <select name="create_residentKey" id="create_residentKey" class="float-right">
-                    <option value="undefined" selected>Undefined</option>
+                    <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
                     <option value="preferred">Preferred</option>
-                    <option value="required">Required</option>
+                    <option value="required" selected>Required</option>
                 </select>
             </span>
             <hr>
@@ -83,10 +83,10 @@
             <span>
                 <span>User Verification</span>
                 <select name="create_userVerification" id="create_userVerification" class="float-right">
-                    <option value="undefined" selected>Undefined</option>
+                    <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
                     <option value="preferred">Preferred</option>
-                    <option value="required">Required</option>
+                    <option value="required" selected>Required</option>
                 </select>
             </span>
             <hr>
@@ -94,11 +94,37 @@
             <span>
                 <span>Attestation</span>
                 <select name="create_attestation" id="create_attestation" class="float-right">
-                    <option value="undefined" selected>Undefined</option>
+                    <option value="undefined">Undefined</option>
                     <option value="none">None</option>
                     <option value="indirect">Indirect</option>
-                    <option value="direct">Direct</option>
+                    <option value="direct" selected>Direct</option>
                     <option value="enterprise">Enterprise</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>PRF Extension</span>
+                <select name="create_prf" id="create_prf" class="float-right">
+                    <option value="undefined">Undefined</option>
+                    <option value="enable" selected>Enable</option>
+                </select>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_first">
+                    <label class = "mdl-textfield__label" for = "create_prf_first">PRF First...</label>
+                </div>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_second">
+                    <label class = "mdl-textfield__label" for = "create_prf_second">PRF Second...</label>
+                </div>
+            </span>
+            <hr>
+
+            <span>
+                <span>HMAC Extension</span>
+                <select name="create_hmac_create" id="create_hmac_create" class="float-right">
+                    <option value="undefined">Undefined</option>
+                    <option value="true" selected>True</option>
                 </select>
             </span>
             <hr>
@@ -125,16 +151,6 @@
             <hr>
 
             <span>
-                <span>HMAC Extension</span>
-                <select name="create_hmac_create" id="create_hmac_create" class="float-right">
-                    <option value="undefined" selected>Undefined</option>
-                    <option value="false">False</option>
-                    <option value="true">True</option>
-                </select>
-            </span>
-            <hr>
-
-            <span>
                 <span>MinPinLength Extension</span>
                 <select name="create_minPinLength" id="create_minPinLength" class="float-right">
                     <option value="undefined" selected>Undefined</option>
@@ -145,21 +161,21 @@
             <hr>
 
             <span>
-                <span>CredBlob Extension</span>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
-                    <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
-                </div>
-            </span>
-            <hr>
-
-            <span>
                 <span>LargeBlob Extension</span>
                 <select name="create_largeBlob" id="create_largeBlob" class="float-right">
                     <option value="undefined" selected>Undefined</option>
                     <option value="preferred">Preferred</option>
                     <option value="required">Required</option>
                 </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>CredBlob Extension</span>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
+                    <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
+                </div>
             </span>
             <hr>
 
@@ -222,6 +238,18 @@
                     <option value="preferred">Preferred</option>
                     <option value="required">Required</option>
                 </select>
+            </span>
+            <hr>
+            <span>
+                <span>PRF Extension</span>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
+                    <label class = "mdl-textfield__label" for = "get_prf_first">PRF First...</label>
+                </div>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_second">
+                    <label class = "mdl-textfield__label" for = "get_prf_second">PRF Second...</label>
+                </div>
             </span>
             <hr>
             <span>
