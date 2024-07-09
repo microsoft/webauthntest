@@ -305,12 +305,40 @@
             });
         }
 
+        var overWriteTransports = false;
+        var transports = [];
+        if ($('#create_internal').is(":checked") ||
+            $('#create_usb').is(":checked") || $('#create_nfc').is(":checked") || $('#create_ble').is(":checked") ||
+            $('#create_hybrid').is(":checked")) {
+            overWriteTransports = true;
+            if ($('#create_internal').is(":checked")) {
+                transports.push('internal');
+            }
+            if ($('#create_usb').is(":checked")) {
+                transports.push('usb');
+            }
+            if ($('#create_nfc').is(":checked")) {
+                transports.push('nfc');
+            }
+            if ($('#create_ble').is(":checked")) {
+                transports.push('ble');
+            }
+            if ($('#create_hybrid').is(":checked")) {
+                transports.push('hybrid');
+            }
+        }
+
         if ($('#create_excludeCredentials').is(":checked")) {
             var excludeCredentials = credentials.map(cred => {
-                return {
+                var excludeCred = {
                     type: "public-key",
-                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0))
+                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                    transports: cred.transports
                 };
+                if (overWriteTransports) {
+                    excludeCred.transports = transports;
+                }
+                return excludeCred;
             });
 
             createCredentialOptions.excludeCredentials = excludeCredentials;
@@ -391,13 +419,53 @@
             publicKey: createCredentialOptions
         }).then(attestation => {
             /** @type {EncodedAttestationResponse} */
+
+            console.log("=== Create Options ===");
+            console.log(createCredentialOptions);
+            console.log("=== Create response ===");
+            console.log(attestation);
+
+            var prfEnabled = false;
+            var prfFirstHex = "";
+            var prfSecondHex = "";
+            var clientExtensionResults = attestation.getClientExtensionResults();
+
+            if (typeof clientExtensionResults.prf !== 'undefined') {
+                if (typeof clientExtensionResults.prf.enabled !== 'undefined') {
+                    prfEnabled = clientExtensionResults.prf.enabled;
+                    console.log("PRF Enabled: ", prfEnabled);
+                }
+                if (typeof clientExtensionResults.prf.results !== 'undefined') {
+                    if (typeof clientExtensionResults.prf.results.first !== 'undefined') {
+                        var prfFirst = clientExtensionResults.prf.results.first;
+                        prfFirstHex = Array.from(new Uint8Array(prfFirst)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                        console.log("PRF First: ", prfFirstHex);
+                    }
+                    if (typeof clientExtensionResults.prf.results.second !== 'undefined') {
+                        var prfSecond = clientExtensionResults.prf.results.second;
+                        prfSecondHex = Array.from(new Uint8Array(prfSecond)).
+                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+                        console.log("PRF Second: ", prfSecondHex);
+                    }
+                }
+            }
+
             var credential = {
                 id: base64encode(attestation.rawId),
+                rawId: attestation.rawId,
                 attachment: attestation.authenticatorAttachment,
-                extensionResults: attestation.getClientExtensionResults(),
                 transports: attestation.response.getTransports(),
+                response: attestation.response,
+                extensionResults: attestation.getClientExtensionResults(),
+                authenticatorData: attestation.response.getAuthenticatorData(),
+                publicKey: attestation.response.getPublicKey(),
+                publicKeyAlgorithm: attestation.response.getPublicKeyAlgorithm(),
                 clientDataJSON: arrayBufferToString(attestation.response.clientDataJSON),
                 attestationObject: base64encode(attestation.response.attestationObject),
+                prfEnabled: prfEnabled,
+                prfFirstHex: prfFirstHex,
+                prfSecondHex: prfSecondHex,
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -405,31 +473,8 @@
                 },
             };
 
-
-            console.log("=== Create Options ===");
-            console.log(createCredentialOptions);
-            console.log("=== Create response ===");
-            console.log(attestation);
-            console.log("=== Create Extension Results ===");
-            console.log(credential.extensionResults);
-
-            if (typeof credential.extensionResults.prf !== 'undefined') {
-                if (typeof credential.extensionResults.prf.enabled !== 'undefined') {
-                    logVariable("PRF Enabled", credential.extensionResults.prf.enabled);
-                }
-                if (typeof credential.extensionResults.prf.results !== 'undefined') {
-                    if (typeof credential.extensionResults.prf.results.first !== 'undefined') {
-                        var firstHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.first)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                        logVariable("PRF First", firstHex);
-                    }
-                    if (typeof credential.extensionResults.prf.results.second !== 'undefined') {
-                        var secondHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.second)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                            logVariable("PRF Second", secondHex);
-                    }
-                }
-            }
+            console.log("=== Create response parsed===");
+            console.log(credential);
 
             return rest_put("/credentials", credential);
         }).then(response => {
@@ -478,12 +523,40 @@
                 break;
         }
 
+        var overWriteTransports = false;
+        var transports = [];
+        if ($('#get_internal').is(":checked") ||
+            $('#get_usb').is(":checked") || $('#get_nfc').is(":checked") || $('#get_ble').is(":checked") ||
+            $('#get_hybrid').is(":checked")) {
+            overWriteTransports = true;
+            if ($('#get_internal').is(":checked")) {
+                transports.push('internal');
+            }
+            if ($('#get_usb').is(":checked")) {
+                transports.push('usb');
+            }
+            if ($('#get_nfc').is(":checked")) {
+                transports.push('nfc');
+            }
+            if ($('#get_ble').is(":checked")) {
+                transports.push('ble');
+            }
+            if ($('#get_hybrid').is(":checked")) {
+                transports.push('hybrid');
+            }
+        }
+
         if ($('#get_allowCredentials').is(":checked")) {
             var allowCredentials = credentials.map(cred => {
-                return {
+                var allowCred = {
                     type: "public-key",
-                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0))
+                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                    transports: cred.transports
                 };
+                if (overWriteTransports) {
+                    allowCred.transports = transports;
+                }
+                return allowCred;
             });
 
             getAssertionOptions.allowCredentials = allowCredentials;
