@@ -27,6 +27,15 @@ storage.Credentials = mongoose.model('Credential', new mongoose.Schema({
         authenticatorDataSummary: String,
         authenticatorDataHex: String,
         extensionDataHex: String,
+        authenticatorData: String,
+        attestationObject: String,
+        clientDataJSON: String,
+        publicKey2: String,
+        publicKeyAlgorithm: Number,
+        authenticatorAttachment: String,
+        prfEnabled: Boolean,
+        prfFirst: String,
+        prfSecond: String,
     },
     authenticationData: {
         authenticatorDataSummary: String,
@@ -36,6 +45,9 @@ storage.Credentials = mongoose.model('Credential', new mongoose.Schema({
         clientDataJSONHex: String,
         signatureHex: String,
         extensionDataHex: String,
+        authenticatorAttachment: String,
+        prfFirst: String,
+        prfSecond: String,
     }
 }));
 

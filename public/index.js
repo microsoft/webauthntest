@@ -424,6 +424,8 @@
             console.log(createCredentialOptions);
             console.log("=== Create response ===");
             console.log(attestation);
+            console.log("=== Create Extension Results ===");
+            console.log(attestation.getClientExtensionResults());
 
             var prfEnabled = false;
             var prfFirstHex = "";
@@ -437,35 +439,28 @@
                 }
                 if (typeof clientExtensionResults.prf.results !== 'undefined') {
                     if (typeof clientExtensionResults.prf.results.first !== 'undefined') {
-                        var prfFirst = clientExtensionResults.prf.results.first;
-                        prfFirstHex = Array.from(new Uint8Array(prfFirst)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                        console.log("PRF First: ", prfFirstHex);
+                        prfFirstHex = arrayBufferToHexString(clientExtensionResults.prf.results.first);
+                        console.log("PRF First (Hex):     ", prfFirstHex);
                     }
                     if (typeof clientExtensionResults.prf.results.second !== 'undefined') {
-                        var prfSecond = clientExtensionResults.prf.results.second;
-                        prfSecondHex = Array.from(new Uint8Array(prfSecond)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                        console.log("PRF Second: ", prfSecondHex);
+                        prfSecondHex = arrayBufferToHexString(clientExtensionResults.prf.results.second);
+                        console.log("PRF Second (Hex):    ", prfSecondHex);
                     }
                 }
             }
 
             var credential = {
-                id: base64encode(attestation.rawId),
-                rawId: attestation.rawId,
-                attachment: attestation.authenticatorAttachment,
+                id: arrayBufferToBase64(attestation.rawId),
+                authenticatorAttachment: attestation.authenticatorAttachment,
                 transports: attestation.response.getTransports(),
-                response: attestation.response,
-                extensionResults: attestation.getClientExtensionResults(),
-                authenticatorData: attestation.response.getAuthenticatorData(),
-                publicKey: attestation.response.getPublicKey(),
+                authenticatorData: arrayBufferToBase64(attestation.response.getAuthenticatorData()),
+                publicKey: arrayBufferToBase64(attestation.response.getPublicKey()),
                 publicKeyAlgorithm: attestation.response.getPublicKeyAlgorithm(),
-                clientDataJSON: arrayBufferToString(attestation.response.clientDataJSON),
-                attestationObject: base64encode(attestation.response.attestationObject),
+                clientDataJSON: arrayBufferToUTF8(attestation.response.clientDataJSON),
+                attestationObject: arrayBufferToBase64(attestation.response.attestationObject),
                 prfEnabled: prfEnabled,
-                prfFirstHex: prfFirstHex,
-                prfSecondHex: prfSecondHex,
+                prfFirst: prfFirstHex,
+                prfSecond: prfSecondHex,
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -584,7 +579,7 @@
                     {
                         var evalByCredential = {};
                         for (const cred of getAssertionOptions.allowCredentials) {
-                            var idBase64Url = base64EncodeURL(cred.id);
+                            var idBase64Url = byteArrayToBase64URL(cred.id);
                             evalByCredential[idBase64Url] = eval;
                         }
                         getAssertionOptions.extensions.prf.evalByCredential = evalByCredential;
@@ -615,15 +610,33 @@
             publicKey: getAssertionOptions
         }).then(assertion => {
             /** @type {EncodedAssertionResponse} */
+
+            var prfFirstHex = "";
+            var prfSecondHex = "";
+            var clientExtensionResults = assertion.getClientExtensionResults();
+
+            if (typeof clientExtensionResults.prf !== 'undefined') {
+                if (typeof clientExtensionResults.prf.results !== 'undefined') {
+                    if (typeof clientExtensionResults.prf.results.first !== 'undefined') {
+                        prfFirstHex = arrayBufferToHexString(clientExtensionResults.prf.results.first);
+                        console.log("PRF First (Hex):     ", prfFirstHex);
+                    }
+                    if (typeof clientExtensionResults.prf.results.second !== 'undefined') {
+                        prfSecondHex = arrayBufferToHexString(clientExtensionResults.prf.results.second);
+                        console.log("PRF Second (Hex):    ", prfSecondHex);
+                    }
+                }
+            }
+
             var credential = {
-                id: base64encode(assertion.rawId),
-                rawId: assertion.rawId,
+                id: arrayBufferToBase64(assertion.rawId),
                 attachment: assertion.authenticatorAttachment,
-                extensionResults: assertion.getClientExtensionResults(),
-                clientDataJSON: arrayBufferToString(assertion.response.clientDataJSON),
-                userHandle: base64encode(assertion.response.userHandle),
-                signature: base64encode(assertion.response.signature),
-                authenticatorData: base64encode(assertion.response.authenticatorData),
+                clientDataJSON: arrayBufferToUTF8(assertion.response.clientDataJSON),
+                userHandle: arrayBufferToBase64(assertion.response.userHandle),
+                signature: arrayBufferToBase64(assertion.response.signature),
+                authenticatorData: arrayBufferToBase64(assertion.response.authenticatorData),
+                prfFirst: prfFirstHex,
+                prfSecond: prfSecondHex,
                 metadata: {
                     rpId: getAssertionOptions.rpId
                 }
@@ -634,22 +647,7 @@
             console.log("=== Get response ===");
             console.log(assertion);
             console.log("=== Get Extension Results ===");
-            console.log(credential.extensionResults);
-
-            if (typeof credential.extensionResults.prf !== 'undefined') {
-                if (typeof credential.extensionResults.prf.results !== 'undefined') {
-                    if (typeof credential.extensionResults.prf.results.first !== 'undefined') {
-                        var firstHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.first)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                        logVariable("PRF First", firstHex);
-                    }
-                    if (typeof credential.extensionResults.prf.results.second !== 'undefined') {
-                        var secondHex = Array.from(new Uint8Array(credential.extensionResults.prf.results.second)).
-                            map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
-                            logVariable("PRF Second", secondHex);
-                    }
-                }
-            }
+            console.log(assertion.getClientExtensionResults());
 
             return rest_put("/assertion", credential);
         }).then(response => {
@@ -750,12 +748,14 @@
         html += '     <p>';
         html += '         <b>Credential Registration Data</b>';
         html += '         <a href="#" class="creationDataDetails" data-value="' + credential.id + '">[more details]</a>';
-        html += '         <br>Key Type: ' + credential.creationData.publicKeySummary;
-        html += '         <br>Discoverable Credential: ' + credential.metadata.residentKey;
+        html += '         <br>Key Type: ' + credential.creationData.publicKeySummary + ' (' + credential.creationData.publicKeyAlgorithm +')';
+        html += '         <br>Requested Discoverable Credential: ' + credential.metadata.residentKey;
         html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
+        html += '         <br>Authenticator Attachment: ' + credential.creationData.authenticatorAttachment;
         if (credential.hasOwnProperty('transports')) {
             html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
         }
+        html += '         <br>PRF Enabled: ' + credential.creationData.prfEnabled;
         html += '         <br>' + credential.creationData.authenticatorDataSummary;
         html += '     </p>';
         html += '     <p>';
@@ -798,13 +798,22 @@
     function showCreationData(id) {
         var credential = credentials.find(c => c.id === id);
 
+        var publicKeyType = credential.creationData.publicKeySummary + " ";
+        if (credential.creationData.publicKeyAlgorithm !== undefined) {
+            publicKeyType += "(" + credential.creationData.publicKeyAlgorithm +") ";
+        }
+
         $("#creationData_attestationStatementHex").text(credential.creationData.attestationStatementHex);
         $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
         $("#creationData_authenticatorData").text(credential.creationData.authenticatorDataSummary);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
-        $("#creationData_publicKey").text(credential.creationData.publicKeySummary + " key: " + credential.creationData.publicKeyHex);
+        $("#creationData_publicKeyType").text(publicKeyType);
+        $("#creationData_publicKey").text(credential.creationData.publicKey2);
+        $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
         $("#creationData_extensionData").text(credential.creationData.extensionDataHex);
         $("#creationData_residentKey").text(credential.metadata.residentKey);
+        $("#creationData_PRF_First").text(credential.creationData.prfFirst);
+        $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
@@ -822,6 +831,10 @@
         $("#authenticationData_extensionData").text(credential.authenticationData.extensionDataHex);
         $("#authenticationData_clientDataJSONHex").text(credential.authenticationData.clientDataJSONHex);
         $("#authenticationData_signatureHex").text(credential.authenticationData.signatureHex);
+        $("#authenticationData_authenticatorAttachment").text(credential.authenticationData.authenticatorAttachment);
+        $("#authenticationData_PRF_First").text(credential.authenticationData.prfFirst);
+        $("#authenticationData_PRF_Second").text(credential.authenticationData.prfSecond);
+
 
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         authenticationDataDialog.showModal();
@@ -864,7 +877,7 @@
      * Helper: Base64 encodes an array buffer
      * @param {ArrayBuffer} arrayBuffer 
      */
-    function base64encode(arrayBuffer) {
+    function arrayBufferToBase64(arrayBuffer) {
         if (!arrayBuffer || arrayBuffer.byteLength == 0)
             return undefined;
 
@@ -876,8 +889,26 @@
      * @param {ArrayBuffer} arrayBuffer 
      * @returns {string}
      */
-    function arrayBufferToString(arrayBuffer) {
+    function arrayBufferToUTF8(arrayBuffer) {
         return String.fromCharCode.apply(null, new Uint8Array(arrayBuffer));
+    }
+
+    /**
+     * Helper: Converts an array buffer to a Hex string
+     * @param {ArrayBuffer} arrayBuffer 
+     * @returns {string}
+     */
+    function arrayBufferToHexString(arrayBuffer) {
+        return Array.from(new Uint8Array(arrayBuffer)).map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+    }
+
+    /**
+     * Helper: Base64Url Encoding
+     */
+    function byteArrayToBase64URL(byteArray) {
+        return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
+          return String.fromCharCode(val);
+        }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
     }
 
     /**
@@ -934,22 +965,6 @@
             }
         });
     }
-
-    /**
-     * Helper: logs a variable
-     */
-    function logVariable(name, text) {
-        console.log(name + ": " + text);
-    }
-
-    /**
-     * Helper: Base64Url Encoding
-     */
-    function base64EncodeURL(byteArray) {
-        return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
-          return String.fromCharCode(val);
-        }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
-      }
 
     //#endregion Helpers
 })();
