@@ -118,7 +118,7 @@ fido.makeCredential = async (uid, attestation) => {
             authenticatorDataHex: attestationObject.authData.toString('hex').toUpperCase(),
             extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
             authenticatorData: attestation.authenticatorData,
-            attestationObject: attestation.attestationObject,
+            attestationObject: attestation.attestationObjectHex,
             clientDataJSON: attestation.clientDataJSON,
             publicKey2: attestation.publicKey,
             publicKeyAlgorithm: attestation.publicKeyAlgorithm,

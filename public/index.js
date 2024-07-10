@@ -458,6 +458,7 @@
                 publicKeyAlgorithm: attestation.response.getPublicKeyAlgorithm(),
                 clientDataJSON: arrayBufferToUTF8(attestation.response.clientDataJSON),
                 attestationObject: arrayBufferToBase64(attestation.response.attestationObject),
+                attestationObjectHex: arrayBufferToHexString(attestation.response.attestationObject),
                 prfEnabled: prfEnabled,
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
@@ -803,7 +804,7 @@
             publicKeyType += "(" + credential.creationData.publicKeyAlgorithm +") ";
         }
 
-        $("#creationData_attestationStatementHex").text(credential.creationData.attestationStatementHex);
+        $("#creationData_attestationObject").text(credential.creationData.attestationObject);
         $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
         $("#creationData_authenticatorData").text(credential.creationData.authenticatorDataSummary);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
