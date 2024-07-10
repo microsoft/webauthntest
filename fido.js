@@ -107,25 +107,37 @@ fido.makeCredential = async (uid, attestation) => {
             residentKey: !!attestation.metadata.residentKey
         },
         creationData: {
+            publicKey: JSON.stringify(authenticatorData.attestedCredentialData.publicKey),
             publicKeySummary: authenticatorData.attestedCredentialData.publicKey.kty,
             publicKeyHex: authenticatorData.attestedCredentialData.publicKeyHex,
-            publicKey: JSON.stringify(authenticatorData.attestedCredentialData.publicKey),
             aaguid: authenticatorData.attestedCredentialData.aaguid,
+            attestationStatementHex: attestationStatement.hex,
+            attestationStatementSummary: attestationStatement.summary,
+            attestationStatementChainJSON: attestationStatement.chainJSON,
             authenticatorDataSummary: summarizeAuthenticatorData(authenticatorData),
             authenticatorDataHex: attestationObject.authData.toString('hex').toUpperCase(),
             extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
-            attestationStatementSummary: attestationStatement.summary,
-            attestationStatementChainJSON: attestationStatement.chainJSON,
-            attestationStatementHex: attestationStatement.hex
+            authenticatorData: attestation.authenticatorData,
+            attestationObject: attestation.attestationObject,
+            clientDataJSON: attestation.clientDataJSON,
+            publicKey2: attestation.publicKey,
+            publicKeyAlgorithm: attestation.publicKeyAlgorithm,
+            authenticatorAttachment: attestation.authenticatorAttachment,
+            prfEnabled: attestation.prfEnabled,
+            prfFirst: attestation.prfFirst,
+            prfSecond: attestation.prfSecond,
         },
         authenticationData: {
-            signCount: authenticatorData.signCount,
             authenticatorDataSummary: "No authentications",
+            signCount: authenticatorData.signCount,
+            userHandleHex: "none",
             authenticatorDataHex: "none",
-            extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
             clientDataJSONHex: "none",
             signatureHex: "none",
-            userHandleHex: "none"
+            extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
+            authenticatorAttachment: "none",
+            prfFirst: "none",
+            prfSecond: "none",
         }
     };
 
@@ -260,12 +272,14 @@ fido.verifyAssertion = async (uid, assertion) => {
             authenticationData: {
                 authenticatorDataSummary: summarizeAuthenticatorData(authenticatorData),
                 signCount: authenticatorData.signCount,
+                userHandleHex: assertion.userHandle ?
+                    Buffer.from(assertion.userHandle, 'base64').toString('hex').toUpperCase() : 'none',
                 authenticatorDataHex: Buffer.from(assertion.authenticatorData, 'base64').toString('hex').toUpperCase(),
-                extensionDataHex: authenticatorData.extensionDataHex,
                 clientDataJSONHex: Buffer.from(assertion.clientDataJSON, 'utf8').toString('hex').toUpperCase(),
                 signatureHex: Buffer.from(assertion.signature, 'base64').toString('hex').toUpperCase(),
-                userHandleHex: assertion.userHandle ?
-                    Buffer.from(assertion.userHandle, 'base64').toString('hex').toUpperCase() : 'none'
+                extensionDataHex: authenticatorData.extensionDataHex,
+                prfFirst: assertion.prfFirst,
+                prfSecond: assertion.prfSecond,
             }
         }, { new: true });
 
