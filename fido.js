@@ -120,6 +120,7 @@ fido.makeCredential = async (uid, attestation) => {
             authenticatorData: attestation.authenticatorData,
             attestationObject: attestation.attestationObjectHex,
             clientDataJSON: attestation.clientDataJSON,
+            clientDataJSONHex: Buffer.from(attestation.clientDataJSON, 'utf8').toString('hex').toUpperCase(),
             publicKey2: attestation.publicKey,
             publicKeyAlgorithm: attestation.publicKeyAlgorithm,
             authenticatorAttachment: attestation.authenticatorAttachment,
@@ -132,6 +133,7 @@ fido.makeCredential = async (uid, attestation) => {
             signCount: authenticatorData.signCount,
             userHandleHex: "none",
             authenticatorDataHex: "none",
+            clientDataJSON: "none",
             clientDataJSONHex: "none",
             signatureHex: "none",
             extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
@@ -179,6 +181,7 @@ fido.verifyAssertion = async (uid, assertion) => {
     } catch (e) {
         throw new Error("clientDataJSON could not be parsed");
     }
+
     //Step 7-10: Verify client data
     validateClientData(C, uid, "webauthn.get");
 
@@ -275,6 +278,7 @@ fido.verifyAssertion = async (uid, assertion) => {
                 userHandleHex: assertion.userHandle ?
                     Buffer.from(assertion.userHandle, 'base64').toString('hex').toUpperCase() : 'none',
                 authenticatorDataHex: Buffer.from(assertion.authenticatorData, 'base64').toString('hex').toUpperCase(),
+                clientDataJSON: assertion.clientDataJSON,
                 clientDataJSONHex: Buffer.from(assertion.clientDataJSON, 'utf8').toString('hex').toUpperCase(),
                 signatureHex: Buffer.from(assertion.signature, 'base64').toString('hex').toUpperCase(),
                 extensionDataHex: authenticatorData.extensionDataHex,

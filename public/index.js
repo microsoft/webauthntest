@@ -806,7 +806,7 @@
 
         $("#creationData_attestationObject").text(credential.creationData.attestationObject);
         $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
-        $("#creationData_authenticatorData").text(credential.creationData.authenticatorDataSummary);
+        $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
         $("#creationData_publicKeyType").text(publicKeyType);
         $("#creationData_publicKey").text(credential.creationData.publicKey2);
@@ -815,6 +815,7 @@
         $("#creationData_residentKey").text(credential.metadata.residentKey);
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
         $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
+
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
@@ -830,7 +831,7 @@
         $("#authenticationData_userHandleHex").text(credential.authenticationData.userHandleHex);
         $("#authenticationData_authenticatorDataHex").text(credential.authenticationData.authenticatorDataHex);
         $("#authenticationData_extensionData").text(credential.authenticationData.extensionDataHex);
-        $("#authenticationData_clientDataJSONHex").text(credential.authenticationData.clientDataJSONHex);
+        $("#authenticationData_clientDataJSON").text(credential.authenticationData.clientDataJSON);
         $("#authenticationData_signatureHex").text(credential.authenticationData.signatureHex);
         $("#authenticationData_authenticatorAttachment").text(credential.authenticationData.authenticatorAttachment);
         $("#authenticationData_PRF_First").text(credential.authenticationData.prfFirst);
