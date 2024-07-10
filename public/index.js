@@ -630,11 +630,11 @@
 
             var credential = {
                 id: arrayBufferToBase64(assertion.rawId),
-                attachment: assertion.authenticatorAttachment,
                 clientDataJSON: arrayBufferToUTF8(assertion.response.clientDataJSON),
                 userHandle: arrayBufferToBase64(assertion.response.userHandle),
                 signature: arrayBufferToBase64(assertion.response.signature),
                 authenticatorData: arrayBufferToBase64(assertion.response.authenticatorData),
+                authenticatorAttachment: assertion.authenticatorAttachment,
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
                 metadata: {
