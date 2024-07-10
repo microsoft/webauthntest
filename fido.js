@@ -278,6 +278,7 @@ fido.verifyAssertion = async (uid, assertion) => {
                 clientDataJSONHex: Buffer.from(assertion.clientDataJSON, 'utf8').toString('hex').toUpperCase(),
                 signatureHex: Buffer.from(assertion.signature, 'base64').toString('hex').toUpperCase(),
                 extensionDataHex: authenticatorData.extensionDataHex,
+                authenticatorAttachment: assertion.authenticatorAttachment,
                 prfFirst: assertion.prfFirst,
                 prfSecond: assertion.prfSecond,
             }
