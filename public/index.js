@@ -13,10 +13,10 @@
      * @type Array<Credential>
      */
     var credentials = [];
+    var conditionalAuthOperationInProgress = false;
+    var ongoingAuth = null;
 
-    //#region Event Handling
-
-    $(window).on('load', function () {
+    $(window).on('load', async function () {
         var createDialog = document.querySelector('#createDialog');
         if (!createDialog.showModal) {
             dialogPolyfill.registerDialog(createDialog);
@@ -63,7 +63,39 @@
             createDialog.showModal();
         });
 
-        $('#getButton').click(() => {
+        $('#getButton').click(async () => {
+
+            if (conditionalAuthOperationInProgress === false)
+            {
+                if (window.PublicKeyCredential) {
+                    try {
+                        const capabilities = await PublicKeyCredential.getClientCapabilities();
+                        if (capabilities.conditionalGet) {
+                            var id;
+                            conditionalAuthOperationInProgress = true;
+                            console.log("Starting Conditional Auth Operation");
+                            getChallenge().then(challenge => {
+                                return getAssertion(challenge, true)
+                            }).then(credential => {
+                                id = credential.id;
+                                return updateCredentials();
+                            }).then(() => {
+                                conditionalAuthOperationInProgress = false;
+                                getDialog.close();
+                                setTimeout(() => {
+                                    highlightCredential(id);
+                                    toast("Successful AutoFill Assertion");
+                                }, 50);
+                            }).catch(e => {
+                                console.log(e);
+                            });
+                        }
+                    } catch (e) {
+                        console.error(e.message);
+                    }
+                }
+            }
+
             getDialog.showModal();
         });
 
@@ -109,7 +141,6 @@
                     console.error('Error getting client capabilities:', error);
                  }
             }
-
             moreDialog.showModal();
         });
 
@@ -146,9 +177,8 @@
             var id;
 
             disableControls();
-
             getChallenge().then(challenge => {
-                return getAssertion(challenge)
+                return getAssertion(challenge, false)
             }).then(credential => {
                 id = credential.id;
                 return updateCredentials();
@@ -189,7 +219,6 @@
             authenticationDataDialog.close();
         });
     });
-
 
     function getChallenge() {
         return rest_get(
@@ -498,10 +527,11 @@
 
     /**
     * Calls the .get() API and sends result to server to verify
-    * @param {ArrayBuffer} challenge 
+    * @param {ArrayBuffer} challenge
+    * @param {boolean} conditional Set to `true` if this is for a conditional UI.
     * @return {any} server response object
     */
-    function getAssertion(challenge) {
+    function getAssertion(challenge, conditional = false) {
         var largeBlobPresent = false;
 
         if (typeof(PublicKeyCredential) === "undefined")
@@ -509,7 +539,7 @@
 
         var getAssertionOptions = {
             rpId: undefined,
-            timeout: 180000,
+            timeout: 600000,
             challenge: challenge,
             allowCredentials: [],
             userVerification: undefined,
@@ -554,20 +584,22 @@
             }
         }
 
-        if ($('#get_allowCredentials').is(":checked")) {
-            var allowCredentials = credentials.map(cred => {
-                var allowCred = {
-                    type: "public-key",
-                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
-                    transports: cred.transports
-                };
-                if (overWriteTransports) {
-                    allowCred.transports = transports;
-                }
-                return allowCred;
-            });
-
-            getAssertionOptions.allowCredentials = allowCredentials;
+        if (conditional === false)
+        {
+            if ($('#get_allowCredentials').is(":checked")) {
+                var allowCredentials = credentials.map(cred => {
+                    var allowCred = {
+                        type: "public-key",
+                        id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                        transports: cred.transports
+                    };
+                    if (overWriteTransports) {
+                        allowCred.transports = transports;
+                    }
+                    return allowCred;
+                });
+                getAssertionOptions.allowCredentials = allowCredentials;
+            }
         }
 
         if ($('#get_userVerification').val() !== "undefined") {
@@ -619,8 +651,17 @@
             getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
         }
 
+        if(ongoingAuth != null) {
+            conditionalAuthOperationInProgress = false;
+            ongoingAuth.abort('Cancel ongoing authentication')
+        }
+
+        ongoingAuth = new AbortController();
+
         return navigator.credentials.get({
-            publicKey: getAssertionOptions
+            publicKey: getAssertionOptions,
+            mediation: conditional ? 'conditional' : 'optional',
+            signal: ongoingAuth.signal
         }).then(assertion => {
             /** @type {EncodedAssertionResponse} */
 
@@ -666,6 +707,7 @@
         }).then(response => {
             return response.json();
         }).then(response => {
+            ongoingAuth = null;
             if (response.error) {
                 return Promise.reject(response.error);
             } else {
