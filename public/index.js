@@ -67,7 +67,7 @@
             getDialog.showModal();
         });
 
-        $('#moreButton').click(() => {
+        $('#moreButton').click(async () => {
             if (!PublicKeyCredential || typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function") {
                 $("#moreDialog_platformAuthenticatorAvailable").text("Not defined");
             } else {
@@ -81,11 +81,8 @@
             if (!PublicKeyCredential || typeof PublicKeyCredential.isConditionalMediationAvailable !== "function") {
                 $("#moreDialog_autofillUiSupported").text("Not defined");
             } else {
-                PublicKeyCredential.isConditionalMediationAvailable().then(supported => {
-                    $("#moreDialog_autofillUiSupported").text(supported ? "Supported" : "Not supported");
-                }).catch(e => {
-                    $("#moreDialog_autofillUiSupported").text("Error");
-                });
+                let isConditionalMediationAvailable = await PublicKeyCredential.isConditionalMediationAvailable();
+                $("#moreDialog_autofillUiSupported").text(isConditionalMediationAvailable);
             }
 
             if (!PublicKeyCredential || typeof PublicKeyCredential.isExternalCTAP2SecurityKeySupported !== "function") {
@@ -96,6 +93,21 @@
                 }).catch(e => {
                     $("#moreDialog_ctap2Supported").text("Error");
                 });
+            }
+
+            if (!PublicKeyCredential || typeof PublicKeyCredential.getClientCapabilities !== "function") {
+                $("#moreDialog_ClientCapabilities").text("Not defined");
+            } else {
+                try {
+                    let capabilities = await PublicKeyCredential.getClientCapabilities();
+                    $("#moreDialog_ClientCapabilities tr").remove();
+                    $("#moreDialog_ClientCapabilities").append(`<tr><th align:left>Capability</th><th>Supported?</th></tr>`);
+                    Object.keys(capabilities).forEach((e) => {
+                        $("#moreDialog_ClientCapabilities").append(`<tr><td>${e}</td><td>${capabilities[e]}</td></tr>`);
+                    })
+                 } catch (error) {
+                    console.error('Error getting client capabilities:', error);
+                 }
             }
 
             moreDialog.showModal();
