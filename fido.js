@@ -248,6 +248,11 @@ fido.verifyAssertion = async (uid, assertion) => {
                 throw new Error("Could not verify signature");
         }
     }
+    else if (publicKey.kty === "AKP")
+    {
+        // TODO: Implement AKP signature verification
+        // This is a placeholder for the AKP signature verification logic.
+    }
     else if (publicKeyEd.kty === "OKP")
     {
         if (publicKeyEd.crv === "Ed25519")
