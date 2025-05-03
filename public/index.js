@@ -345,6 +345,24 @@
                 alg: -8
             });
         }
+        if ($('#create_ML_DSA_44').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -48
+            });
+        }
+        if ($('#create_ML_DSA_65').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -49
+            });
+        }
+        if ($('#create_ML_DSA_87').is(":checked")) {
+            createCredentialOptions.pubKeyCredParams.push({
+                type: "public-key",
+                alg: -50
+            });
+        }
 
         var overWriteTransports = false;
         var transports = [];
