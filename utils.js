@@ -98,6 +98,24 @@ utils.coseToJwk = buffer => {
                 },
                 format: 'jwk'
             }
+        } else if (publicKeyCbor.get(3) == -48) {
+            publicKeyJwk = {
+                kty: "AKP",
+                alg: "ML-DSA-44",
+                pub: publicKeyCbor.get(-1).toString('base64')
+            }
+        } else if (publicKeyCbor.get(3) == -49) {
+            publicKeyJwk = {
+                kty: "AKP",
+                alg: "ML-DSA-65",
+                pub: publicKeyCbor.get(-1).toString('base64')
+            }
+        } else if (publicKeyCbor.get(3) == -50) {
+            publicKeyJwk = {
+                kty: "AKP",
+                alg: "ML-DSA-87",
+                pub: publicKeyCbor.get(-1).toString('base64')
+            }
         } else {
             throw new Error("Unknown public key algorithm");
         }
