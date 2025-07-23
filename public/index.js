@@ -485,6 +485,10 @@
             console.log(attestation);
             console.log("=== Create Extension Results ===");
             console.log(attestation.getClientExtensionResults());
+            var RegistrationResponseJSON = attestation.toJSON();
+            var RegistrationResponseJSONString = JSON.stringify(RegistrationResponseJSON);
+            console.log("=== Create response JSON (String) ===");
+            console.log(RegistrationResponseJSONString);
 
             var prfEnabled = false;
             var prfFirstHex = "";
@@ -720,6 +724,10 @@
             console.log(assertion);
             console.log("=== Get Extension Results ===");
             console.log(assertion.getClientExtensionResults());
+            var assertionResponseJSON = assertion.toJSON();
+            var assertionResponseJSONString = JSON.stringify(assertionResponseJSON);
+            console.log("=== Get response JSON (String) ===");
+            console.log(assertionResponseJSONString);
 
             return rest_put("/assertion", credential);
         }).then(response => {
