@@ -629,17 +629,17 @@
         }
 
         if ($('#get_prf_first').val() || $('#get_prf_second').val()) {
-            var eval = {};
+            var prfEval = {};
             if ($('#get_prf_first').val()) {
-                eval.first = stringToArrayBuffer($('#get_prf_first').val());
+                prfEval.first = stringToArrayBuffer($('#get_prf_first').val());
             }
             if ($('#get_prf_second').val()) {
-                eval.second = stringToArrayBuffer($('#get_prf_second').val());
+                prfEval.second = stringToArrayBuffer($('#get_prf_second').val());
             }
             if ($('#get_prf_global').is(":checked") || $('#get_prf_per_credential').is(":checked")) {
                 getAssertionOptions.extensions.prf = {};
                 if ($('#get_prf_global').is(":checked")) {
-                    getAssertionOptions.extensions.prf.eval = eval;
+                    getAssertionOptions.extensions.prf.eval = prfEval;
                 }
                 if ($('#get_prf_per_credential').is(":checked")) {
                     if (getAssertionOptions.allowCredentials.length > 0)
@@ -647,7 +647,7 @@
                         var evalByCredential = {};
                         for (const cred of getAssertionOptions.allowCredentials) {
                             var idBase64Url = byteArrayToBase64URL(cred.id);
-                            evalByCredential[idBase64Url] = eval;
+                            evalByCredential[idBase64Url] = prfEval;
                         }
                         getAssertionOptions.extensions.prf.evalByCredential = evalByCredential;
                     }
