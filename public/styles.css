@@ -239,3 +239,18 @@ a {
   text-align: center;
   margin-top: 15px;
 }
+
+.footer-links {
+  text-align: center;
+  margin: 40px 0 30px;
+  font-size: 12px;
+  color: #666;
+}
+
+.footer-links a {
+  color: rgb(63, 81, 181);
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
