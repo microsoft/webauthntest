@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CBOR Playground</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&lang=en">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .container { max-width: 1180px; margin: 0 auto; padding: 16px; }
+        textarea { width: 100%; min-height: 180px; font-family: monospace; }
+        pre { background:#fff; padding:16px; overflow:auto; border-radius:4px; }
+        .error { color:#b00020; font-weight:500; }
+        .samples button { margin-right:8px; margin-bottom:8px; }
+        footer { margin-top:40px; font-size:12px; opacity:0.8; }
+        .mdl-card { width:100%; }
+        .card-title { font-size:16px; font-weight:500; margin-bottom:8px; }
+        .mono { font-family: monospace; font-size: 13px; }
+    </style>
+</head>
+<body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base">
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+        <header class="mdl-layout__header mdl-color--primary">
+            <div class="mdl-layout__header-row">
+                <span class="mdl-layout-title">CBOR Playground</span>
+                <div class="mdl-layout-spacer"></div>
+                <a href="index.html" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">Back to App</a>
+            </div>
+        </header>
+        <main class="mdl-layout__content">
+            <div class="container">
+                <p>This page provides an educational decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Paste CBOR data as Hex, Base64 (URL-safe allowed), or an array of byte values. Byte strings are rendered as h'HEX'. Not for production use.</p>
+
+                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
+                    <div class="card-title">Input</div>
+                    <textarea id="cborInput" placeholder="Example (hex): a26161016162820203"></textarea>
+                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <button id="decodeBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Decode</button>
+                        <button id="clearBtn" class="mdl-button mdl-js-button">Clear</button>
+                        <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
+                    </div>
+                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="nestedOffsets">
+                            <input type="checkbox" id="nestedOffsets" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">Nested Offsets</span>
+                        </label>
+                        <!-- Hex Slices feature removed -->
+                        <!-- Removed display mode selector; always pretty -->
+                        <div style="display:flex; gap:8px;">
+                            <button id="exportJson" class="mdl-button mdl-js-button">Export JSON</button>
+                            <label class="mdl-button mdl-js-button" for="importJsonFile" style="cursor:pointer;">Import JSON</label>
+                            <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mdl-card mdl-shadow--2dp" style="padding:16px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Decoded</span>
+                        <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
+                            <i class="material-icons">content_copy</i>
+                        </button>
+                    </div>
+                    <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                </div>
+
+                <div id="errorArea" class="error" role="alert" style="margin-top:16px;"></div>
+
+                <footer>
+                    Limitations: duplicate map keys overwrite previous; very large integers > 2^53-1 returned as BigInt; tagged values appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script src="cbor.js"></script>
+    <script>
+        const inputEl = document.getElementById('cborInput');
+        const jsonEl = document.getElementById('decodedJson');
+    const errEl = document.getElementById('errorArea');
+    // Re-encoded hex output removed
+        const fmtEl = document.getElementById('formatInfo');
+
+        function detectFormat(text){
+            const t = text.trim();
+            if(!t) return '';
+            if(/^[0-9a-fA-F\s]+$/.test(t) && t.replace(/\s+/g,'').length % 2 === 0) return 'hex';
+            if(/^[A-Za-z0-9+\/\_\-]+=*$/.test(t) && t.length >= 4) return 'base64';
+            if(/^\[[-0-9,\s]+\]$/.test(t)) return 'array';
+            return 'unknown';
+        }
+
+        function toBytes(text){
+            const mode = detectFormat(text);
+            if(mode === 'hex') return CBORPlayground.hexToBytes(text);
+            if(mode === 'base64') return CBORPlayground.base64ToBytes(text);
+            if(mode === 'array') {
+                const arr = JSON.parse(text);
+                if(!Array.isArray(arr)) throw new Error('Not an array');
+                return new Uint8Array(arr);
+            }
+            throw new Error('Unable to determine input format');
+        }
+
+        let lastRoots = null; // meta roots cache
+
+        function render(){
+            errEl.textContent=''; jsonEl.textContent='';
+            const raw = inputEl.value;
+            if(!raw.trim()) return;
+            try {
+                const bytes = toBytes(raw);
+                const roots = CBORPlayground.decodeCborStreamTreeMeta(bytes);
+                lastRoots = roots;
+                const options = {
+                    nestedOffsets: document.getElementById('nestedOffsets').checked
+                };
+                jsonEl.textContent = CBORPlayground.formatMetaRoots(roots, options);
+            } catch(e){
+                errEl.textContent = e.message;
+            }
+        }
+
+        document.getElementById('decodeBtn').addEventListener('click', render);
+        document.getElementById('clearBtn').addEventListener('click', ()=>{ inputEl.value=''; render(); });
+    inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
+    document.getElementById('nestedOffsets').addEventListener('change', render);
+    // Hex slices toggle removed
+    // Display mode selector removed
+        document.getElementById('exportJson').addEventListener('click', ()=>{
+            if(!lastRoots){ errEl.textContent='Nothing decoded to export.'; return; }
+            try {
+                const exported = lastRoots.map(r=> CBORPlayground.exportValue(r.value));
+                const blob = new Blob([JSON.stringify(exported.length===1? exported[0] : exported, null, 2)], {type:'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'cbor-export.json'; a.click();
+                URL.revokeObjectURL(url);
+            } catch(e){ errEl.textContent = e.message; }
+        });
+        document.getElementById('copyDecoded').addEventListener('click', ()=>{
+            if(!decodedJson.textContent.trim()) { errEl.textContent='Nothing to copy.'; return; }
+            navigator.clipboard.writeText(decodedJson.textContent).then(()=>{
+                errEl.textContent='';
+                // brief visual feedback by flashing background
+                decodedJson.style.background='#e0ffe8';
+                setTimeout(()=> decodedJson.style.background='', 300);
+            }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+        });
+        document.getElementById('importJsonFile').addEventListener('change', (ev)=>{
+            const file = ev.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ()=>{
+                try {
+                    const text = reader.result; const parsed = JSON.parse(text);
+                    const values = Array.isArray(parsed) ? parsed.map(CBORPlayground.importValue) : [CBORPlayground.importValue(parsed)];
+                    // Encode and show hex + populate decoded view
+                    const encoded = CBORPlayground.encodeValues(values);
+                    inputEl.value = CBORPlayground.bytesToHex(encoded);
+                    render();
+                } catch(e){ errEl.textContent = 'Import error: ' + e.message; }
+            };
+            reader.readAsText(file);
+            ev.target.value='';
+        });
+        // Re-encode button removed
+    inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
+    </script>
+</body>
+</html>
