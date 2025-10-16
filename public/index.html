@@ -16,13 +16,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.css">
     <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
     <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Ensure FAB buttons in tab bar align perfectly vertically */
-        .fab-group { display:flex; flex-wrap:nowrap; align-items:center; }
-        .fab-group .mdl-button--fab { display:flex; align-items:center; justify-content:center; margin:0; flex:0 0 auto; }
-        .fab-group .mdl-button--fab i.material-icons { line-height:1; margin-top:0; }
-    </style>
-        <link rel="stylesheet" href="styles.css">
 
 </head>
 
@@ -570,34 +563,17 @@
             </div>
             <div class="mdl-layout__header-row">
             </div>
-            <div class="mdl-layout__tab-bar mdl-js-ripple-effect mdl-color--primary-dark" style="display:flex; align-items:center;">
+            <div class="mdl-layout__tab-bar mdl-js-ripple-effect mdl-color--primary-dark">
                 <a href="#credentials" class="mdl-layout__tab is-active">Credentials</a>
-                <span class="fab-group" style="margin-left:auto; display:flex; gap:24px; align-items:center;">
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="createButton" title="Create Credential">
-                        <i class="material-icons" role="presentation">add</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="getButton" title="Get Assertion">
-                        <i class="material-icons" role="presentation">lock_open</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="moreButton" title="More Options">
-                        <i class="material-icons" role="presentation">more_horiz</i>
-                    </button>
-                </span>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="createButton">
-                        <i class="material-icons" role="presentation">add</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="getButton">
-                        <i class="material-icons" role="presentation">lock_open</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent"
-                        id="moreButton">
-                        <i class="material-icons" role="presentation">more_horiz</i>
-                    </button>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="createButton">
+                    <i class="material-icons" role="presentation">add</i>
+                </button>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="getButton">
+                    <i class="material-icons" role="presentation">lock_open</i>
+                </button>
+                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="moreButton">
+                    <i class="material-icons" role="presentation">more_horiz</i>
+                </button>
             </div>
         </header>
         <main class="mdl-layout__content">
@@ -612,9 +588,12 @@
                 <div class="mdl-snackbar__text"></div>
                 <button class="mdl-snackbar__action" type="button"></button>
             </div>
-
+            <footer class="footer-links">
+                <a href="cbor.html">CBOR Playground</a>
+            </footer>
         </main>
     </div>
+    
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.js"></script>
     <script src="https://code.getmdl.io/1.3.0/material.min.js "></script>
