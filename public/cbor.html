@@ -44,6 +44,8 @@
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+                        <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
+                        <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                         <!-- Import JSON feature removed -->
                     </div>
                 </div>
@@ -71,6 +73,8 @@
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                         <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
                         <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
+                        <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
+                        <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                         <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
                             <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input">
                             <span class="mdl-checkbox__label">Canonical</span>
@@ -182,6 +186,26 @@
                 setTimeout(()=> decodedJson.style.background='', 300);
             }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
         });
+        // Import CBOR file handling
+        const importCborFileInput = document.getElementById('importCborFile');
+        importCborFileInput.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(){
+                try {
+                    const bytes = new Uint8Array(reader.result);
+                    // Populate input as uppercase hex for transparency
+                    inputEl.value = CBORPlayground.bytesToHex(bytes).toLowerCase();
+                    fmtEl.textContent = 'hex';
+                    render();
+                } catch(err){ errEl.textContent = 'Import error: '+ err.message; }
+            };
+            reader.onerror = ()=>{ errEl.textContent = 'File read failed.'; };
+            reader.readAsArrayBuffer(file);
+            // reset so selecting same file again re-triggers
+            importCborFileInput.value='';
+        });
         // Import JSON feature removed
         // Re-encode button removed
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
@@ -248,6 +272,24 @@
     document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; });
     document.getElementById('encodeFormat').addEventListener('click', ()=>{
         try { if(jsonInput.value.trim()){ const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } } catch(e){ errEl.textContent = 'Format error: ' + e.message; }
+    });
+    // Import JSON for encoding
+    const importJsonEncodeInput = document.getElementById('importJsonEncode');
+    importJsonEncodeInput.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(){
+            try {
+                jsonInput.value = reader.result;
+                // attempt pretty format if valid JSON
+                try { const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } catch(_ignore){}
+                encodeJson();
+            } catch(err){ errEl.textContent = 'Import JSON error: '+ err.message; }
+        };
+        reader.onerror = ()=>{ errEl.textContent = 'File read failed.'; };
+        reader.readAsText(file, 'utf-8');
+        importJsonEncodeInput.value='';
     });
     document.getElementById('copyEncodedHex').addEventListener('click', ()=>{
         if(!encodedHexEl.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
