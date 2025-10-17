@@ -436,8 +436,8 @@
         return concat.apply(null, parts);
     }
     function mapKeyToCborKey(k){
-        // Attempt numeric if decimal digits only
-        if(/^[0-9]+$/.test(k)){
+        // Attempt numeric if optional leading minus sign and decimal digits only (supports negative integer map keys)
+        if(/^-?[0-9]+$/.test(k)){
             const n = Number(k); if(Number.isSafeInteger(n)) return n;
         }
         return k; // fallback to string
