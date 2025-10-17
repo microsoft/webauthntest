@@ -34,7 +34,7 @@
                 <p>This page provides an educational decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Paste CBOR data as Hex, Base64 (URL-safe allowed), or an array of byte values. Byte strings are rendered as h'HEX'. Not for production use.</p>
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
-                    <div class="card-title">Input</div>
+                    <div class="card-title">Decode CBOR to JSON</div>
                     <textarea id="cborInput" placeholder="Example (hex): a26161016162820203"></textarea>
                     <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                         <button id="decodeBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Decode</button>
@@ -72,19 +72,20 @@
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
                         <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
                         <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
-                        <button id="copyHex" class="mdl-button mdl-js-button" title="Copy hex">Copy Hex</button>
-                        <button id="copyB64" class="mdl-button mdl-js-button" title="Copy Base64">Copy Base64</button>
                         <button id="downloadCbor" class="mdl-button mdl-js-button" title="Download .cbor file">Download</button>
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" style="padding-left:8px; display:flex; align-items:center;" for="canonicalOrder">
+                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input" style="margin-right:4px;">
+                            <span class="mdl-checkbox__label" style="position:relative; top:1px;">Canonical</span>
+                        </label>
                         <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:grid; gap:12px;">
                         <div>
-                            <div style="font-size:12px; font-weight:500;">Hex</div>
+                            <div style="font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <span>Hex</span>
+                                <button id="copyEncodedHex" class="mdl-button mdl-js-button mdl-button--icon" title="Copy encoded hex"><i class="material-icons">content_copy</i></button>
+                            </div>
                             <pre id="encodedHex" class="mono" style="background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
-                        </div>
-                        <div>
-                            <div style="font-size:12px; font-weight:500;">Base64</div>
-                            <pre id="encodedB64" class="mono" style="background:#fff; padding:8px; min-height:40px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                         </div>
                     </div>
                 </div>
@@ -199,23 +200,11 @@
     // ---------------- JSON -> CBOR Encoding Logic ----------------
     const jsonInput = document.getElementById('jsonInput');
     const encodedHexEl = document.getElementById('encodedHex');
-    const encodedB64El = document.getElementById('encodedB64');
     const encodeInfoEl = document.getElementById('encodeInfo');
     let lastEncodedBytes = null;
 
-    function bytesToBase64(u8){
-        // Chunk to avoid stack overflow for very large arrays
-        let binary = '';
-        const chunk = 0x8000;
-        for(let i=0;i<u8.length;i+=chunk){
-            const sub = u8.subarray(i, i+chunk);
-            binary += String.fromCharCode.apply(null, Array.from(sub));
-        }
-        return btoa(binary).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_'); // URL-safe variant
-    }
-
     function encodeJson(){
-        errEl.textContent=''; encodeInfoEl.textContent=''; encodedHexEl.textContent=''; encodedB64El.textContent=''; lastEncodedBytes = null;
+        errEl.textContent=''; encodeInfoEl.textContent=''; encodedHexEl.textContent=''; lastEncodedBytes = null;
         const raw = jsonInput.value.trim();
         if(!raw){ return; }
         try {
@@ -236,7 +225,6 @@
             lastEncodedBytes = bytes;
             const hex = CBORPlayground.bytesToHex(bytes).toUpperCase();
             encodedHexEl.textContent = hex;
-            encodedB64El.textContent = bytesToBase64(bytes);
             encodeInfoEl.textContent = bytes.length + ' bytes';
         } catch(e){
             errEl.textContent = 'Encode error: ' + e.message;
@@ -268,17 +256,17 @@
     }
 
     document.getElementById('encodeRun').addEventListener('click', encodeJson);
-    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodedB64El.textContent=''; encodeInfoEl.textContent=''; });
+    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; });
     document.getElementById('encodeFormat').addEventListener('click', ()=>{
         try { if(jsonInput.value.trim()){ const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } } catch(e){ errEl.textContent = 'Format error: ' + e.message; }
     });
-    document.getElementById('copyHex').addEventListener('click', ()=>{
+    document.getElementById('copyEncodedHex').addEventListener('click', ()=>{
         if(!encodedHexEl.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
-        navigator.clipboard.writeText(encodedHexEl.textContent).then(()=>{ errEl.textContent=''; }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
-    });
-    document.getElementById('copyB64').addEventListener('click', ()=>{
-        if(!encodedB64El.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
-        navigator.clipboard.writeText(encodedB64El.textContent).then(()=>{ errEl.textContent=''; }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+        navigator.clipboard.writeText(encodedHexEl.textContent).then(()=>{
+            errEl.textContent='';
+            encodedHexEl.style.background='#e0ffe8';
+            setTimeout(()=> encodedHexEl.style.background='', 300);
+        }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
     });
     document.getElementById('downloadCbor').addEventListener('click', ()=>{
         if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
@@ -287,6 +275,14 @@
         const a = document.createElement('a');
         a.href = url; a.download = 'data.cbor'; a.click();
         URL.revokeObjectURL(url);
+    });
+
+    // Toggle canonical ordering
+    const canonicalChk = document.getElementById('canonicalOrder');
+    canonicalChk.addEventListener('change', ()=>{
+        CBORPlayground.canonicalSortMapKeys = canonicalChk.checked;
+        // Re-encode immediately if we already have JSON parsed
+        if(jsonInput.value.trim()) encodeJson();
     });
 
     </script>

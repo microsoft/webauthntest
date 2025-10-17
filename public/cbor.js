@@ -417,7 +417,20 @@
         return concat.apply(null, parts);
     }
     function encodeMap(obj){
-        const entries = Object.entries(obj);
+        let entries = Object.entries(obj);
+        // Optional canonical ordering per RFC 8949 Section 4.2: sort by length of encoded key, then lexicographically.
+        // We approximate by encoding the map key and comparing the resulting byte arrays.
+        if(global.CBORPlayground && global.CBORPlayground.canonicalSortMapKeys){
+            entries = entries.slice().sort((a,b)=>{
+                const ka = encodeAny(mapKeyToCborKey(a[0]));
+                const kb = encodeAny(mapKeyToCborKey(b[0]));
+                if(ka.length !== kb.length) return ka.length - kb.length;
+                for(let i=0;i<ka.length && i<kb.length;i++){
+                    if(ka[i] !== kb[i]) return ka[i] - kb[i];
+                }
+                return 0;
+            });
+        }
         const head = encodeLength(5, entries.length); const parts=[head];
         for(const [k,v] of entries){ parts.push(encodeAny(mapKeyToCborKey(k)), encodeAny(v)); }
         return concat.apply(null, parts);
@@ -526,4 +539,5 @@
     global.CBORPlayground.exportValue = exportValue;
     global.CBORPlayground.importValue = importValue;
     global.CBORPlayground.encodeValues = encodeValues;
+    global.CBORPlayground.canonicalSortMapKeys = false; // default disabled; UI can toggle
 })(typeof window !== 'undefined' ? window : globalThis);
