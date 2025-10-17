@@ -42,10 +42,6 @@
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="nestedOffsets">
-                            <input type="checkbox" id="nestedOffsets" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">Nested Offsets</span>
-                        </label>
                         <!-- Hex Slices feature removed -->
                         <!-- Removed display mode selector; always pretty -->
                         <div style="display:flex; gap:8px;">
@@ -66,10 +62,37 @@
                     <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                 </div>
 
+                <!-- Encode JSON to CBOR Card -->
+                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:24px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Encode JSON to CBOR</span>
+                        <button id="encodeRun" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Encode</button>
+                    </div>
+                    <textarea id="jsonInput" placeholder='Example JSON / relaxed object:\n{\n  name: "Alice",\n  pubkey: {@bytes:"a1b2"},\n  big: {@bigint:"9007199254740993"},\n  transactionId: h"001122AABB"\n}\nNotes: Keys may be unquoted, h\'HEX\' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.'></textarea>
+                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+                        <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
+                        <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
+                        <button id="copyHex" class="mdl-button mdl-js-button" title="Copy hex">Copy Hex</button>
+                        <button id="copyB64" class="mdl-button mdl-js-button" title="Copy Base64">Copy Base64</button>
+                        <button id="downloadCbor" class="mdl-button mdl-js-button" title="Download .cbor file">Download</button>
+                        <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
+                    </div>
+                    <div style="margin-top:12px; display:grid; gap:12px;">
+                        <div>
+                            <div style="font-size:12px; font-weight:500;">Hex</div>
+                            <pre id="encodedHex" class="mono" style="background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                        </div>
+                        <div>
+                            <div style="font-size:12px; font-weight:500;">Base64</div>
+                            <pre id="encodedB64" class="mono" style="background:#fff; padding:8px; min-height:40px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="errorArea" class="error" role="alert" style="margin-top:16px;"></div>
 
                 <footer>
-                    Limitations: duplicate map keys overwrite previous; very large integers > 2^53-1 returned as BigInt; tagged values appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
+                    Notes: duplicate map keys still overwrite previous (last wins); large integers (including bignum tags 2 & 3) decode to BigInt; common semantic tags decoded (date/time, epoch, embedded CBOR, URI, base64/url, regex, mime); other tags appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
                 </footer>
             </div>
         </main>
@@ -87,6 +110,12 @@
         function detectFormat(text){
             const t = text.trim();
             if(!t) return '';
+            // Support optional 0x / 0X hex prefix (not previously detected because of the 'x')
+            // We only classify as hex if (after removing prefix + whitespace) length is even and non-zero.
+            if(/^0x[0-9a-fA-F\s]*$/i.test(t)){
+                const body = t.slice(2).replace(/\s+/g,'');
+                if(body.length && body.length % 2 === 0) return 'hex';
+            }
             if(/^[0-9a-fA-F\s]+$/.test(t) && t.replace(/\s+/g,'').length % 2 === 0) return 'hex';
             if(/^[A-Za-z0-9+\/\_\-]+=*$/.test(t) && t.length >= 4) return 'base64';
             if(/^\[[-0-9,\s]+\]$/.test(t)) return 'array';
@@ -115,9 +144,8 @@
                 const bytes = toBytes(raw);
                 const roots = CBORPlayground.decodeCborStreamTreeMeta(bytes);
                 lastRoots = roots;
-                const options = {
-                    nestedOffsets: document.getElementById('nestedOffsets').checked
-                };
+                // nestedOffsets option removed; always render without nested offset annotations
+                const options = { nestedOffsets: false };
                 jsonEl.textContent = CBORPlayground.formatMetaRoots(roots, options);
             } catch(e){
                 errEl.textContent = e.message;
@@ -127,7 +155,6 @@
         document.getElementById('decodeBtn').addEventListener('click', render);
         document.getElementById('clearBtn').addEventListener('click', ()=>{ inputEl.value=''; render(); });
     inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
-    document.getElementById('nestedOffsets').addEventListener('change', render);
     // Hex slices toggle removed
     // Display mode selector removed
         document.getElementById('exportJson').addEventListener('click', ()=>{
@@ -168,6 +195,100 @@
         });
         // Re-encode button removed
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
+
+    // ---------------- JSON -> CBOR Encoding Logic ----------------
+    const jsonInput = document.getElementById('jsonInput');
+    const encodedHexEl = document.getElementById('encodedHex');
+    const encodedB64El = document.getElementById('encodedB64');
+    const encodeInfoEl = document.getElementById('encodeInfo');
+    let lastEncodedBytes = null;
+
+    function bytesToBase64(u8){
+        // Chunk to avoid stack overflow for very large arrays
+        let binary = '';
+        const chunk = 0x8000;
+        for(let i=0;i<u8.length;i+=chunk){
+            const sub = u8.subarray(i, i+chunk);
+            binary += String.fromCharCode.apply(null, Array.from(sub));
+        }
+        return btoa(binary).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_'); // URL-safe variant
+    }
+
+    function encodeJson(){
+        errEl.textContent=''; encodeInfoEl.textContent=''; encodedHexEl.textContent=''; encodedB64El.textContent=''; lastEncodedBytes = null;
+        const raw = jsonInput.value.trim();
+        if(!raw){ return; }
+        try {
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch(primaryErr){
+                // Attempt relaxed transformation: support unquoted keys, h'HEX'/h"HEX" tokens, // comments.
+                try {
+                    const relaxed = transformRelaxedJson(raw);
+                    parsed = JSON.parse(relaxed);
+                } catch(relaxedErr){
+                    throw primaryErr; // Surface original error for clarity.
+                }
+            }
+            const value = CBORPlayground.importValue(parsed); // apply wrappers (@bytes, @bigint, etc.)
+            const bytes = CBORPlayground.encodeValues([value]);
+            lastEncodedBytes = bytes;
+            const hex = CBORPlayground.bytesToHex(bytes).toUpperCase();
+            encodedHexEl.textContent = hex;
+            encodedB64El.textContent = bytesToBase64(bytes);
+            encodeInfoEl.textContent = bytes.length + ' bytes';
+        } catch(e){
+            errEl.textContent = 'Encode error: ' + e.message;
+        }
+    }
+
+    function transformRelaxedJson(src){
+        let s = src; // Do not mutate original externally.
+        // Normalize line endings
+        s = s.replace(/\r\n?/g,'\n');
+        // Remove // comments (not inside strings - heuristic: skip lines with // before quotes balance closes)
+        s = s.split('\n').map(line=>{
+            const idx = line.indexOf('//');
+            if(idx === -1) return line;
+            const before = line.slice(0, idx);
+            // crude: count quotes; if even number of double quotes before // treat as comment
+            const dq = (before.match(/"/g)||[]).length;
+            const sq = (before.match(/'/g)||[]).length; // ignore single quotes heuristic
+            if(dq % 2 === 0) return before; // remove comment part
+            return line; // leave line untouched if inside string
+        }).join('\n');
+        // Support h'HEX' or h"HEX" or h'hex' forms -> {"@bytes":"HEX"}
+        s = s.replace(/h['"]([0-9a-fA-F]+)['"]/g, (_,hex)=> '{"@bytes":"'+hex+'"}');
+        // Quote unquoted keys: match start of object member after { or ,
+        s = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*):/g, '$1"$2"$3:');
+        // Replace single quoted strings with double (not perfect; avoids interfering with already double quoted)
+        s = s.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (m,inner)=> '"'+inner.replace(/"/g,'\\"')+'"');
+        return s;
+    }
+
+    document.getElementById('encodeRun').addEventListener('click', encodeJson);
+    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodedB64El.textContent=''; encodeInfoEl.textContent=''; });
+    document.getElementById('encodeFormat').addEventListener('click', ()=>{
+        try { if(jsonInput.value.trim()){ const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } } catch(e){ errEl.textContent = 'Format error: ' + e.message; }
+    });
+    document.getElementById('copyHex').addEventListener('click', ()=>{
+        if(!encodedHexEl.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
+        navigator.clipboard.writeText(encodedHexEl.textContent).then(()=>{ errEl.textContent=''; }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+    });
+    document.getElementById('copyB64').addEventListener('click', ()=>{
+        if(!encodedB64El.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
+        navigator.clipboard.writeText(encodedB64El.textContent).then(()=>{ errEl.textContent=''; }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+    });
+    document.getElementById('downloadCbor').addEventListener('click', ()=>{
+        if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
+        const blob = new Blob([lastEncodedBytes], {type:'application/cbor'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'data.cbor'; a.click();
+        URL.revokeObjectURL(url);
+    });
+
     </script>
 </body>
 </html>
