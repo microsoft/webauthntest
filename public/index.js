@@ -202,6 +202,12 @@
         });
 
         $('#getDialog_cancelButton').click(() => {
+            if (ongoingAuth) {
+                conditionalAuthOperationInProgress = false;
+                ongoingAuth.abort('User cancelled get dialog');
+                ongoingAuth = null;
+            }
+            enableControls();
             getDialog.close();
         });
 
@@ -218,7 +224,137 @@
         $('#authenticationDataDialog_xButton').click(() => {
             authenticationDataDialog.close();
         });
+
+        // Initialize priority lists (algorithms + hints) via generalized helper
+        initPriorityList({
+            listId: 'create_algorithmsList',
+            upClass: 'alg-up',
+            downClass: 'alg-down',
+            resetButtonId: 'algorithmsResetOrder',
+            enforceMinimumChecked: true,
+            minimumWarningElementId: 'algorithmsWarning',
+            disableButtonId: 'createDialog_createButton'
+        });
+        initPriorityList({
+            listId: 'create_hintsList',
+            upClass: 'hint-up',
+            downClass: 'hint-down',
+            resetButtonId: 'hintsResetOrderCreate'
+        });
+        initPriorityList({
+            listId: 'get_hintsList',
+            upClass: 'hint-up',
+            downClass: 'hint-down',
+            resetButtonId: 'hintsResetOrderGet'
+        });
     });
+
+    /**
+     * Generalized priority list initializer (algorithms, hints, etc.)
+     * @param {Object} cfg configuration
+     * @param {string} cfg.listId UL element id containing <li>
+     * @param {string} cfg.upClass CSS class for move-up buttons
+     * @param {string} cfg.downClass CSS class for move-down buttons
+     * @param {string} [cfg.resetButtonId] optional reset button id
+     * @param {boolean} [cfg.enforceMinimumChecked] enforce at least one checkbox selected
+     * @param {string} [cfg.minimumWarningElementId] element id to toggle for minimum warning
+     * @param {string} [cfg.disableButtonId] button id to disable when minimum not met
+     */
+    function initPriorityList(cfg) {
+        var list = document.getElementById(cfg.listId);
+        if (!list) return;
+        var originalOrder = Array.from(list.children).map(li => li.id);
+        var warningEl = cfg.minimumWarningElementId ? document.getElementById(cfg.minimumWarningElementId) : null;
+        var disableBtn = cfg.disableButtonId ? document.getElementById(cfg.disableButtonId) : null;
+
+        function updateMinimumState() {
+            if (!cfg.enforceMinimumChecked) return;
+            var checked = list.querySelectorAll('input[type="checkbox"]:checked').length;
+            if (checked === 0) {
+                if (warningEl) warningEl.style.display = 'block';
+                if (disableBtn) disableBtn.disabled = true;
+            } else {
+                if (warningEl) warningEl.style.display = 'none';
+                if (disableBtn) disableBtn.disabled = false;
+            }
+        }
+
+        function updateButtonDisabledState() {
+            var items = Array.from(list.children);
+            items.forEach((li, idx) => {
+                var up = li.querySelector('.' + cfg.upClass);
+                var down = li.querySelector('.' + cfg.downClass);
+                if (up) up.disabled = (idx === 0);
+                if (down) down.disabled = (idx === items.length - 1);
+            });
+            updateMinimumState();
+        }
+
+        function move(li, direction) {
+            if (!li) return;
+            if (direction === -1 && li.previousElementSibling) {
+                li.parentNode.insertBefore(li, li.previousElementSibling);
+            } else if (direction === 1 && li.nextElementSibling) {
+                li.parentNode.insertBefore(li.nextElementSibling, li);
+            }
+            updateButtonDisabledState();
+        }
+
+        list.addEventListener('click', (e) => {
+            var target = e.target;
+            if (target.classList.contains(cfg.upClass)) {
+                move(target.closest('li'), -1);
+            } else if (target.classList.contains(cfg.downClass)) {
+                move(target.closest('li'), 1);
+            }
+        });
+
+        if (cfg.enforceMinimumChecked) {
+            list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', updateMinimumState);
+            });
+        }
+
+        if (cfg.resetButtonId) {
+            var resetBtn = document.getElementById(cfg.resetButtonId);
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    var currentLis = Array.from(list.children);
+                    currentLis.sort((a, b) => originalOrder.indexOf(a.id) - originalOrder.indexOf(b.id));
+                    currentLis.forEach(li => list.appendChild(li));
+                    updateButtonDisabledState();
+                });
+            }
+        }
+
+        // Drag & drop
+        Array.from(list.children).forEach(li => {
+            li.draggable = true;
+            li.addEventListener('dragstart', (ev) => {
+                ev.dataTransfer.setData('text/plain', li.id);
+            });
+            li.addEventListener('dragover', (ev) => {
+                ev.preventDefault();
+                var draggingId = ev.dataTransfer.getData('text/plain');
+                var draggingEl = document.getElementById(draggingId);
+                if (!draggingEl || draggingEl === li) return;
+                var rect = li.getBoundingClientRect();
+                var before = (ev.clientY - rect.top) < rect.height / 2;
+                if (before) {
+                    list.insertBefore(draggingEl, li);
+                } else if (li.nextSibling !== draggingEl) {
+                    list.insertBefore(draggingEl, li.nextSibling);
+                }
+            });
+            li.addEventListener('drop', (ev) => {
+                ev.preventDefault();
+                updateButtonDisabledState();
+            });
+        });
+
+        updateButtonDisabledState();
+        updateMinimumState();
+    }
 
     function getChallenge() {
         return rest_get(
@@ -315,53 +451,33 @@
         //don't do this in production code. user.id should not contain PII
         createCredentialOptions.user.id = stringToArrayBuffer(createCredentialOptions.user.name);
 
-        if ($('#create_ES256').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -7
-            });
+        // New prioritized algorithm collection: iterate list in current DOM order
+        var algItems = document.querySelectorAll('#create_algorithmsList li');
+        algItems.forEach(li => {
+            var cb = li.querySelector('input[type="checkbox"]');
+            if (cb && cb.checked) {
+                var algId = parseInt(li.getAttribute('data-alg-id'), 10);
+                if (!isNaN(algId)) {
+                    createCredentialOptions.pubKeyCredParams.push({ type: 'public-key', alg: algId });
+                }
+            }
+        });
+        if (createCredentialOptions.pubKeyCredParams.length === 0) {
+            return Promise.reject("No algorithms selected. Select at least one algorithm.");
         }
-        if ($('#create_ES384').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -35
-            });
-        }
-        if ($('#create_ES512').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -36
-            });
-        }
-        if ($('#create_RS256').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -257
-            });
-        }
-        if ($('#create_EdDSA').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -8
-            });
-        }
-        if ($('#create_ML_DSA_44').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -48
-            });
-        }
-        if ($('#create_ML_DSA_65').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -49
-            });
-        }
-        if ($('#create_ML_DSA_87').is(":checked")) {
-            createCredentialOptions.pubKeyCredParams.push({
-                type: "public-key",
-                alg: -50
-            });
+
+        // Collect prioritized hints (optional)
+        var hintItems = document.querySelectorAll('#create_hintsList li');
+        var hints = [];
+        hintItems.forEach(li => {
+            var cb = li.querySelector('input[type="checkbox"]');
+            if (cb && cb.checked) {
+                var hintVal = li.getAttribute('data-hint');
+                if (hintVal) hints.push(hintVal);
+            }
+        });
+        if (hints.length > 0) {
+            createCredentialOptions.hints = hints; // WebAuthn Level 3 hints
         }
 
         var overWriteTransports = false;
@@ -485,10 +601,16 @@
             console.log(attestation);
             console.log("=== Create Extension Results ===");
             console.log(attestation.getClientExtensionResults());
-            var RegistrationResponseJSON = attestation.toJSON();
-            var RegistrationResponseJSONString = JSON.stringify(RegistrationResponseJSON);
-            console.log("=== Create response JSON (String) ===");
-            console.log(RegistrationResponseJSONString);
+            var RegistrationResponseJSON = null;
+            var RegistrationResponseJSONString = "";
+            try {
+                RegistrationResponseJSON = attestation.toJSON();
+                RegistrationResponseJSONString = JSON.stringify(RegistrationResponseJSON);
+                console.log("=== Create response JSON (String) ===");
+                console.log(RegistrationResponseJSONString);
+            } catch (error) {
+                console.warn("attestation.toJSON() failed", error);
+            }
 
             var prfEnabled = false;
             var prfFirstHex = "";
@@ -628,6 +750,20 @@
             getAssertionOptions.userVerification = $('#get_userVerification').val();
         }
 
+        // Collect prioritized hints (optional) for get()
+        var getHintItems = document.querySelectorAll('#get_hintsList li');
+        var getHints = [];
+        getHintItems.forEach(li => {
+            var cb = li.querySelector('input[type="checkbox"]');
+            if (cb && cb.checked) {
+                var hintVal = li.getAttribute('data-hint');
+                if (hintVal) getHints.push(hintVal);
+            }
+        });
+        if (getHints.length > 0) {
+            getAssertionOptions.hints = getHints; // WebAuthn Level 3 hints
+        }
+
         if ($('#get_prf_first').val() || $('#get_prf_second').val()) {
             var prfEval = {};
             if ($('#get_prf_first').val()) {
@@ -724,10 +860,16 @@
             console.log(assertion);
             console.log("=== Get Extension Results ===");
             console.log(assertion.getClientExtensionResults());
-            var assertionResponseJSON = assertion.toJSON();
-            var assertionResponseJSONString = JSON.stringify(assertionResponseJSON);
-            console.log("=== Get response JSON (String) ===");
-            console.log(assertionResponseJSONString);
+            var assertionResponseJSON = null;
+            var assertionResponseJSONString = "";
+            try {
+                assertionResponseJSON = assertion.toJSON();
+                assertionResponseJSONString = JSON.stringify(assertionResponseJSON);
+                console.log("=== Get response JSON (String) ===");
+                console.log(assertionResponseJSONString);
+            } catch (error) {
+                console.warn("assertion.toJSON() failed", error);
+            }
 
             return rest_put("/assertion", credential);
         }).then(response => {

@@ -104,42 +104,130 @@
             </span>
             <hr>
 
-            <span>
+            <span class="alg-block">
                 <span>Algorithms<br><br></span>
-                <div class="mdl-grid mdl-grid--no-spacing">
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES256">
-                        <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ES256</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES384">
-                        <input type="checkbox" id="create_ES384" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ES384</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ES512">
-                        <input type="checkbox" id="create_ES512" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ES512</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_RS256">
-                        <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">RS256</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_EdDSA">
-                        <input type="checkbox" id="create_EdDSA" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">EdDSA</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ML_DSA_44">
-                        <input type="checkbox" id="create_ML_DSA_44" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ML-DSA-44</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ML_DSA_65">
-                        <input type="checkbox" id="create_ML_DSA_65" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ML-DSA-65</span>
-                    </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ML_DSA_87">
-                        <input type="checkbox" id="create_ML_DSA_87" class="mdl-checkbox__input" checked>
-                        <span class="mdl-checkbox__label">ML-DSA-87</span>
-                    </label>
-                </div>
+                <ul id="create_algorithmsList" class="alg-list">
+                    <li id="algItem_ES256" data-alg-id="-7">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES256">
+                            <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ES256 (-7)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ES256 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ES256 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_ES384" data-alg-id="-35">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES384">
+                            <input type="checkbox" id="create_ES384" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ES384 (-35)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ES384 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ES384 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_ES512" data-alg-id="-36">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES512">
+                            <input type="checkbox" id="create_ES512" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ES512 (-36)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ES512 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ES512 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_RS256" data-alg-id="-257">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_RS256">
+                            <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">RS256 (-257)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move RS256 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move RS256 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_EdDSA" data-alg-id="-8">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_EdDSA">
+                            <input type="checkbox" id="create_EdDSA" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">EdDSA (-8)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move EdDSA up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move EdDSA down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_ML_DSA_44" data-alg-id="-48">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_44">
+                            <input type="checkbox" id="create_ML_DSA_44" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ML-DSA-44 (-48)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ML-DSA-44 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ML-DSA-44 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_ML_DSA_65" data-alg-id="-49">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_65">
+                            <input type="checkbox" id="create_ML_DSA_65" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ML-DSA-65 (-49)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ML-DSA-65 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ML-DSA-65 down">▼</button>
+                        </div>
+                    </li>
+                    <li id="algItem_ML_DSA_87" data-alg-id="-50">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_87">
+                            <input type="checkbox" id="create_ML_DSA_87" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">ML-DSA-87 (-50)</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="alg-up" aria-label="Move ML-DSA-87 up">▲</button>
+                            <button type="button" class="alg-down" aria-label="Move ML-DSA-87 down">▼</button>
+                        </div>
+                    </li>
+                </ul>
+                <div id="algorithmsWarning" class="alg-warning" style="display:none;">Select at least one algorithm.</div>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="algorithmsResetOrder">Reset Order</button>
+            </span>
+
+            <hr>
+            <span class="hints-block">
+                <span>Hints<br><br></span>
+                <ul id="create_hintsList" class="alg-list">
+                    <li id="hintItem_security_key" data-hint="security-key">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_security_key">
+                            <input type="checkbox" id="create_hint_security_key" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">security-key</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move security-key up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move security-key down">▼</button>
+                        </div>
+                    </li>
+                    <li id="hintItem_client_device" data-hint="client-device">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_client_device">
+                            <input type="checkbox" id="create_hint_client_device" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">client-device</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move client-device up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move client-device down">▼</button>
+                        </div>
+                    </li>
+                    <li id="hintItem_hybrid" data-hint="hybrid">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_hybrid">
+                            <input type="checkbox" id="create_hint_hybrid" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">hybrid</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move hybrid up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move hybrid down">▼</button>
+                        </div>
+                    </li>
+                </ul>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="hintsResetOrderCreate">Reset Order</button>
             </span>
 
             <hr>
@@ -173,23 +261,6 @@
                         <input type="checkbox" id="create_hybrid" class="mdl-checkbox__input">
                         <span class="mdl-checkbox__label">Hybrid</span>
                     </label>
-                </div>
-            </span>
-            <hr>
-
-            <span>
-                <span>PRF Extension</span>
-                <select name="create_prf" id="create_prf" class="float-right">
-                    <option value="undefined">Undefined</option>
-                    <option value="enable" selected>Enable</option>
-                </select>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_first">
-                    <label class = "mdl-textfield__label" for = "create_prf_first">First Salt/Nonce...</label>
-                </div>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_second">
-                    <label class = "mdl-textfield__label" for = "create_prf_second">Second Salt/Nonce...</label>
                 </div>
             </span>
             <hr>
@@ -249,6 +320,22 @@
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
                     <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
+                </div>
+            </span>
+            <hr>
+            <span>
+                <span>PRF Extension</span>
+                <select name="create_prf" id="create_prf" class="float-right">
+                    <option value="undefined">Undefined</option>
+                    <option value="enable" selected>Enable</option>
+                </select>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_first">
+                    <label class = "mdl-textfield__label" for = "create_prf_first">First Salt/Nonce...</label>
+                </div>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_second">
+                    <label class = "mdl-textfield__label" for = "create_prf_second">Second Salt/Nonce...</label>
                 </div>
             </span>
             <hr>
@@ -317,24 +404,41 @@
                 </div>
             </span>
             <hr>
-            <span>
-                <span>PRF Extension</span>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
-                    <label class = "mdl-textfield__label" for = "get_prf_first">First Salt/Nonce...</label>
-                </div>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_second">
-                    <label class = "mdl-textfield__label" for = "get_prf_second">Second Salt/Nonce...</label>
-                </div>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_global">
-                    <input type="checkbox" id="get_prf_global" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Global Eval</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_per_credential">
-                    <input type="checkbox" id="get_prf_per_credential" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Per Credential Eval</span>
-                </label>
+            <span class="get-hints-block">
+                <span>Hints<br><br></span>
+                <ul id="get_hintsList" class="alg-list">
+                    <li id="getHintItem_security_key" data-hint="security-key">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_security_key">
+                            <input type="checkbox" id="get_hint_security_key" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">security-key</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move security-key up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move security-key down">▼</button>
+                        </div>
+                    </li>
+                    <li id="getHintItem_client_device" data-hint="client-device">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_client_device">
+                            <input type="checkbox" id="get_hint_client_device" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">client-device</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move client-device up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move client-device down">▼</button>
+                        </div>
+                    </li>
+                    <li id="getHintItem_hybrid" data-hint="hybrid">
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_hybrid">
+                            <input type="checkbox" id="get_hint_hybrid" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">hybrid</span>
+                        </label>
+                        <div class="alg-actions">
+                            <button type="button" class="hint-up" aria-label="Move hybrid up">▲</button>
+                            <button type="button" class="hint-down" aria-label="Move hybrid down">▼</button>
+                        </div>
+                    </li>
+                </ul>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="hintsResetOrderGet">Reset Order</button>
             </span>
             <hr>
             <span>
@@ -361,6 +465,26 @@
                     <input class = "mdl-textfield__input" type = "text" id = "get_largeBlobText">
                     <label class = "mdl-textfield__label" for = "get_largeBlobText">LargeBlob...</label>
                 </div>
+            </span>
+            <hr>
+            <span>
+                <span>PRF Extension</span>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
+                    <label class = "mdl-textfield__label" for = "get_prf_first">First Salt/Nonce...</label>
+                </div>
+                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_second">
+                    <label class = "mdl-textfield__label" for = "get_prf_second">Second Salt/Nonce...</label>
+                </div>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_global">
+                    <input type="checkbox" id="get_prf_global" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">Global Eval</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_per_credential">
+                    <input type="checkbox" id="get_prf_per_credential" class="mdl-checkbox__input" checked>
+                    <span class="mdl-checkbox__label">Per Credential Eval</span>
+                </label>
             </span>
             <hr>
             <span>

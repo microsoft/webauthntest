@@ -6,5 +6,6 @@
         ".vscode{,/**}",
         ".env"
     ],
-    "files.insertFinalNewline": false
+    "files.insertFinalNewline": false,
+    "sarif-viewer.connectToGithubCodeScanning": "off"
 }
