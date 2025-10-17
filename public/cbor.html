@@ -62,32 +62,35 @@
                     <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                 </div>
 
-                <!-- Encode JSON to CBOR Card -->
+                <!-- Encode JSON to CBOR - Input Card -->
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:24px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <span>Encode JSON to CBOR</span>
                         <button id="encodeRun" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Encode</button>
                     </div>
                     <textarea id="jsonInput" placeholder='Example JSON / relaxed object:\n{\n  name: "Alice",\n  pubkey: {@bytes:"a1b2"},\n  big: {@bigint:"9007199254740993"},\n  transactionId: h"001122AABB"\n}\nNotes: Keys may be unquoted, h\'HEX\' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.'></textarea>
-                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                         <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
                         <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
                         <button id="downloadCbor" class="mdl-button mdl-js-button" title="Download .cbor file">Download</button>
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" style="padding-left:8px; display:flex; align-items:center;" for="canonicalOrder">
-                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input" style="margin-right:4px;">
-                            <span class="mdl-checkbox__label" style="position:relative; top:1px;">Canonical</span>
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
+                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input">
+                            <span class="mdl-checkbox__label">Canonical</span>
                         </label>
                         <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
-                    <div style="margin-top:12px; display:grid; gap:12px;">
-                        <div>
-                            <div style="font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                                <span>Hex</span>
-                                <button id="copyEncodedHex" class="mdl-button mdl-js-button mdl-button--icon" title="Copy encoded hex"><i class="material-icons">content_copy</i></button>
-                            </div>
-                            <pre id="encodedHex" class="mono" style="background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                </div>
+
+                <!-- Encoded CBOR Output Card -->
+                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:16px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Encoded CBOR (Hex)</span>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button id="downloadEncodedCbor" class="mdl-button mdl-js-button mdl-button--icon" title="Download encoded CBOR (.cbor)"><i class="material-icons">file_download</i></button>
+                            <button id="copyEncodedHex" class="mdl-button mdl-js-button mdl-button--icon" title="Copy encoded hex"><i class="material-icons">content_copy</i></button>
                         </div>
                     </div>
+                    <pre id="encodedHex" class="mono" aria-label="Encoded CBOR hex output" style="position:relative; background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                 </div>
 
                 <div id="errorArea" class="error" role="alert" style="margin-top:16px;"></div>
@@ -275,6 +278,19 @@
         const a = document.createElement('a');
         a.href = url; a.download = 'data.cbor'; a.click();
         URL.revokeObjectURL(url);
+    });
+
+    // Download from output card icon
+    document.getElementById('downloadEncodedCbor').addEventListener('click', ()=>{
+        if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
+        const blob = new Blob([lastEncodedBytes], {type:'application/cbor'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'data.cbor'; a.click();
+        URL.revokeObjectURL(url);
+        // visual feedback flash
+        encodedHexEl.style.background='#e0f0ff';
+        setTimeout(()=> encodedHexEl.style.background='', 300);
     });
 
     // Toggle canonical ordering
