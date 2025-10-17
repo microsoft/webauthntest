@@ -78,9 +78,12 @@ body .mdl-layout__tab-bar .mdl-layout__tab.is-active::after {
 }
 
 body #signOutButton { position:absolute; right:40px; top:30px; z-index:999; color:white; }
-body #createButton { position:absolute; right:180px; top:36px; z-index:999; }
-body #getButton { position:absolute; right:110px; top:36px; z-index:999; }
-body #moreButton { position:absolute; right:40px; top:36px; z-index:999; }
+body #createButton { position:absolute; right:250px; top:36px; z-index:999; }
+body #getButton { position:absolute; right:180px; top:36px; z-index:999; }
+body #moreButton { position:absolute; right:110px; top:36px; z-index:999; }
+body #cborButton { position:absolute; right:40px; top:36px; z-index:999; }
+body #cborBackButton { position:absolute; right:40px; top:36px; z-index:999; color:white; }
+body #cborBackButton .material-icons { color:inherit; }
 /* Removed flex fab-group and cborButton styles (reverted) */
 
 p {

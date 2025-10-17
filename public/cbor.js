@@ -4,6 +4,39 @@
 // NOT for production security-critical parsing.
 
 (function(global){
+    class CborMap {
+        constructor(entries){
+            this.entries = entries.map(([k, v]) => [k, v]);
+        }
+    }
+
+    function isCborMap(value){
+        return value instanceof CborMap;
+    }
+
+    function indentBlock(text, indent){
+        const padding = ' '.repeat(indent);
+        return text.split('\n').map(line => padding + line).join('\n');
+    }
+
+    function inlineSummary(text){
+        return text.replace(/\s+/g, ' ').trim();
+    }
+
+    function formatIntegerHex(num){
+        if(Object.is(num, -0)) return '-0x0';
+        if(num === 0) return '0x0';
+        const sign = num < 0 ? '-' : '';
+        const absHex = Math.abs(num).toString(16).toUpperCase();
+        return sign + '0x' + absHex;
+    }
+
+    function formatBigIntHex(bn){
+        if(bn === 0n) return '0x0n';
+        const sign = bn < 0n ? '-' : '';
+        const absHex = (bn < 0n ? -bn : bn).toString(16).toUpperCase();
+        return sign + '0x' + absHex + 'n';
+    }
     function readUint(data, offset, length){
         if(offset + length > data.length) throw new Error('Truncated integer');
         let val = 0n;
@@ -124,16 +157,22 @@
             }
             case 5: { // map
                 const {len, offset: o2} = readLength(addl, data, offset); offset = o2;
-                let obj = {};
-                const readPairs = (count)=>{ for(let i=0;i<count;i++){ const k = decodeItem(data, offset); offset = k.offset; const v = decodeItem(data, offset); offset = v.offset; const key = (typeof k.value === 'string')? k.value : JSON.stringify(k.value); obj[key]=v.value; } };
+                const entries = [];
+                function readPair(){
+                    const k = decodeItem(data, offset); offset = k.offset;
+                    const v = decodeItem(data, offset); offset = v.offset;
+                    entries.push([k.value, v.value]);
+                }
                 if(len === -1){
                     while(true){
                         if(offset >= data.length) throw new Error('Unterminated indefinite map');
                         if(data[offset] === 0xFF){ offset++; break; }
-                        const k = decodeItem(data, offset); offset = k.offset; const v = decodeItem(data, offset); offset = v.offset; const key = (typeof k.value === 'string')? k.value : JSON.stringify(k.value); obj[key]=v.value;
+                        readPair();
                     }
-                } else { readPairs(len); }
-                return {value: obj, offset};
+                } else {
+                    for(let i=0;i<len;i++) readPair();
+                }
+                return {value: new CborMap(entries), offset};
             }
             case 6: { // tag
                 const {len: tagNum, offset: o2} = readLength(addl, data, offset); offset = o2;
@@ -210,6 +249,19 @@
             const parts = value.map(v=> pad(indent+2) + formatDiagnostic(v, indent+2));
             return '[\n' + parts.join(',\n') + '\n' + pad(indent) + ']';
         }
+        if(isCborMap(value)){
+            if(value.entries.length === 0) return '{}';
+            const formatted = value.entries.map(([k, v]) => {
+                const keyInline = inlineSummary(formatDiagnostic(k, indent+2));
+                const valStr = formatDiagnostic(v, indent+2);
+                if(valStr.indexOf('\n') !== -1){
+                    const indentedVal = indentBlock(valStr, indent+4);
+                    return pad(indent+2) + keyInline + ' =>\n' + indentedVal;
+                }
+                return pad(indent+2) + keyInline + ' => ' + valStr;
+            });
+            return '{\n' + formatted.join(',\n') + '\n' + pad(indent) + '}';
+        }
         // Objects / maps / special wrappers
         if(value && typeof value === 'object'){
             if(Object.prototype.hasOwnProperty.call(value,'@tag')){
@@ -231,7 +283,11 @@
         }
         // Primitives
         if(typeof value === 'string') return JSON.stringify(value);
-        if(typeof value === 'bigint') return value.toString() + 'n';
+        if(typeof value === 'number'){
+            if(Number.isInteger(value)) return formatIntegerHex(value);
+            return String(value);
+        }
+        if(typeof value === 'bigint') return formatBigIntHex(value);
         if(value === undefined) return 'undefined';
         return String(value);
     }
@@ -253,9 +309,12 @@
             case 2: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; if(len === -1){ let parts=[]; while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite byte string'); if(data[offset]===0xFF){ offset++; break; } const chunk = decodeItemMeta(data, offset); if(!(chunk.meta.value instanceof Uint8Array)) throw new Error('Indef bytes expect definite byte strings'); parts.push(chunk.meta.value); offset = chunk.offset; } let total=parts.reduce((a,p)=>a+p.length,0); const out=new Uint8Array(total); let pos=0; parts.forEach(p=>{out.set(p,pos); pos+=p.length;}); meta.value=out; return finish(offset);} if(offset+len>data.length) throw new Error('Truncated byte string'); meta.value = data.slice(offset, offset+len); offset += len; return finish(offset); }
             case 3: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; if(len === -1){ let chunks=[]; while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite text string'); if(data[offset]===0xFF){ offset++; break; } const chunk = decodeItemMeta(data, offset); if(typeof chunk.meta.value !== 'string') throw new Error('Indef text expects definite text'); chunks.push(chunk.meta.value); offset = chunk.offset; } meta.value = chunks.join(''); return finish(offset);} if(offset+len>data.length) throw new Error('Truncated text string'); meta.value = toUtf8(data.slice(offset, offset+len)); offset += len; return finish(offset); }
             case 4: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; meta.elements=[]; if(len === -1){ while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite array'); if(data[offset]===0xFF){ offset++; break; } const child = decodeItemMeta(data, offset); meta.elements.push(child.meta); offset = child.offset; } } else { for(let i=0;i<len;i++){ const child = decodeItemMeta(data, offset); meta.elements.push(child.meta); offset = child.offset; } } meta.value = meta.elements.map(c=>c.value); return finish(offset); }
-            case 5: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; meta.entries=[]; let obj={}; function addPair(km, vm){ const key = (typeof km.value === 'string')? km.value : JSON.stringify(km.value); obj[key]=vm.value; meta.entries.push({ key: km, value: vm }); }
-                if(len === -1){ while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite map'); if(data[offset]===0xFF){ offset++; break; } const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } } else { for(let i=0;i<len;i++){ const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } }
-                meta.value = obj; return finish(offset); }
+            case 5: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; meta.entries=[];
+                function addPair(km, vm){ meta.entries.push({ key: km, value: vm }); }
+                if(len === -1){ while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite map'); if(data[offset]===0xFF){ offset++; break; } const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } }
+                else { for(let i=0;i<len;i++){ const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } }
+                meta.value = new CborMap(meta.entries.map(e => [e.key.value, e.value.value]));
+                return finish(offset); }
             case 6: { const {len: tagNum, offset:o2} = readLength(addl,data,offset); offset = o2; const inner = decodeItemMeta(data, offset); offset = inner.offset; meta.tag = tagNum; meta.child = inner.meta; meta.value = { '@tag': tagNum, value: inner.meta.value }; return finish(offset); }
             case 7: { if(addl < 20){ meta.value = {'@simple': addl}; return finish(offset);} switch(addl){ case 20: meta.value=false; return finish(offset); case 21: meta.value=true; return finish(offset); case 22: meta.value=null; return finish(offset); case 23: meta.value=undefined; return finish(offset); case 24: { if(offset>=data.length) throw new Error('Truncated simple'); meta.value={'@simple': data[offset++]}; return finish(offset);} case 25: { if(offset+2>data.length) throw new Error('Truncated half float'); meta.value=readHalfFloat(data.slice(offset, offset+2)); offset+=2; return finish(offset);} case 26: { if(offset+4>data.length) throw new Error('Truncated float32'); meta.value=new DataView(data.buffer,data.byteOffset+offset,4).getFloat32(0,false); offset+=4; return finish(offset);} case 27: { if(offset+8>data.length) throw new Error('Truncated float64'); meta.value=new DataView(data.buffer,data.byteOffset+offset,8).getFloat64(0,false); offset+=8; return finish(offset);} case 31: throw new Error('Unexpected BREAK'); }
                 throw new Error('Unknown simple/fp additional info: '+addl); }
@@ -275,7 +334,7 @@
         // Byte string
         if(meta.value instanceof Uint8Array){ return prefix + "h'" + bytesToHex(meta.value).toUpperCase() + "'"; }
         if(meta.tag !== undefined){
-            const inner = formatMeta(meta.child, options, indent + (mode==='pretty'?2:0));
+            const inner = formatMeta(meta.child, options, indent + 2);
             return prefix + 'tag(' + meta.tag + ', ' + inner + ')';
         }
         if(Array.isArray(meta.elements)){
@@ -283,27 +342,27 @@
             const lines = meta.elements.map(m=> pad(indent+2) + formatMeta(m, options, indent+2));
             return prefix + '[\n' + lines.join(',\n') + '\n' + pad(indent) + ']';
         }
-        if(Array.isArray(meta.entries)){
-            if(meta.entries.length === 0) return prefix + '{}';
-            const lines = meta.entries.map(e=>{
-                const k = formatMapKey(e.key.value);
-                return pad(indent+2) + k + ': ' + formatMeta(e.value, options, indent+2);
+        if(isCborMap(meta.value)){
+            const entries = meta.entries || [];
+            if(entries.length === 0) return prefix + '{}';
+            const lines = entries.map(e=>{
+                const keyInline = inlineSummary(formatMeta(e.key, options, indent+2));
+                const valueStr = formatMeta(e.value, options, indent+2);
+                if(valueStr.indexOf('\n') !== -1){
+                    const indented = indentBlock(valueStr, indent+4);
+                    return pad(indent+2) + keyInline + ' =>\n' + indented;
+                }
+                return pad(indent+2) + keyInline + ' => ' + valueStr;
             });
             return prefix + '{\n' + lines.join(',\n') + '\n' + pad(indent) + '}';
         }
         if(typeof meta.value === 'string') return prefix + JSON.stringify(meta.value);
-        if(typeof meta.value === 'bigint') return prefix + meta.value.toString() + 'n';
+        if(typeof meta.value === 'number'){
+            if(Number.isInteger(meta.value)) return prefix + formatIntegerHex(meta.value);
+        }
+        if(typeof meta.value === 'bigint') return prefix + formatBigIntHex(meta.value);
         if(meta.value && typeof meta.value === 'object' && meta.value['@simple'] !== undefined) return prefix + 'simple(' + meta.value['@simple'] + ')';
         return prefix + String(meta.value);
-    }
-
-    function formatMapKey(k){
-        if(typeof k === 'string'){
-            if(/^[0-9]+$/.test(k)) return k; // numeric string
-            if(/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k)) return k;
-            return JSON.stringify(k);
-        }
-        return JSON.stringify(k);
     }
 
     function formatMetaRoots(roots, options){
@@ -312,7 +371,7 @@
         return '[\n' + lines.join(',\n') + '\n]';
     }
 
-    global.CBORPlayground = { decodeCbor, decodeCborStream, hexToBytes, base64ToBytes, bytesToHex, formatDiagnostic, decodeCborStreamTreeMeta: decodeCborStreamTreeMeta, formatMetaRoots };
+    global.CBORPlayground = { decodeCbor, decodeCborStream, hexToBytes, base64ToBytes, bytesToHex, formatDiagnostic, decodeCborStreamTreeMeta: decodeCborStreamTreeMeta, formatMetaRoots, CborMap };
     // ---------------- Encoding Support ----------------
     function encodeUnsigned(num){
         if(num < 24) return Uint8Array.of(num);
@@ -348,10 +407,17 @@
         for(const v of arr) parts.push(encodeAny(v));
         return concat.apply(null, parts);
     }
-    function encodeMap(obj){
-        const entries = Object.entries(obj);
+    function encodeMap(mapLike){
+        let entries;
+        if(isCborMap(mapLike)){
+            entries = mapLike.entries.map(([k, v]) => [k, v]);
+        } else if(Array.isArray(mapLike)){
+            entries = mapLike.map(([k, v]) => [k, v]);
+        } else {
+            entries = Object.entries(mapLike).map(([k, v]) => [mapKeyToCborKey(k), v]);
+        }
         const head = encodeLength(5, entries.length); const parts=[head];
-        for(const [k,v] of entries){ parts.push(encodeAny(mapKeyToCborKey(k)), encodeAny(v)); }
+        for(const [k,v] of entries){ parts.push(encodeAny(k), encodeAny(v)); }
         return concat.apply(null, parts);
     }
     function mapKeyToCborKey(k){
@@ -409,6 +475,7 @@
         if(value instanceof Uint8Array) return encodeBytes(value);
         if(typeof value === 'string') return encodeText(value);
         if(Array.isArray(value)) return encodeArray(value);
+        if(isCborMap(value)) return encodeMap(value);
         if(value && typeof value === 'object'){
             // Tag object form {"@tag":N, value: X}
             if(Object.prototype.hasOwnProperty.call(value, '@tag') && Object.prototype.hasOwnProperty.call(value, 'value')){
@@ -429,6 +496,7 @@
         // Convert runtime structure into export-friendly JSON with markers
         if(value instanceof Uint8Array) return { '@bytes': bytesToHex(value) };
         if(typeof value === 'bigint') return { '@bigint': value.toString() };
+        if(isCborMap(value)) return { '@map': value.entries.map(([k, v]) => [exportValue(k), exportValue(v)]) };
         if(value && typeof value === 'object'){
             if(Object.prototype.hasOwnProperty.call(value,'@tag')) return { '@tag': value['@tag'], value: exportValue(value.value) };
             if(Object.prototype.hasOwnProperty.call(value,'@simple')) return { '@simple': value['@simple'] };
@@ -441,6 +509,7 @@
         if(exp && typeof exp === 'object'){
             if(exp['@bytes']) return hexToBytes(exp['@bytes']);
             if(exp['@bigint']) return BigInt(exp['@bigint']);
+            if(exp['@map']) return new CborMap(exp['@map'].map(([k, v]) => [importValue(k), importValue(v)]));
             if(exp['@tag'] !== undefined) return { '@tag': exp['@tag'], value: importValue(exp.value) };
             if(exp['@simple'] !== undefined) return { '@simple': exp['@simple'] };
             if(Array.isArray(exp)) return exp.map(importValue);
