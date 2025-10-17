@@ -218,14 +218,14 @@
     // ---------------- JSON -> CBOR Encoding Logic ----------------
         const jsonInput = document.getElementById('jsonInput');
         // Set multiline placeholder via JS so \n escapes become actual newlines
-        jsonInput.placeholder = `Example JSON / relaxed object:
+    jsonInput.placeholder = `Example JSON / relaxed object:
 {
     name: "Alice",
     pubkey: {@bytes:"a1b2"},
     big: {@bigint:"9007199254740993"},
     transactionId: h"001122AABB"
 }
-Notes: Keys may be unquoted, h'HEX' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.`;
+Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.`;
     const encodedHexEl = document.getElementById('encodedHex');
     const encodeInfoEl = document.getElementById('encodeInfo');
     let lastEncodedBytes = null;
@@ -282,6 +282,8 @@ Notes: Keys may be unquoted, h'HEX' or h"HEX" become {@bytes:"HEX"}. Wrappers: {
         s = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*):/g, '$1"$2"$3:');
         // Replace single quoted strings with double (not perfect; avoids interfering with already double quoted)
         s = s.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (m,inner)=> '"'+inner.replace(/"/g,'\\"')+'"');
+    // Quote bare numeric keys (including negatives like -1:, -42:) so they become valid JSON; encoder later converts numeric-string keys back to numeric CBOR keys
+    s = s.replace(/([,{]\s*)(-?[0-9]+)(\s*):/g, '$1"$2"$3:');
         return s;
     }
 
