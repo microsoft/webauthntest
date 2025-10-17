@@ -22,16 +22,22 @@
 </head>
 <body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base">
     <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header class="mdl-layout__header mdl-color--primary">
+        <header class="mdl-layout__header mdl-layout__header--scroll mdl-color--primary">
+            <div class="mdl-layout__header-row"></div>
             <div class="mdl-layout__header-row">
-                <span class="mdl-layout-title">CBOR Playground</span>
-                <div class="mdl-layout-spacer"></div>
-                <a href="index.html" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">Back to App</a>
+                <h3 style="flex:1; display:flex; align-items:center; gap:8px; margin:0;" class="mdl-color-text--white">
+                    CBOR Playground
+                </h3>
+                <a href="index.html" id="backToAppBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white" title="Back to main app" style="display:flex; align-items:center; gap:4px;">
+                    <i class="material-icons" aria-hidden="true">arrow_back</i>
+                    Back
+                </a>
             </div>
+            <div class="mdl-layout__header-row"></div>
         </header>
         <main class="mdl-layout__content">
             <div class="container">
-                <p>This page provides an educational decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Paste CBOR data as Hex, Base64 (URL-safe allowed), or an array of byte values. Byte strings are rendered as h'HEX'. Not for production use.</p>
+                <p>This page provides an educational encoder/decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Not for production use.</p>
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -51,7 +57,7 @@
                     </div>
                 </div>
 
-                <div class="mdl-card mdl-shadow--2dp" style="padding:16px;">
+                <div id="decodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; display:none;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <span>Decoded CBOR (JSON)</span>
                         <div style="display:flex; gap:4px; align-items:center;">
@@ -70,10 +76,9 @@
                         <span>Encode JSON to CBOR</span>
                         <button id="encodeRun" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Encode</button>
                     </div>
-                    <textarea id="jsonInput" placeholder='Example JSON / relaxed object:\n{\n  name: "Alice",\n  pubkey: {@bytes:"a1b2"},\n  big: {@bigint:"9007199254740993"},\n  transactionId: h"001122AABB"\n}\nNotes: Keys may be unquoted, h\'HEX\' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.'></textarea>
+                    <textarea id="jsonInput" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                         <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
-                        <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
                         <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
                         <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                         <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
@@ -85,7 +90,7 @@
                 </div>
 
                 <!-- Encoded CBOR Output Card -->
-                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:16px;">
+                <div id="encodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:16px; display:none;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <span>Encoded CBOR (Hex)</span>
                         <div style="display:flex; gap:4px; align-items:center;">
@@ -110,8 +115,7 @@
     <script>
         const inputEl = document.getElementById('cborInput');
         const jsonEl = document.getElementById('decodedJson');
-    const errEl = document.getElementById('errorArea');
-    // Re-encoded hex output removed
+        const errEl = document.getElementById('errorArea');
         const fmtEl = document.getElementById('formatInfo');
 
         function detectFormat(text){
@@ -144,26 +148,28 @@
         let lastRoots = null; // meta roots cache
 
         function render(){
-            errEl.textContent=''; jsonEl.textContent='';
+            errEl.textContent='';
+            jsonEl.textContent='';
             const raw = inputEl.value;
-            if(!raw.trim()) return;
+            const decodedCard = document.getElementById('decodedCard');
+            if(!raw.trim()) { decodedCard.style.display='none'; return; }
             try {
                 const bytes = toBytes(raw);
                 const roots = CBORPlayground.decodeCborStreamTreeMeta(bytes);
                 lastRoots = roots;
-                // nestedOffsets option removed; always render without nested offset annotations
                 const options = { nestedOffsets: false };
                 jsonEl.textContent = CBORPlayground.formatMetaRoots(roots, options);
+                decodedCard.style.display = jsonEl.textContent.trim()? 'block':'none';
             } catch(e){
+                decodedCard.style.display='none';
                 errEl.textContent = e.message;
             }
         }
 
         document.getElementById('decodeBtn').addEventListener('click', render);
         document.getElementById('clearBtn').addEventListener('click', ()=>{ inputEl.value=''; render(); });
-    inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
-    // Hex slices toggle removed
-    // Display mode selector removed
+        inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
+
         document.getElementById('downloadDecodedJson').addEventListener('click', ()=>{
             if(!lastRoots){ errEl.textContent='Nothing decoded to download.'; return; }
             try {
@@ -207,41 +213,51 @@
             // reset so selecting same file again re-triggers
             importCborFileInput.value='';
         });
-        // Import JSON feature removed
-        // Re-encode button removed
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
 
     // ---------------- JSON -> CBOR Encoding Logic ----------------
-    const jsonInput = document.getElementById('jsonInput');
+        const jsonInput = document.getElementById('jsonInput');
+        // Set multiline placeholder via JS so \n escapes become actual newlines
+        jsonInput.placeholder = `Example JSON / relaxed object:
+{
+    name: "Alice",
+    pubkey: {@bytes:"a1b2"},
+    big: {@bigint:"9007199254740993"},
+    transactionId: h"001122AABB"
+}
+Notes: Keys may be unquoted, h'HEX' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.`;
     const encodedHexEl = document.getElementById('encodedHex');
     const encodeInfoEl = document.getElementById('encodeInfo');
     let lastEncodedBytes = null;
 
-    function encodeJson(){
-        errEl.textContent=''; encodeInfoEl.textContent=''; encodedHexEl.textContent=''; lastEncodedBytes = null;
+    function encodeJson(showErrors=true){
+        if(showErrors) errEl.textContent='';
+        encodeInfoEl.textContent=''; encodedHexEl.textContent=''; lastEncodedBytes = null;
+        const encodedCard = document.getElementById('encodedCard');
         const raw = jsonInput.value.trim();
-        if(!raw){ return; }
+        if(!raw){ encodedCard.style.display='none'; return; }
         try {
             let parsed;
             try {
                 parsed = JSON.parse(raw);
             } catch(primaryErr){
-                // Attempt relaxed transformation: support unquoted keys, h'HEX'/h"HEX" tokens, // comments.
                 try {
                     const relaxed = transformRelaxedJson(raw);
                     parsed = JSON.parse(relaxed);
                 } catch(relaxedErr){
-                    throw primaryErr; // Surface original error for clarity.
+                    if(showErrors) throw primaryErr; else { encodedCard.style.display='none'; return; }
                 }
             }
-            const value = CBORPlayground.importValue(parsed); // apply wrappers (@bytes, @bigint, etc.)
+            const value = CBORPlayground.importValue(parsed);
             const bytes = CBORPlayground.encodeValues([value]);
             lastEncodedBytes = bytes;
             const hex = CBORPlayground.bytesToHex(bytes).toUpperCase();
             encodedHexEl.textContent = hex;
             encodeInfoEl.textContent = bytes.length + ' bytes';
+            encodedCard.style.display = hex? 'block':'none';
         } catch(e){
-            errEl.textContent = 'Encode error: ' + e.message;
+            encodedCard.style.display='none';
+            if(showErrors) errEl.textContent = 'Encode error: ' + e.message;
         }
     }
 
@@ -269,11 +285,8 @@
         return s;
     }
 
-    document.getElementById('encodeRun').addEventListener('click', encodeJson);
-    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; });
-    document.getElementById('encodeFormat').addEventListener('click', ()=>{
-        try { if(jsonInput.value.trim()){ const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } } catch(e){ errEl.textContent = 'Format error: ' + e.message; }
-    });
+    document.getElementById('encodeRun').addEventListener('click', ()=> encodeJson(true));
+    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; document.getElementById('encodedCard').style.display='none'; });
     // Import JSON for encoding
     const importJsonEncodeInput = document.getElementById('importJsonEncode');
     importJsonEncodeInput.addEventListener('change', (e)=>{
@@ -283,9 +296,7 @@
         reader.onload = function(){
             try {
                 jsonInput.value = reader.result;
-                // attempt pretty format if valid JSON
-                try { const obj = JSON.parse(jsonInput.value); jsonInput.value = JSON.stringify(obj, null, 2); } catch(_ignore){}
-                encodeJson();
+                encodeJson(false);
             } catch(err){ errEl.textContent = 'Import JSON error: '+ err.message; }
         };
         reader.onerror = ()=>{ errEl.textContent = 'File read failed.'; };
@@ -318,8 +329,16 @@
     canonicalChk.addEventListener('change', ()=>{
         CBORPlayground.canonicalSortMapKeys = canonicalChk.checked;
         // Re-encode immediately if we already have JSON parsed
-        if(jsonInput.value.trim()) encodeJson();
+        if(jsonInput.value.trim()) encodeJson(false);
     });
+
+    // Auto encode on typing with debounce
+    let encodeDebounceTimer;
+    jsonInput.addEventListener('input', ()=>{
+        clearTimeout(encodeDebounceTimer);
+        encodeDebounceTimer = setTimeout(()=> encodeJson(false), 300);
+    });
+    jsonInput.addEventListener('paste', ()=>{ setTimeout(()=> encodeJson(false), 0); });
 
     </script>
 </body>
