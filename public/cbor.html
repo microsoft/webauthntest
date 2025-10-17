@@ -34,18 +34,17 @@
                 <p>This page provides an educational decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Paste CBOR data as Hex, Base64 (URL-safe allowed), or an array of byte values. Byte strings are rendered as h'HEX'. Not for production use.</p>
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
-                    <div class="card-title">Decode CBOR to JSON</div>
-                    <textarea id="cborInput" placeholder="Example (hex): a26161016162820203"></textarea>
-                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Decode CBOR to JSON</span>
                         <button id="decodeBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Decode</button>
+                    </div>
+                    <textarea id="cborInput" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
+                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                         <button id="clearBtn" class="mdl-button mdl-js-button">Clear</button>
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-                        <div style="display:flex; gap:8px;">
-                            <label class="mdl-button mdl-js-button" for="importJsonFile" style="cursor:pointer;">Import JSON</label>
-                            <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
-                        </div>
+                        <!-- Import JSON feature removed -->
                     </div>
                 </div>
 
@@ -183,22 +182,7 @@
                 setTimeout(()=> decodedJson.style.background='', 300);
             }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
         });
-        document.getElementById('importJsonFile').addEventListener('change', (ev)=>{
-            const file = ev.target.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = ()=>{
-                try {
-                    const text = reader.result; const parsed = JSON.parse(text);
-                    const values = Array.isArray(parsed) ? parsed.map(CBORPlayground.importValue) : [CBORPlayground.importValue(parsed)];
-                    // Encode and show hex + populate decoded view
-                    const encoded = CBORPlayground.encodeValues(values);
-                    inputEl.value = CBORPlayground.bytesToHex(encoded);
-                    render();
-                } catch(e){ errEl.textContent = 'Import error: ' + e.message; }
-            };
-            reader.readAsText(file);
-            ev.target.value='';
-        });
+        // Import JSON feature removed
         // Re-encode button removed
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
 
