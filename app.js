@@ -73,7 +73,12 @@ app.patch('/credentials/transports', async (req, res) => {
         if (!Array.isArray(transports)) {
             throw new Error('transports must be an array');
         }
-        const updated = await require('./storage').Credentials.findOneAndUpdate({ uid, id }, { transports }, { new: true });
+        const allowed = new Set(['internal','usb','nfc','ble','hybrid']);
+        const clean = [];
+        transports.forEach(t => {
+            if (allowed.has(t) && !clean.includes(t)) clean.push(t);
+        });
+        const updated = await require('./storage').Credentials.findOneAndUpdate({ uid, id }, { transports: clean }, { new: true });
         if (!updated) {
             throw new Error('Credential not found');
         }

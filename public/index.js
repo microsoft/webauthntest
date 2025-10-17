@@ -227,28 +227,43 @@
 
         // Update Transports dialog events
         if (updateTransportsDialog) {
-            $('#updateTransportsDialog_xButton').click(() => {
+            function closeUpdateTransportsDialog() {
+                selectedTransportCredentialId = null;
                 updateTransportsDialog.close();
+            }
+            $('#updateTransportsDialog_xButton').click(closeUpdateTransportsDialog);
+            $('#updateTransportsDialog_cancelButton').click(closeUpdateTransportsDialog);
+            $('#updateTransportsDialog_clearButton').click(() => {
+                ['internal','usb','nfc','ble','hybrid'].forEach(t => resetTransportCheckbox(t));
             });
-            $('#updateTransportsDialog_cancelButton').click(() => {
-                updateTransportsDialog.close();
+            $('#updateTransportsDialog_selectAllButton').click(() => {
+                ['internal','usb','nfc','ble','hybrid'].forEach(t => setTransportCheckbox(t, true));
             });
             $('#updateTransportsDialog_saveButton').click(() => {
                 if (!selectedTransportCredentialId) {
-                    updateTransportsDialog.close();
+                    closeUpdateTransportsDialog();
                     return;
                 }
                 var transports = [];
-                if ($('#update_transport_internal').prop('checked')) transports.push('internal');
-                if ($('#update_transport_usb').prop('checked')) transports.push('usb');
-                if ($('#update_transport_nfc').prop('checked')) transports.push('nfc');
-                if ($('#update_transport_ble').prop('checked')) transports.push('ble');
-                if ($('#update_transport_hybrid').prop('checked')) transports.push('hybrid');
-                updateCredentialTransports(selectedTransportCredentialId, transports).then(() => {
-                    updateTransportsDialog.close();
-                    return updateCredentials();
+                ['internal','usb','nfc','ble','hybrid'].forEach(t => {
+                    if ($('#update_transport_' + t).prop('checked')) transports.push(t);
+                });
+                    updateCredentialTransports(selectedTransportCredentialId, transports).then((result) => {
+                        // Optimistically update local credential list with server-sanctioned transports
+                        if (result && Array.isArray(result.transports)) {
+                            var cred = credentials.find(c => c.id === selectedTransportCredentialId);
+                            if (cred) {
+                                cred.transports = result.transports.slice();
+                            }
+                            // Re-render list to reflect new transports immediately
+                            renderCredentialList();
+                        }
+                        // Background refresh to ensure consistency
+                        return updateCredentials();
                 }).catch(err => {
                     toast('Failed to update transports: ' + err);
+                }).finally(() => {
+                    closeUpdateTransportsDialog();
                 });
             });
         }
@@ -980,7 +995,7 @@
             showAuthenticationData($(event.target).attr("data-value"));
         });
         $("a.updateTransportsButton").click(e => {
-            var id = $(event.target).attr("data-value");
+            var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
         });
     }
@@ -1106,19 +1121,53 @@
     function showUpdateTransports(id) {
         selectedTransportCredentialId = id;
         var credential = credentials.find(c => c.id === id);
-        // reset all
-        $('#update_transport_internal').prop('checked', false);
-        $('#update_transport_usb').prop('checked', false);
-        $('#update_transport_nfc').prop('checked', false);
-        $('#update_transport_ble').prop('checked', false);
-        $('#update_transport_hybrid').prop('checked', false);
+        if (!credential) {
+            updateCredentials().then(() => {
+                credential = credentials.find(c => c.id === id);
+                if (credential) {
+                    showUpdateTransports(id);
+                } else {
+                    toast('Credential not found');
+                }
+            });
+            return;
+        }
+        // reset all using helper (ensures MDL visual sync)
+        ['internal','usb','nfc','ble','hybrid'].forEach(t => resetTransportCheckbox(t));
         if (credential && Array.isArray(credential.transports)) {
+            var allowed = ['internal','usb','nfc','ble','hybrid'];
             credential.transports.forEach(t => {
-                $('#update_transport_' + t).prop('checked', true);
+                if (allowed.includes(t)) {
+                    setTransportCheckbox(t, true);
+                }
             });
         }
         var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
-        if (updateTransportsDialog) updateTransportsDialog.showModal();
+        if (updateTransportsDialog) {
+            updateTransportsDialog.showModal();
+            // Force MDL to upgrade any components to avoid first-click miss
+            if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') {
+                try { componentHandler.upgradeDom(); } catch (e) { /* ignore upgrade errors */ }
+            }
+        }
+    }
+
+    function resetTransportCheckbox(name) {
+        var $input = $('#update_transport_' + name);
+        $input.prop('checked', false);
+        var $label = $input.closest('label.mdl-checkbox');
+        $label.removeClass('is-checked');
+    }
+
+    function setTransportCheckbox(name, checked) {
+        var $input = $('#update_transport_' + name);
+        $input.prop('checked', checked);
+        var $label = $input.closest('label.mdl-checkbox');
+        if (checked) {
+            $label.addClass('is-checked');
+        } else {
+            $label.removeClass('is-checked');
+        }
     }
 
 
@@ -1209,7 +1258,8 @@
     function rest_get(endpoint) {
         return fetch(endpoint, {
             method: "GET",
-            credentials: "same-origin"
+            credentials: "same-origin",
+            cache: "no-store"
         });
     }
 
@@ -1260,7 +1310,8 @@
             body: JSON.stringify(object),
             headers: {
                 "content-type": "application/json"
-            }
+            },
+            cache: "no-store"
         });
     }
 

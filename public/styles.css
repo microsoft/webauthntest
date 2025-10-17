@@ -1,3 +1,16 @@
+/* Spacing & layout for Update Transports dialog action buttons */
+.transport-actions {
+  margin-top: 20px; /* space before divider */
+  padding-top: 14px; /* spacing above buttons */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 2px solid rgba(63,81,181,0.45); /* thicker themed indigo divider */
+}
+
+.transport-actions .mdl-button {
+  min-width: 120px;
+}
 /**
  * Copyright 2015 Google Inc. All Rights Reserved.
  *
