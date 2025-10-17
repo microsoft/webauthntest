@@ -234,12 +234,22 @@
             <span>
                 <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
                     <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Exclude Credentials?</span>
+                    <span class="mdl-checkbox__label">Exclude Existing Credentials?</span>
                 </label>
             </span>
             <hr>
             <span>
-                <span>Overwrite Exclude Credentials Transports? <br><br></span>
+                <span>Extra Fake ExcludeList Credentials</span>
+                <input type="number" id="create_fakeExcludeCount" class="float-right small-number-input" min="0" value="0" />
+            </span>
+            <hr>
+            <span>
+                <span>Fake Credentials ID Length (bytes)</span>
+                <input type="number" id="create_fakeExcludeLength" class="float-right small-number-input" min="1" value="64" />
+            </span>
+            <hr>
+            <span>
+                <span>Fake Credentials Transports <br><br></span>
                 <div class="mdl-grid mdl-grid--no-spacing">
                     <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_internal">
                         <input type="checkbox" id="create_internal" class="mdl-checkbox__input">
@@ -379,7 +389,17 @@
             </span>
             <hr>
             <span>
-                <span>Overwrite AllowCredentials Transports? <br><br></span>
+                <span>Extra Fake AllowList Credentials?</span>
+                <input type="number" id="get_fakeAllowCount" class="float-right small-number-input" min="0" value="0" />
+            </span>
+            <hr>
+            <span>
+                <span>Fake Credentials ID Length (bytes)</span>
+                <input type="number" id="get_fakeAllowLength" class="float-right small-number-input" min="1" value="64" />
+            </span>
+            <hr>
+            <span>
+                <span>Fake Credentials Transports <br><br></span>
                 <div class="mdl-grid mdl-grid--no-spacing">
                     <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_internal">
                         <input type="checkbox" id="get_internal" class="mdl-checkbox__input">

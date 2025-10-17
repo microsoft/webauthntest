@@ -546,21 +546,76 @@
             }
         }
 
-        if ($('#create_excludeCredentials').is(":checked")) {
-            var excludeCredentials = credentials.map(cred => {
-                var excludeCred = {
-                    type: "public-key",
-                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
-                    transports: cred.transports
-                };
-                if (overWriteTransports) {
-                    excludeCred.transports = transports;
-                }
-                return excludeCred;
-            });
+        // Build excludeCredentials list (fake + optionally existing) with new rules
+        (function(){
+            var excludeCredentials = [];
 
-            createCredentialOptions.excludeCredentials = excludeCredentials;
-        }
+            // Parse fake credential parameters regardless of excludeExisting toggle
+            var fakeCount = parseInt($('#create_fakeExcludeCount').val(), 10);
+            var fakeLen = parseInt($('#create_fakeExcludeLength').val(), 10);
+            if (isNaN(fakeCount)) fakeCount = 0;
+            if (isNaN(fakeLen)) fakeLen = 64;
+            if (fakeCount < 0) fakeCount = 0;
+            if (fakeLen < 1) fakeLen = 1;
+            if (fakeLen > 2048) fakeLen = 2048; // safety cap
+
+            // Generate fake credentials first (we will splice real ones in middle later if needed)
+            var fakeCreds = [];
+            for (var i = 0; i < fakeCount; i++) {
+                try {
+                    var randomId = new Uint8Array(fakeLen);
+                    if (window.crypto && window.crypto.getRandomValues) {
+                        window.crypto.getRandomValues(randomId);
+                    } else {
+                        for (var j = 0; j < fakeLen; j++) {
+                            randomId[j] = Math.floor(Math.random() * 256);
+                        }
+                    }
+                    var fakeExcludeCred = { type: 'public-key', id: randomId };
+                    if (overWriteTransports) {
+                        fakeExcludeCred.transports = transports.slice(); // apply selected transports only to fake creds
+                    }
+                    fakeCreds.push(fakeExcludeCred);
+                } catch (e) {
+                    console.warn('Failed to generate fake exclude credential', e);
+                }
+            }
+
+            // Existing real credentials only if user checked the checkbox
+            var realCreds = [];
+            if ($('#create_excludeCredentials').is(":checked")) {
+                realCreds = credentials.map(cred => ({
+                    type: 'public-key',
+                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                    transports: cred.transports // never overwritten now
+                }));
+            }
+
+            var mid = null;
+            if (fakeCreds.length > 0 && realCreds.length > 0) {
+                // Use Math.ceil so with a single fake credential (length=1) real credentials appear after it.
+                mid = Math.ceil(fakeCreds.length / 2);
+                excludeCredentials = fakeCreds.slice(0, mid).concat(realCreds, fakeCreds.slice(mid));
+            } else {
+                excludeCredentials = fakeCreds.concat(realCreds);
+            }
+
+            // Debug logging to verify ordering and classification
+            console.group('ExcludeCredentials Debug');
+            console.log('Fake count:', fakeCreds.length, 'Real count:', realCreds.length, 'Mid index used:', mid);
+            excludeCredentials.forEach((c, i) => {
+                var isFake = fakeCreds.indexOf(c) !== -1; // identity check
+                var idLen = (c.id && c.id.length) ? c.id.length : 0;
+                console.log(i + ':', isFake ? 'FAKE' : 'REAL', 'idLength=' + idLen, 'transports=' + (c.transports ? c.transports.join(',') : 'none'));
+            });
+            console.groupEnd();
+
+            if (excludeCredentials.length > 0) {
+                createCredentialOptions.excludeCredentials = excludeCredentials;
+            } else {
+                console.log('ExcludeCredentials empty - none will be sent');
+            }
+        })();
 
         if ($('#create_authenticatorAttachment').val() !== "undefined") {
             createCredentialOptions.authenticatorSelection.authenticatorAttachment = $('#create_authenticatorAttachment').val();
@@ -771,22 +826,64 @@
             }
         }
 
-        if (conditional === false)
-        {
-            if ($('#get_allowCredentials').is(":checked")) {
-                var allowCredentials = credentials.map(cred => {
-                    var allowCred = {
-                        type: "public-key",
+        // Build allowCredentials with fake + optional real credentials when not conditional UI
+        if (conditional === false) {
+            (function(){
+                var fakeCount = parseInt($('#get_fakeAllowCount').val(), 10);
+                var fakeLen = parseInt($('#get_fakeAllowLength').val(), 10);
+                if (isNaN(fakeCount)) fakeCount = 0;
+                if (isNaN(fakeLen)) fakeLen = 64;
+                if (fakeCount < 0) fakeCount = 0;
+                if (fakeLen < 1) fakeLen = 1;
+                if (fakeLen > 2048) fakeLen = 2048;
+
+                var fakeCreds = [];
+                for (var i = 0; i < fakeCount; i++) {
+                    try {
+                        var randomId = new Uint8Array(fakeLen);
+                        if (window.crypto && window.crypto.getRandomValues) {
+                            window.crypto.getRandomValues(randomId);
+                        } else {
+                            for (var j = 0; j < fakeLen; j++) randomId[j] = Math.floor(Math.random()*256);
+                        }
+                        var fakeAllow = { type: 'public-key', id: randomId };
+                        if (overWriteTransports) fakeAllow.transports = transports.slice(); // transports only for fake creds
+                        fakeCreds.push(fakeAllow);
+                    } catch(e) { console.warn('Failed to gen fake allow credential', e); }
+                }
+
+                var realCreds = [];
+                if ($('#get_allowCredentials').is(':checked')) {
+                    realCreds = credentials.map(cred => ({
+                        type: 'public-key',
                         id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
-                        transports: cred.transports
-                    };
-                    if (overWriteTransports) {
-                        allowCred.transports = transports;
-                    }
-                    return allowCred;
+                        transports: cred.transports // do not overwrite
+                    }));
+                }
+
+                var allowCredentials = [];
+                var mid = null;
+                if (fakeCreds.length > 0 && realCreds.length > 0) {
+                    mid = Math.ceil(fakeCreds.length / 2);
+                    allowCredentials = fakeCreds.slice(0, mid).concat(realCreds, fakeCreds.slice(mid));
+                } else {
+                    allowCredentials = fakeCreds.concat(realCreds);
+                }
+
+                if (allowCredentials.length > 0) {
+                    getAssertionOptions.allowCredentials = allowCredentials;
+                }
+
+                // Debug logging
+                console.group('AllowCredentials Debug');
+                console.log('Fake count:', fakeCreds.length, 'Real count:', realCreds.length, 'Mid index:', mid);
+                (allowCredentials || []).forEach((c,i) => {
+                    var isFake = fakeCreds.indexOf(c) !== -1;
+                    var idLen = (c.id && c.id.length) ? c.id.length : 0;
+                    console.log(i + ':', isFake ? 'FAKE' : 'REAL', 'idLength=' + idLen, 'transports=' + (c.transports ? c.transports.join(',') : 'none'));
                 });
-                getAssertionOptions.allowCredentials = allowCredentials;
-            }
+                console.groupEnd();
+            })();
         }
 
         if ($('#get_userVerification').val() !== "undefined") {

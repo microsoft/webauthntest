@@ -114,6 +114,12 @@ select {
   height: 20px;
 }
 
+/* Small numeric inputs for fake exclude credential controls */
+.small-number-input {
+  width: 90px; /* compact width */
+  box-sizing: border-box;
+}
+
 .float-right {
   float: right;
 }
