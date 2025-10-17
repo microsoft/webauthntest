@@ -117,16 +117,6 @@
                 $("#moreDialog_autofillUiSupported").text(isConditionalMediationAvailable);
             }
 
-            if (!PublicKeyCredential || typeof PublicKeyCredential.isExternalCTAP2SecurityKeySupported !== "function") {
-                $("#moreDialog_ctap2Supported").text("Not defined");
-            } else {
-                PublicKeyCredential.isExternalCTAP2SecurityKeySupported().then(supported => {
-                    $("#moreDialog_ctap2Supported").text(supported ? "Supported" : "Not supported");
-                }).catch(e => {
-                    $("#moreDialog_ctap2Supported").text("Error");
-                });
-            }
-
             if (!PublicKeyCredential || typeof PublicKeyCredential.getClientCapabilities !== "function") {
                 $("#moreDialog_ClientCapabilities").text("Not defined");
             } else {
@@ -142,6 +132,10 @@
                  }
             }
             moreDialog.showModal();
+        });
+
+        $('#cborButton').click(() => {
+            window.location.href = "./cbor.html";
         });
 
         $('#createDialog_createButton').click(() => {

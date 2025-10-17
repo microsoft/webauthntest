@@ -22,54 +22,89 @@
 </head>
 <body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base">
     <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header class="mdl-layout__header mdl-color--primary">
+        <header class="mdl-layout__header mdl-layout__header--scroll mdl-color--primary">
+            <div class="mdl-layout__header-row"></div>
             <div class="mdl-layout__header-row">
-                <span class="mdl-layout-title">CBOR Playground</span>
-                <div class="mdl-layout-spacer"></div>
-                <a href="index.html" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white">Back to App</a>
+                <h3 style="flex:1; display:flex; align-items:center; gap:8px; margin:0;" class="mdl-color-text--white">
+                    CBOR Playground
+                </h3>
+                <a href="index.html" id="backToAppBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white" title="Back to main app" style="display:flex; align-items:center; gap:4px;">
+                    <i class="material-icons" aria-hidden="true">arrow_back</i>
+                    Back
+                </a>
             </div>
+            <div class="mdl-layout__header-row"></div>
         </header>
         <main class="mdl-layout__content">
             <div class="container">
-                <p>This page provides an educational decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Paste CBOR data as Hex, Base64 (URL-safe allowed), or an array of byte values. Byte strings are rendered as h'HEX'. Not for production use.</p>
+                <p>This page provides an educational encoder/decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Not for production use.</p>
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
-                    <div class="card-title">Input</div>
-                    <textarea id="cborInput" placeholder="Example (hex): a26161016162820203"></textarea>
-                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Decode CBOR to JSON</span>
                         <button id="decodeBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Decode</button>
+                    </div>
+                    <textarea id="cborInput" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
+                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                         <button id="clearBtn" class="mdl-button mdl-js-button">Clear</button>
+                        <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
+                        <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="nestedOffsets">
-                            <input type="checkbox" id="nestedOffsets" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">Nested Offsets</span>
-                        </label>
-                        <!-- Hex Slices feature removed -->
-                        <!-- Removed display mode selector; always pretty -->
-                        <div style="display:flex; gap:8px;">
-                            <button id="exportJson" class="mdl-button mdl-js-button">Export JSON</button>
-                            <label class="mdl-button mdl-js-button" for="importJsonFile" style="cursor:pointer;">Import JSON</label>
-                            <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
-                        </div>
+
+                        <!-- Import JSON feature removed -->
                     </div>
                 </div>
 
-                <div class="mdl-card mdl-shadow--2dp" style="padding:16px;">
+                <div id="decodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; display:none;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Decoded</span>
-                        <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
-                            <i class="material-icons">content_copy</i>
-                        </button>
+                        <span>Decoded CBOR (JSON)</span>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button id="downloadDecodedJson" class="mdl-button mdl-js-button mdl-button--icon" title="Download decoded JSON"><i class="material-icons">file_download</i></button>
+                            <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
+                                <i class="material-icons">content_copy</i>
+                            </button>
+                        </div>
                     </div>
                     <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                </div>
+
+                <!-- Encode JSON to CBOR - Input Card -->
+                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:24px;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Encode JSON to CBOR</span>
+                        <button id="encodeRun" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Encode</button>
+                    </div>
+                    <textarea id="jsonInput" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
+                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
+                        <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
+                        <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
+                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
+                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input" checked>
+                            <span class="mdl-checkbox__label">Canonical</span>
+                        </label>
+                        <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
+                    </div>
+                </div>
+
+                <!-- Encoded CBOR Output Card -->
+                <div id="encodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:16px; display:none;">
+                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <span>Encoded CBOR (Hex)</span>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button id="downloadEncodedCbor" class="mdl-button mdl-js-button mdl-button--icon" title="Download encoded CBOR (.cbor)"><i class="material-icons">file_download</i></button>
+                            <button id="copyEncodedHex" class="mdl-button mdl-js-button mdl-button--icon" title="Copy encoded hex"><i class="material-icons">content_copy</i></button>
+                        </div>
+                    </div>
+                    <pre id="encodedHex" class="mono" aria-label="Encoded CBOR hex output" style="position:relative; background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                 </div>
 
                 <div id="errorArea" class="error" role="alert" style="margin-top:16px;"></div>
 
                 <footer>
-                    Limitations: duplicate map keys overwrite previous; very large integers > 2^53-1 returned as BigInt; tagged values appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
+                    Notes: duplicate map keys still overwrite previous (last wins); large integers (including bignum tags 2 & 3) decode to BigInt; common semantic tags decoded (date/time, epoch, embedded CBOR, URI, base64/url, regex, mime); other tags appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
                 </footer>
             </div>
         </main>
@@ -80,13 +115,18 @@
     <script>
         const inputEl = document.getElementById('cborInput');
         const jsonEl = document.getElementById('decodedJson');
-    const errEl = document.getElementById('errorArea');
-    // Re-encoded hex output removed
+        const errEl = document.getElementById('errorArea');
         const fmtEl = document.getElementById('formatInfo');
 
         function detectFormat(text){
             const t = text.trim();
             if(!t) return '';
+            // Support optional 0x / 0X hex prefix (not previously detected because of the 'x')
+            // We only classify as hex if (after removing prefix + whitespace) length is even and non-zero.
+            if(/^0x[0-9a-fA-F\s]*$/i.test(t)){
+                const body = t.slice(2).replace(/\s+/g,'');
+                if(body.length && body.length % 2 === 0) return 'hex';
+            }
             if(/^[0-9a-fA-F\s]+$/.test(t) && t.replace(/\s+/g,'').length % 2 === 0) return 'hex';
             if(/^[A-Za-z0-9+\/\_\-]+=*$/.test(t) && t.length >= 4) return 'base64';
             if(/^\[[-0-9,\s]+\]$/.test(t)) return 'array';
@@ -108,37 +148,40 @@
         let lastRoots = null; // meta roots cache
 
         function render(){
-            errEl.textContent=''; jsonEl.textContent='';
+            errEl.textContent='';
+            jsonEl.textContent='';
             const raw = inputEl.value;
-            if(!raw.trim()) return;
+            const decodedCard = document.getElementById('decodedCard');
+            if(!raw.trim()) { decodedCard.style.display='none'; return; }
             try {
                 const bytes = toBytes(raw);
                 const roots = CBORPlayground.decodeCborStreamTreeMeta(bytes);
                 lastRoots = roots;
-                const options = {
-                    nestedOffsets: document.getElementById('nestedOffsets').checked
-                };
+                const options = { nestedOffsets: false };
                 jsonEl.textContent = CBORPlayground.formatMetaRoots(roots, options);
+                decodedCard.style.display = jsonEl.textContent.trim()? 'block':'none';
             } catch(e){
+                decodedCard.style.display='none';
                 errEl.textContent = e.message;
             }
         }
 
         document.getElementById('decodeBtn').addEventListener('click', render);
         document.getElementById('clearBtn').addEventListener('click', ()=>{ inputEl.value=''; render(); });
-    inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
-    document.getElementById('nestedOffsets').addEventListener('change', render);
-    // Hex slices toggle removed
-    // Display mode selector removed
-        document.getElementById('exportJson').addEventListener('click', ()=>{
-            if(!lastRoots){ errEl.textContent='Nothing decoded to export.'; return; }
+        inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
+
+        document.getElementById('downloadDecodedJson').addEventListener('click', ()=>{
+            if(!lastRoots){ errEl.textContent='Nothing decoded to download.'; return; }
             try {
                 const exported = lastRoots.map(r=> CBORPlayground.exportValue(r.value));
-                const blob = new Blob([JSON.stringify(exported.length===1? exported[0] : exported, null, 2)], {type:'application/json'});
+                const jsonOut = JSON.stringify(exported.length===1? exported[0] : exported, null, 2);
+                const blob = new Blob([jsonOut], {type:'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = 'cbor-export.json'; a.click();
+                a.href = url; a.download = 'decoded.json'; a.click();
                 URL.revokeObjectURL(url);
+                decodedJson.style.background='#e0f0ff';
+                setTimeout(()=> decodedJson.style.background='', 300);
             } catch(e){ errEl.textContent = e.message; }
         });
         document.getElementById('copyDecoded').addEventListener('click', ()=>{
@@ -150,24 +193,153 @@
                 setTimeout(()=> decodedJson.style.background='', 300);
             }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
         });
-        document.getElementById('importJsonFile').addEventListener('change', (ev)=>{
-            const file = ev.target.files[0]; if(!file) return;
+        // Import CBOR file handling
+        const importCborFileInput = document.getElementById('importCborFile');
+        importCborFileInput.addEventListener('change', (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if(!file) return;
             const reader = new FileReader();
-            reader.onload = ()=>{
+            reader.onload = function(){
                 try {
-                    const text = reader.result; const parsed = JSON.parse(text);
-                    const values = Array.isArray(parsed) ? parsed.map(CBORPlayground.importValue) : [CBORPlayground.importValue(parsed)];
-                    // Encode and show hex + populate decoded view
-                    const encoded = CBORPlayground.encodeValues(values);
-                    inputEl.value = CBORPlayground.bytesToHex(encoded);
+                    const bytes = new Uint8Array(reader.result);
+                    // Populate input as uppercase hex for transparency
+                    inputEl.value = CBORPlayground.bytesToHex(bytes).toLowerCase();
+                    fmtEl.textContent = 'hex';
                     render();
-                } catch(e){ errEl.textContent = 'Import error: ' + e.message; }
+                } catch(err){ errEl.textContent = 'Import error: '+ err.message; }
             };
-            reader.readAsText(file);
-            ev.target.value='';
+            reader.onerror = ()=>{ errEl.textContent = 'File read failed.'; };
+            reader.readAsArrayBuffer(file);
+            // reset so selecting same file again re-triggers
+            importCborFileInput.value='';
         });
-        // Re-encode button removed
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
+
+    // ---------------- JSON -> CBOR Encoding Logic ----------------
+        const jsonInput = document.getElementById('jsonInput');
+        // Set multiline placeholder via JS so \n escapes become actual newlines
+        jsonInput.placeholder = `Example JSON / relaxed object:
+{
+    name: "Alice",
+    pubkey: {@bytes:"a1b2"},
+    big: {@bigint:"9007199254740993"},
+    transactionId: h"001122AABB"
+}
+Notes: Keys may be unquoted, h'HEX' or h"HEX" become {@bytes:"HEX"}. Wrappers: {@bytes:".."}, {@bigint:".."}, {@tag:N,value:...}, {@simple:N}.`;
+    const encodedHexEl = document.getElementById('encodedHex');
+    const encodeInfoEl = document.getElementById('encodeInfo');
+    let lastEncodedBytes = null;
+
+    function encodeJson(showErrors=true){
+        if(showErrors) errEl.textContent='';
+        encodeInfoEl.textContent=''; encodedHexEl.textContent=''; lastEncodedBytes = null;
+        const encodedCard = document.getElementById('encodedCard');
+        const raw = jsonInput.value.trim();
+        if(!raw){ encodedCard.style.display='none'; return; }
+        try {
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch(primaryErr){
+                try {
+                    const relaxed = transformRelaxedJson(raw);
+                    parsed = JSON.parse(relaxed);
+                } catch(relaxedErr){
+                    if(showErrors) throw primaryErr; else { encodedCard.style.display='none'; return; }
+                }
+            }
+            const value = CBORPlayground.importValue(parsed);
+            const bytes = CBORPlayground.encodeValues([value]);
+            lastEncodedBytes = bytes;
+            const hex = CBORPlayground.bytesToHex(bytes).toUpperCase();
+            encodedHexEl.textContent = hex;
+            encodeInfoEl.textContent = bytes.length + ' bytes';
+            encodedCard.style.display = hex? 'block':'none';
+        } catch(e){
+            encodedCard.style.display='none';
+            if(showErrors) errEl.textContent = 'Encode error: ' + e.message;
+        }
+    }
+
+    function transformRelaxedJson(src){
+        let s = src; // Do not mutate original externally.
+        // Normalize line endings
+        s = s.replace(/\r\n?/g,'\n');
+        // Remove // comments (not inside strings - heuristic: skip lines with // before quotes balance closes)
+        s = s.split('\n').map(line=>{
+            const idx = line.indexOf('//');
+            if(idx === -1) return line;
+            const before = line.slice(0, idx);
+            // crude: count quotes; if even number of double quotes before // treat as comment
+            const dq = (before.match(/"/g)||[]).length;
+            const sq = (before.match(/'/g)||[]).length; // ignore single quotes heuristic
+            if(dq % 2 === 0) return before; // remove comment part
+            return line; // leave line untouched if inside string
+        }).join('\n');
+        // Support h'HEX' or h"HEX" or h'hex' forms -> {"@bytes":"HEX"}
+        s = s.replace(/h['"]([0-9a-fA-F]+)['"]/g, (_,hex)=> '{"@bytes":"'+hex+'"}');
+        // Quote unquoted keys: match start of object member after { or ,
+        s = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*):/g, '$1"$2"$3:');
+        // Replace single quoted strings with double (not perfect; avoids interfering with already double quoted)
+        s = s.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (m,inner)=> '"'+inner.replace(/"/g,'\\"')+'"');
+        return s;
+    }
+
+    document.getElementById('encodeRun').addEventListener('click', ()=> encodeJson(true));
+    document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; document.getElementById('encodedCard').style.display='none'; });
+    // Import JSON for encoding
+    const importJsonEncodeInput = document.getElementById('importJsonEncode');
+    importJsonEncodeInput.addEventListener('change', (e)=>{
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(){
+            try {
+                jsonInput.value = reader.result;
+                encodeJson(false);
+            } catch(err){ errEl.textContent = 'Import JSON error: '+ err.message; }
+        };
+        reader.onerror = ()=>{ errEl.textContent = 'File read failed.'; };
+        reader.readAsText(file, 'utf-8');
+        importJsonEncodeInput.value='';
+    });
+    document.getElementById('copyEncodedHex').addEventListener('click', ()=>{
+        if(!encodedHexEl.textContent.trim()){ errEl.textContent='Nothing to copy.'; return; }
+        navigator.clipboard.writeText(encodedHexEl.textContent).then(()=>{
+            errEl.textContent='';
+            encodedHexEl.style.background='#e0ffe8';
+            setTimeout(()=> encodedHexEl.style.background='', 300);
+        }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+    });
+    // Download from output card icon
+    document.getElementById('downloadEncodedCbor').addEventListener('click', ()=>{
+        if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
+        const blob = new Blob([lastEncodedBytes], {type:'application/cbor'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'data.cbor'; a.click();
+        URL.revokeObjectURL(url);
+        // visual feedback flash
+        encodedHexEl.style.background='#e0f0ff';
+        setTimeout(()=> encodedHexEl.style.background='', 300);
+    });
+
+    // Toggle canonical ordering
+    const canonicalChk = document.getElementById('canonicalOrder');
+    canonicalChk.addEventListener('change', ()=>{
+        CBORPlayground.canonicalSortMapKeys = canonicalChk.checked;
+        // Re-encode immediately if we already have JSON parsed
+        if(jsonInput.value.trim()) encodeJson(false);
+    });
+
+    // Auto encode on typing with debounce
+    let encodeDebounceTimer;
+    jsonInput.addEventListener('input', ()=>{
+        clearTimeout(encodeDebounceTimer);
+        encodeDebounceTimer = setTimeout(()=> encodeJson(false), 300);
+    });
+    jsonInput.addEventListener('paste', ()=>{ setTimeout(()=> encodeJson(false), 0); });
+
     </script>
 </body>
 </html>

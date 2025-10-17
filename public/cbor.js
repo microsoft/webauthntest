@@ -138,6 +138,57 @@
             case 6: { // tag
                 const {len: tagNum, offset: o2} = readLength(addl, data, offset); offset = o2;
                 const tagged = decodeItem(data, offset); offset = tagged.offset;
+                // Interpret selected semantic tags (RFC 8949) to remove previous limitations:
+                // 2 = positive bignum, 3 = negative bignum.
+                if((tagNum === 2 || tagNum === 3) && tagged.value instanceof Uint8Array){
+                    // Big-endian unsigned magnitude in the byte string.
+                    let bn = 0n;
+                    for(const b of tagged.value){ bn = (bn << 8n) | BigInt(b); }
+                    if(tagNum === 3){ // negative: value = -1 - n
+                        bn = -1n - bn;
+                    }
+                    return { value: bn, offset };
+                }
+                // 0 = date/time string in RFC 3339 format
+                if(tagNum === 0 && typeof tagged.value === 'string'){
+                    return { value: { '@datetime': tagged.value }, offset };
+                }
+                // 1 = epoch-based date/time (seconds since 1970-01-01T00:00Z) int/float
+                if(tagNum === 1 && (typeof tagged.value === 'number' || typeof tagged.value === 'bigint')){
+                    // Convert to ISO 8601 string; BigInt may exceed safe range, so limit conversion if large.
+                    let secs = tagged.value;
+                    let iso;
+                    try {
+                        if(typeof secs === 'bigint'){
+                            // Only convert if within safe millisecond range.
+                            const msBig = secs * 1000n;
+                            if(msBig <= BigInt(Number.MAX_SAFE_INTEGER) && msBig >= BigInt(Number.MIN_SAFE_INTEGER)){
+                                iso = new Date(Number(msBig)).toISOString();
+                            } else {
+                                iso = secs.toString() + 's';
+                            }
+                        } else {
+                            iso = new Date(secs * 1000).toISOString();
+                        }
+                    } catch{ iso = String(secs); }
+                    return { value: { '@epoch': secs, '@iso': iso }, offset };
+                }
+                // 24 = encoded CBOR data item in a byte string
+                if(tagNum === 24 && tagged.value instanceof Uint8Array){
+                    let embedded;
+                    try {
+                        embedded = decodeCbor(tagged.value);
+                    } catch(e){
+                        embedded = { '@error': 'Embedded decode failed: ' + e.message, '@bytes': bytesToHex(tagged.value) };
+                    }
+                    return { value: { '@embedded': embedded }, offset };
+                }
+                // 32 = URI, 33 = base64url, 34 = base64, 35 = regexp, 36 = MIME message
+                if(tagNum === 32 && typeof tagged.value === 'string') return { value: { '@uri': tagged.value }, offset };
+                if(tagNum === 33 && typeof tagged.value === 'string') return { value: { '@base64url': tagged.value }, offset };
+                if(tagNum === 34 && typeof tagged.value === 'string') return { value: { '@base64': tagged.value }, offset };
+                if(tagNum === 35 && typeof tagged.value === 'string') return { value: { '@regex': tagged.value }, offset };
+                if(tagNum === 36 && typeof tagged.value === 'string') return { value: { '@mime': tagged.value }, offset };
                 return {value: {"@tag": tagNum, value: tagged.value}, offset};
             }
             case 7: { // simple / floats
@@ -256,7 +307,24 @@
             case 5: { const {len, offset:o2} = readLength(addl,data,offset); offset = o2; meta.entries=[]; let obj={}; function addPair(km, vm){ const key = (typeof km.value === 'string')? km.value : JSON.stringify(km.value); obj[key]=vm.value; meta.entries.push({ key: km, value: vm }); }
                 if(len === -1){ while(true){ if(offset>=data.length) throw new Error('Unterminated indefinite map'); if(data[offset]===0xFF){ offset++; break; } const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } } else { for(let i=0;i<len;i++){ const k = decodeItemMeta(data, offset); offset = k.offset; const v = decodeItemMeta(data, offset); offset = v.offset; addPair(k.meta, v.meta); } }
                 meta.value = obj; return finish(offset); }
-            case 6: { const {len: tagNum, offset:o2} = readLength(addl,data,offset); offset = o2; const inner = decodeItemMeta(data, offset); offset = inner.offset; meta.tag = tagNum; meta.child = inner.meta; meta.value = { '@tag': tagNum, value: inner.meta.value }; return finish(offset); }
+            case 6: { const {len: tagNum, offset:o2} = readLength(addl,data,offset); offset = o2; const inner = decodeItemMeta(data, offset); offset = inner.offset; meta.tag = tagNum; meta.child = inner.meta; 
+                // Mirror main-path semantic interpretations for common tags while preserving meta child info.
+                const rawVal = inner.meta.value;
+                if((tagNum === 2 || tagNum === 3) && rawVal instanceof Uint8Array){
+                    let bn=0n; for(const b of rawVal){ bn = (bn<<8n) | BigInt(b); } if(tagNum===3) bn = -1n - bn; meta.value = bn; return finish(offset);
+                }
+                if(tagNum === 0 && typeof rawVal === 'string'){ meta.value = { '@datetime': rawVal }; return finish(offset); }
+                if(tagNum === 1 && (typeof rawVal === 'number' || typeof rawVal === 'bigint')){
+                    let secs = rawVal; let iso; try { if(typeof secs === 'bigint'){ const msBig = secs*1000n; if(msBig <= BigInt(Number.MAX_SAFE_INTEGER) && msBig >= BigInt(Number.MIN_SAFE_INTEGER)) iso = new Date(Number(msBig)).toISOString(); else iso = secs.toString() + 's'; } else { iso = new Date(secs*1000).toISOString(); } } catch{ iso = String(secs);} meta.value = { '@epoch': secs, '@iso': iso }; return finish(offset);
+                }
+                if(tagNum === 24 && rawVal instanceof Uint8Array){ let embedded; try { embedded = decodeCbor(rawVal); } catch(e){ embedded = { '@error': 'Embedded decode failed: ' + e.message, '@bytes': bytesToHex(rawVal) }; } meta.value = { '@embedded': embedded }; return finish(offset); }
+                if(tagNum === 32 && typeof rawVal === 'string'){ meta.value = { '@uri': rawVal }; return finish(offset); }
+                if(tagNum === 33 && typeof rawVal === 'string'){ meta.value = { '@base64url': rawVal }; return finish(offset); }
+                if(tagNum === 34 && typeof rawVal === 'string'){ meta.value = { '@base64': rawVal }; return finish(offset); }
+                if(tagNum === 35 && typeof rawVal === 'string'){ meta.value = { '@regex': rawVal }; return finish(offset); }
+                if(tagNum === 36 && typeof rawVal === 'string'){ meta.value = { '@mime': rawVal }; return finish(offset); }
+                meta.value = { '@tag': tagNum, value: rawVal }; return finish(offset); }
+            // Meta decoding now interprets bignum/date/embedded/URI/base64/regex/mime tags similar to primary decode.
             case 7: { if(addl < 20){ meta.value = {'@simple': addl}; return finish(offset);} switch(addl){ case 20: meta.value=false; return finish(offset); case 21: meta.value=true; return finish(offset); case 22: meta.value=null; return finish(offset); case 23: meta.value=undefined; return finish(offset); case 24: { if(offset>=data.length) throw new Error('Truncated simple'); meta.value={'@simple': data[offset++]}; return finish(offset);} case 25: { if(offset+2>data.length) throw new Error('Truncated half float'); meta.value=readHalfFloat(data.slice(offset, offset+2)); offset+=2; return finish(offset);} case 26: { if(offset+4>data.length) throw new Error('Truncated float32'); meta.value=new DataView(data.buffer,data.byteOffset+offset,4).getFloat32(0,false); offset+=4; return finish(offset);} case 27: { if(offset+8>data.length) throw new Error('Truncated float64'); meta.value=new DataView(data.buffer,data.byteOffset+offset,8).getFloat64(0,false); offset+=8; return finish(offset);} case 31: throw new Error('Unexpected BREAK'); }
                 throw new Error('Unknown simple/fp additional info: '+addl); }
         }
@@ -349,7 +417,20 @@
         return concat.apply(null, parts);
     }
     function encodeMap(obj){
-        const entries = Object.entries(obj);
+        let entries = Object.entries(obj);
+        // Optional canonical ordering per RFC 8949 Section 4.2: sort by length of encoded key, then lexicographically.
+        // We approximate by encoding the map key and comparing the resulting byte arrays.
+        if(global.CBORPlayground && global.CBORPlayground.canonicalSortMapKeys){
+            entries = entries.slice().sort((a,b)=>{
+                const ka = encodeAny(mapKeyToCborKey(a[0]));
+                const kb = encodeAny(mapKeyToCborKey(b[0]));
+                if(ka.length !== kb.length) return ka.length - kb.length;
+                for(let i=0;i<ka.length && i<kb.length;i++){
+                    if(ka[i] !== kb[i]) return ka[i] - kb[i];
+                }
+                return 0;
+            });
+        }
         const head = encodeLength(5, entries.length); const parts=[head];
         for(const [k,v] of entries){ parts.push(encodeAny(mapKeyToCborKey(k)), encodeAny(v)); }
         return concat.apply(null, parts);
@@ -458,4 +539,5 @@
     global.CBORPlayground.exportValue = exportValue;
     global.CBORPlayground.importValue = importValue;
     global.CBORPlayground.encodeValues = encodeValues;
+    global.CBORPlayground.canonicalSortMapKeys = false; // default disabled; UI can toggle
 })(typeof window !== 'undefined' ? window : globalThis);
