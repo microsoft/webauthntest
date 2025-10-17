@@ -15,6 +15,7 @@
     var credentials = [];
     var conditionalAuthOperationInProgress = false;
     var ongoingAuth = null;
+    var selectedTransportCredentialId = null; // credential id currently being edited for transports
 
     $(window).on('load', async function () {
         var createDialog = document.querySelector('#createDialog');
@@ -35,6 +36,11 @@
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         if (!authenticationDataDialog.showModal) {
             dialogPolyfill.registerDialog(authenticationDataDialog);
+        }
+
+        var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
+        if (updateTransportsDialog && !updateTransportsDialog.showModal) {
+            dialogPolyfill.registerDialog(updateTransportsDialog);
         }
 
         var moreDialog = document.querySelector('#moreDialog');
@@ -218,6 +224,34 @@
         $('#authenticationDataDialog_xButton').click(() => {
             authenticationDataDialog.close();
         });
+
+        // Update Transports dialog events
+        if (updateTransportsDialog) {
+            $('#updateTransportsDialog_xButton').click(() => {
+                updateTransportsDialog.close();
+            });
+            $('#updateTransportsDialog_cancelButton').click(() => {
+                updateTransportsDialog.close();
+            });
+            $('#updateTransportsDialog_saveButton').click(() => {
+                if (!selectedTransportCredentialId) {
+                    updateTransportsDialog.close();
+                    return;
+                }
+                var transports = [];
+                if ($('#update_transport_internal').prop('checked')) transports.push('internal');
+                if ($('#update_transport_usb').prop('checked')) transports.push('usb');
+                if ($('#update_transport_nfc').prop('checked')) transports.push('nfc');
+                if ($('#update_transport_ble').prop('checked')) transports.push('ble');
+                if ($('#update_transport_hybrid').prop('checked')) transports.push('hybrid');
+                updateCredentialTransports(selectedTransportCredentialId, transports).then(() => {
+                    updateTransportsDialog.close();
+                    return updateCredentials();
+                }).catch(err => {
+                    toast('Failed to update transports: ' + err);
+                });
+            });
+        }
 
         // Initialize priority lists (algorithms + hints) via generalized helper
         initPriorityList({
@@ -945,6 +979,10 @@
         $("a.authenticationDataDetails").click(e => {
             showAuthenticationData($(event.target).attr("data-value"));
         });
+        $("a.updateTransportsButton").click(e => {
+            var id = $(event.target).attr("data-value");
+            showUpdateTransports(id);
+        });
     }
 
     /**
@@ -985,6 +1023,9 @@
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect deleteCredentialButton" data-value="'
             + credential.id
             + '">Delete</a>';
+        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
+            + credential.id
+            + '">Update Transports</a>';
         html += ' </div>';
         html += '</div>';
 
@@ -1056,6 +1097,28 @@
 
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         authenticationDataDialog.showModal();
+    }
+
+    /**
+     * UI: Shows Update Transports dialog and pre-populates checkboxes
+     * @param {string} id credential id
+     */
+    function showUpdateTransports(id) {
+        selectedTransportCredentialId = id;
+        var credential = credentials.find(c => c.id === id);
+        // reset all
+        $('#update_transport_internal').prop('checked', false);
+        $('#update_transport_usb').prop('checked', false);
+        $('#update_transport_nfc').prop('checked', false);
+        $('#update_transport_ble').prop('checked', false);
+        $('#update_transport_hybrid').prop('checked', false);
+        if (credential && Array.isArray(credential.transports)) {
+            credential.transports.forEach(t => {
+                $('#update_transport_' + t).prop('checked', true);
+            });
+        }
+        var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
+        if (updateTransportsDialog) updateTransportsDialog.showModal();
     }
 
 
@@ -1182,6 +1245,37 @@
                 "content-type": "application/json"
             }
         });
+    }
+
+    /**
+     * Helper: Performs an HTTP patch operation
+     * @param {string} endpoint endpoint URL
+     * @param {any} object 
+     * @returns {Promise} Promise resolving to javascript object received back
+     */
+    function rest_patch(endpoint, object) {
+        return fetch(endpoint, {
+            method: "PATCH",
+            credentials: "same-origin",
+            body: JSON.stringify(object),
+            headers: {
+                "content-type": "application/json"
+            }
+        });
+    }
+
+    /**
+     * Updates credential transports on server
+     * @param {string} id credential id
+     * @param {Array<string>} transports transports array
+     */
+    function updateCredentialTransports(id, transports) {
+        return rest_patch('/credentials/transports', { id: id, transports: transports })
+            .then(r => r.json())
+            .then(r => {
+                if (r.error) return Promise.reject(r.error);
+                return Promise.resolve(r.result);
+            });
     }
 
     //#endregion Helpers
