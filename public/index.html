@@ -635,6 +635,48 @@
         </div>
     </dialog>
 
+    <dialog class="mdl-dialog" id="updateTransportsDialog">
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button close" id="updateTransportsDialog_xButton">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <h3 class="mdl-dialog__title">Update Credential Transports</h3>
+        <div class="mdl-dialog__content">
+            <p>Select the transports supported by this credential. This will overwrite the stored values.</p>
+            <div class="mdl-grid mdl-grid--no-spacing">
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_internal">
+                    <input type="checkbox" id="update_transport_internal" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">Internal</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_usb">
+                    <input type="checkbox" id="update_transport_usb" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">USB</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_nfc">
+                    <input type="checkbox" id="update_transport_nfc" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">NFC</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_ble">
+                    <input type="checkbox" id="update_transport_ble" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">BLE</span>
+                </label>
+                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_hybrid">
+                    <input type="checkbox" id="update_transport_hybrid" class="mdl-checkbox__input">
+                    <span class="mdl-checkbox__label">Hybrid</span>
+                </label>
+            </div>
+            <div class="transport-actions">
+                <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="updateTransportsDialog_clearButton">Clear All</button>
+                <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="updateTransportsDialog_selectAllButton">Select All</button>
+            </div>
+        </div>
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button" id="updateTransportsDialog_saveButton">Save</button>
+            <button type="button" class="mdl-button close" id="updateTransportsDialog_cancelButton">Cancel</button>
+        </div>
+    </dialog>
+
     <dialog class="mdl-dialog" id="moreDialog">
         <h3 class="mdl-dialog__title">More Options</h3>
         <div class="mdl-dialog__content">

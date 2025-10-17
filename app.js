@@ -62,6 +62,32 @@ app.delete('/credentials', async (req, res) => {
 
 });
 
+// Updates the transports array for a credential
+app.patch('/credentials/transports', async (req, res) => {
+    try {
+        const uid = getUser(req);
+        const { id, transports } = req.body;
+        if (!id) {
+            throw new Error('id is required');
+        }
+        if (!Array.isArray(transports)) {
+            throw new Error('transports must be an array');
+        }
+        const allowed = new Set(['internal','usb','nfc','ble','hybrid']);
+        const clean = [];
+        transports.forEach(t => {
+            if (allowed.has(t) && !clean.includes(t)) clean.push(t);
+        });
+        const updated = await require('./storage').Credentials.findOneAndUpdate({ uid, id }, { transports: clean }, { new: true });
+        if (!updated) {
+            throw new Error('Credential not found');
+        }
+        res.json({ result: { id: updated.id, transports: updated.transports } });
+    } catch (e) {
+        res.json({ error: e.message });
+    }
+});
+
 app.get('/challenge', async (req, res) => {
     try {
         const uid = getUser(req);
