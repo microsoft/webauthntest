@@ -42,10 +42,7 @@
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-                        <!-- Hex Slices feature removed -->
-                        <!-- Removed display mode selector; always pretty -->
                         <div style="display:flex; gap:8px;">
-                            <button id="exportJson" class="mdl-button mdl-js-button">Export JSON</button>
                             <label class="mdl-button mdl-js-button" for="importJsonFile" style="cursor:pointer;">Import JSON</label>
                             <input type="file" id="importJsonFile" accept="application/json" style="display:none;" />
                         </div>
@@ -54,10 +51,13 @@
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Decoded</span>
-                        <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
-                            <i class="material-icons">content_copy</i>
-                        </button>
+                        <span>Decoded (JSON)</span>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button id="downloadDecodedJson" class="mdl-button mdl-js-button mdl-button--icon" title="Download decoded JSON"><i class="material-icons">file_download</i></button>
+                            <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
+                                <i class="material-icons">content_copy</i>
+                            </button>
+                        </div>
                     </div>
                     <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
                 </div>
@@ -72,7 +72,6 @@
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                         <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
                         <button id="encodeFormat" class="mdl-button mdl-js-button" title="Pretty format JSON">Format</button>
-                        <button id="downloadCbor" class="mdl-button mdl-js-button" title="Download .cbor file">Download</button>
                         <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
                             <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input">
                             <span class="mdl-checkbox__label">Canonical</span>
@@ -161,15 +160,18 @@
     inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
     // Hex slices toggle removed
     // Display mode selector removed
-        document.getElementById('exportJson').addEventListener('click', ()=>{
-            if(!lastRoots){ errEl.textContent='Nothing decoded to export.'; return; }
+        document.getElementById('downloadDecodedJson').addEventListener('click', ()=>{
+            if(!lastRoots){ errEl.textContent='Nothing decoded to download.'; return; }
             try {
                 const exported = lastRoots.map(r=> CBORPlayground.exportValue(r.value));
-                const blob = new Blob([JSON.stringify(exported.length===1? exported[0] : exported, null, 2)], {type:'application/json'});
+                const jsonOut = JSON.stringify(exported.length===1? exported[0] : exported, null, 2);
+                const blob = new Blob([jsonOut], {type:'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url; a.download = 'cbor-export.json'; a.click();
+                a.href = url; a.download = 'decoded.json'; a.click();
                 URL.revokeObjectURL(url);
+                decodedJson.style.background='#e0f0ff';
+                setTimeout(()=> decodedJson.style.background='', 300);
             } catch(e){ errEl.textContent = e.message; }
         });
         document.getElementById('copyDecoded').addEventListener('click', ()=>{
@@ -271,15 +273,6 @@
             setTimeout(()=> encodedHexEl.style.background='', 300);
         }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
     });
-    document.getElementById('downloadCbor').addEventListener('click', ()=>{
-        if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
-        const blob = new Blob([lastEncodedBytes], {type:'application/cbor'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'data.cbor'; a.click();
-        URL.revokeObjectURL(url);
-    });
-
     // Download from output card icon
     document.getElementById('downloadEncodedCbor').addEventListener('click', ()=>{
         if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
