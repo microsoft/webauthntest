@@ -41,18 +41,19 @@
                     <textarea id="cborInput" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
                     <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                         <button id="clearBtn" class="mdl-button mdl-js-button">Clear</button>
+                        <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
+                        <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
                     </div>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-                        <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
-                        <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
+
                         <!-- Import JSON feature removed -->
                     </div>
                 </div>
 
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Decoded (JSON)</span>
+                        <span>Decoded CBOR (JSON)</span>
                         <div style="display:flex; gap:4px; align-items:center;">
                             <button id="downloadDecodedJson" class="mdl-button mdl-js-button mdl-button--icon" title="Download decoded JSON"><i class="material-icons">file_download</i></button>
                             <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
@@ -76,7 +77,7 @@
                         <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
                         <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                         <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
-                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input">
+                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input" checked>
                             <span class="mdl-checkbox__label">Canonical</span>
                         </label>
                         <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
