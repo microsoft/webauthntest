@@ -9,22 +9,14 @@
         "start": "node app.js"
     },
     "dependencies": {
-        "@types/base64url": "^2.0.7",
-        "@types/jquery": "^3.5.32",
-        "@types/js-cookie": "^3.0.6",
-        "base64-url": "^2.3.3",
-        "body-parser": "^2.2.0",
-        "cbor": "^10.0.3",
+    "uuid": "^9.0.0",
+        "cbor": "^10.0.11",
         "cookie-parser": "^1.4.7",
         "express": "^5.1.0",
         "express-sslify": "^1.2.0",
-        "jsonwebtoken": "^9.0.2",
-        "jsrsasign": "^11.1.0",
-        "jwk-to-pem": "^2.0.7",
-        "mongoose": "^8.14.1",
-        "uuid-parse": "^1.1.0"
+        "mongoose": "^8.19.1"
     },
     "engines": {
-        "node": ">=20.15.0"
+        "node": ">=22.11.0"
     }
 }

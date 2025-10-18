@@ -1,15 +1,17 @@
 const crypto = require('crypto');
 const cbor = require('cbor');
-const jwt = require('jsonwebtoken');
+// Using raw random challenges instead of JWT
 const url = require('url');
-const base64url = require('base64-url');
-const uuid = require('uuid-parse');
+const { stringify: uuidStringify } = require('uuid');
 const storage = require('./storage.js');
 const fidoAttestation = require('./fidoAttestation.js');
-const {sha256, jwkToPem, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
+const {sha256, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
 
 const hostname = process.env.HOSTNAME || "localhost";
-const jwt_secret = process.env.JWTSECRET || "defaultsecret";
+// In-memory challenge store: map uid -> {challengeBase64, expiresAt}
+const challengeStore = new Map();
+
+const CHALLENGE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
 
 const fido = {};
 
@@ -28,10 +30,20 @@ const fido = {};
  * @returns {string} challenge
  */
 fido.getChallenge = (uid) => {
-    return jwt.sign({}, jwt_secret, {
-        subject: uid, 
-        expiresIn: 120 * 1000
-    });
+    // Generate 32 random bytes and store base64-encoded challenge per user with expiry
+    const raw = crypto.randomBytes(32);
+    // Use base64url encoding for safe transport in URLs and JSON
+    const b64 = raw.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const expiresAt = Date.now() + CHALLENGE_EXPIRY_MS;
+    // Store base64url (no padding) to make it safe for URLs and JSON
+    challengeStore.set(uid, { challengeBase64: b64, expiresAt });
+    // Debug log to help trace mismatches during development
+    try {
+        console.log(`[fido] setChallenge uid=${uid} challenge=${b64}`);
+    } catch (e) {
+        // ignore logging errors
+    }
+    return b64; // client will convert string -> ArrayBuffer
 };
 
 /**
@@ -61,7 +73,7 @@ fido.makeCredential = async (uid, attestation) => {
     }
 
     //Step 3-6: Verify client data
-    validateClientData(C, uid, "webauthn.create");
+    await validateClientData(C, uid, "webauthn.create");
     //Step 7: Compute the hash of response.clientDataJSON using SHA-256.
     const clientDataHash = sha256(attestation.clientDataJSON);
 
@@ -183,7 +195,7 @@ fido.verifyAssertion = async (uid, assertion) => {
     }
 
     //Step 7-10: Verify client data
-    validateClientData(C, uid, "webauthn.get");
+    await validateClientData(C, uid, "webauthn.get");
 
     //Parse authenticator data used for the next few steps
     const authenticatorData = parseAuthenticatorData(authData);
@@ -218,35 +230,21 @@ fido.verifyAssertion = async (uid, assertion) => {
         verify = crypto.createVerify('RSA-SHA256');
         verify.update(authData);
         verify.update(hash);
-        if (!verify.verify(jwkToPem(publicKey), sig))
+        const pubKeyObj = crypto.createPublicKey({ key: publicKey, format: 'jwk' });
+        if (!verify.verify(pubKeyObj, sig))
             throw new Error("Could not verify signature");
     }
     else if (publicKey.kty === "EC")
     {
-        if (publicKey.crv === "P-256")
-        {
-            verify = crypto.createVerify('sha256');
-            verify.update(authData);
-            verify.update(hash);
-            if (!verify.verify(jwkToPem(publicKey), sig))
-                throw new Error("Could not verify signature");
-        }
-        else if (publicKey.crv === "P-384")
-        {
-            verify = crypto.createVerify('sha384');
-            verify.update(authData);
-            verify.update(hash);
-            if (!verify.verify(jwkToPem(publicKey), sig))
-                throw new Error("Could not verify signature");
-        }
-        else if (publicKey.crv === "P-521")
-        {
-            verify = crypto.createVerify('sha512');
-            verify.update(authData);
-            verify.update(hash);
-            if (!verify.verify(jwkToPem(publicKey), sig))
-                throw new Error("Could not verify signature");
-        }
+        let algo = 'sha256';
+        if (publicKey.crv === "P-384") algo = 'sha384';
+        if (publicKey.crv === "P-521") algo = 'sha512';
+        verify = crypto.createVerify(algo);
+        verify.update(authData);
+        verify.update(hash);
+        const pubKeyObj = crypto.createPublicKey({ key: publicKey, format: 'jwk' });
+        if (!verify.verify(pubKeyObj, sig))
+            throw new Error("Could not verify signature");
     }
     else if (publicKey.kty === "AKP")
     {
@@ -311,7 +309,7 @@ fido.deleteCredential = async (uid, id) => {
  * @param {string} uid user id (used to validate challenge)
  * @param {string} type Operation type: webauthn.create or webauthn.get
  */
-const validateClientData = (clientData, uid, type) => {
+const validateClientData = async (clientData, uid, type) => {
     if (clientData.type !== type)
         throw new Error("collectedClientData type was expected to be " + type);
 
@@ -329,7 +327,36 @@ const validateClientData = (clientData, uid, type) => {
         throw new Error("Invalid origin in collectedClientData. Expected HTTPS protocol.");
 
     try {
-        jwt.verify(base64url.decode(clientData.challenge), jwt_secret, {subject: uid});
+        // clientData.challenge is base64url-encoded; normalize base64url and compare to stored base64url
+        function normalizeBase64Url(b64u) {
+            // Remove whitespace
+            b64u = (b64u || '').trim();
+            // Convert to base64url (no padding, -/_ instead of +/)
+            // If the client sent standard base64, convert '+'/'/' to '-'/'_' and strip '=' padding
+            return b64u.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+    const clientB64Url = normalizeBase64Url(clientData.challenge);
+    const stored = challengeStore.get(uid);
+        if (!stored) throw new Error('No challenge stored');
+        if (Date.now() > stored.expiresAt) {
+            challengeStore.delete(uid);
+            throw new Error('Challenge expired');
+        }
+        // Compare raw bytes to be robust against minor encoding differences
+        function base64UrlToBuffer(b64u) {
+            // convert base64url to base64
+            let b64 = b64u.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            return Buffer.from(b64, 'base64');
+        }
+        const clientBuf = base64UrlToBuffer(clientB64Url);
+        const storedBuf = base64UrlToBuffer(stored.challengeBase64);
+        if (!clientBuf.equals(storedBuf)) {
+            console.error('[fido] challenge mismatch', { uid, clientB64Url, storedB64Url: stored.challengeBase64, clientHex: clientBuf.toString('hex'), storedHex: storedBuf.toString('hex') });
+            throw new Error('Invalid challenge in collectedClientData');
+        }
+        // one-time use
+        challengeStore.delete(uid);
     } catch (err) {
         throw new Error("Invalid challenge in collectedClientData");
     }
@@ -358,7 +385,7 @@ function parseAuthenticatorData(authData) {
 
         if (flags & 64) {
             //has attestation data
-            const aaguid = uuid.unparse(authData.subarray(37, 53)).toUpperCase();
+            const aaguid = uuidStringify(authData.subarray(37, 53)).toUpperCase();
             const credentialIdLength = (authData[53] << 8) | authData[54];
             const credentialId = authData.subarray(55, 55 + credentialIdLength);
             const publicKeyBuffer = authData.subarray(55 + credentialIdLength, authData.length);

@@ -1,4 +1,3 @@
-const jwkToPem = require('jwk-to-pem')
 const crypto = require('crypto');
 const cbor = require('cbor');
 
@@ -20,9 +19,6 @@ utils.sha256 = data => {
  * node's crypto verify methods.
  * @param {any} jwk json web token
  */
-utils.jwkToPem = jwk => {
-    return jwkToPem(jwk);
-}
 
 /**
  * Utility function to convert a DER  to a PEM
