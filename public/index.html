@@ -234,12 +234,22 @@
             <span>
                 <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
                     <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Exclude Credentials?</span>
+                    <span class="mdl-checkbox__label">Exclude Existing Credentials?</span>
                 </label>
             </span>
             <hr>
             <span>
-                <span>Overwrite Exclude Credentials Transports? <br><br></span>
+                <span>Extra Credentials Count</span>
+                <input type="number" id="create_fakeExcludeCount" class="float-right small-number-input" min="0" value="0" />
+            </span>
+            <hr>
+            <span>
+                <span>Extra Credentials ID Length</span>
+                <input type="number" id="create_fakeExcludeLength" class="float-right small-number-input" min="1" value="64" />
+            </span>
+            <hr>
+            <span>
+                <span>Extra Credentials Transports<br><br></span>
                 <div class="mdl-grid mdl-grid--no-spacing">
                     <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_internal">
                         <input type="checkbox" id="create_internal" class="mdl-checkbox__input">
@@ -316,7 +326,7 @@
             <hr>
 
             <span>
-                <span>CredBlob Extension</span>
+                <span>CredBlob Extension<br></span>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
                     <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
@@ -379,7 +389,17 @@
             </span>
             <hr>
             <span>
-                <span>Overwrite AllowCredentials Transports? <br><br></span>
+                <span>Extra Credentials Count</span>
+                <input type="number" id="get_fakeAllowCount" class="float-right small-number-input" min="0" value="0" />
+            </span>
+            <hr>
+            <span>
+                <span>Extra Credentials ID Length</span>
+                <input type="number" id="get_fakeAllowLength" class="float-right small-number-input" min="1" value="64" />
+            </span>
+            <hr>
+            <span>
+                <span>Extra Credentials Transports <br><br></span>
                 <div class="mdl-grid mdl-grid--no-spacing">
                     <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_internal">
                         <input type="checkbox" id="get_internal" class="mdl-checkbox__input">
@@ -460,7 +480,7 @@
             </span>
             <hr>
             <span>
-                <span>Write LargeBlob</span>
+                <span>Write LargeBlob<br></span>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "get_largeBlobText">
                     <label class = "mdl-textfield__label" for = "get_largeBlobText">LargeBlob...</label>
@@ -468,7 +488,7 @@
             </span>
             <hr>
             <span>
-                <span>PRF Extension</span>
+                <span>PRF Extension<br></span>
                 <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
                     <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
                     <label class = "mdl-textfield__label" for = "get_prf_first">First Salt/Nonce...</label>
@@ -488,7 +508,7 @@
             </span>
             <hr>
             <span>
-                <span>Conditional Mediation</span>
+                <span>AutoFill Scenario <br></span>
                 <input
                     class = "mdl-textfield__input"
                     type = "text"
