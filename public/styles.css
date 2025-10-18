@@ -132,63 +132,77 @@ dialog {
   min-width: 450px;
 }
 
-/* Multi-column flowing layout for Create Credential dialog */
+/* Hybrid layout: flex single column on narrow screens, masonry-style columns on wide screens to reduce vertical gaps */
+#createDialog { width: clamp(320px, 95vw, 1200px); max-width:100%; }
 #createDialog .mdl-dialog__content {
-  column-count: 2;
-  column-gap: clamp(16px, 3vw, 36px);
-  column-fill: auto; /* fill columns sequentially to minimize whitespace */
   max-height: 70vh;
   overflow-y: auto;
-  padding-right: 8px; /* room for scrollbar */
-}
-#createDialog .mdl-dialog__content > hr { display: none; }
-#createDialog .mdl-dialog__content > span {
-  display: inline-block;
-  width: 100%;
-  background:#fafafa;
-  border:1px solid #e5e5e5;
-  border-radius:4px;
-  padding:6px 14px;
-  margin: 0 0 12px 0;
-  box-sizing: border-box;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  page-break-inside: avoid;
-}
-/* Algorithm block normal flow (no special spanning to avoid vertical gaps) */
-#createDialog { min-width: 920px; }
-
-/* Multi-column flowing layout for Get Credential dialog (mirrors create dialog) */
-#getDialog .mdl-dialog__content {
-  column-count: 2;
-  column-gap: clamp(16px, 3vw, 36px);
-  column-fill: auto;
-  max-height: 70vh;
-  overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* spacing for single column */
 }
-#getDialog .mdl-dialog__content > hr { display: none; }
-#getDialog .mdl-dialog__content > span {
-  display: inline-block;
-  width: 100%;
+#createDialog .mdl-dialog__content > hr { display:none; }
+#createDialog .mdl-dialog__content > span {
   background:#fafafa;
   border:1px solid #e5e5e5;
   border-radius:4px;
-  padding:6px 14px;
-  margin: 0 0 12px 0;
+  padding:6px 12px;
+  margin: 0;
   box-sizing: border-box;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  page-break-inside: avoid;
 }
-#getDialog { min-width: 920px; }
+@media (min-width:1000px){
+  #createDialog .mdl-dialog__content {
+    display: block; /* switch to multicol */
+    column-count: 2;
+    column-gap: 18px;
+    column-fill: balance;
+  }
+  #createDialog .mdl-dialog__content > span {
+    display: inline-block;
+    width: 100%;
+    break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
+    margin: 0 0 12px 0; /* restore bottom spacing per column item */
+  }
+}
 
-@media (max-width: 1100px) {
-  #createDialog .mdl-dialog__content { column-count: 1; }
-  #createDialog { min-width: 480px; }
-  #getDialog .mdl-dialog__content { column-count: 1; }
-  #getDialog { min-width: 480px; }
+/* Hybrid layout for Get Credential dialog */
+#getDialog { width: clamp(320px, 95vw, 1200px); max-width:100%; }
+#getDialog .mdl-dialog__content {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
+#getDialog .mdl-dialog__content > hr { display:none; }
+#getDialog .mdl-dialog__content > span {
+  background:#fafafa;
+  border:1px solid #e5e5e5;
+  border-radius:4px;
+  padding:6px 12px;
+  margin: 0;
+  box-sizing: border-box;
+}
+@media (min-width:1000px){
+  #getDialog .mdl-dialog__content {
+    display: block;
+    column-count: 2;
+    column-gap: 18px;
+    column-fill: balance;
+  }
+  #getDialog .mdl-dialog__content > span {
+    display: inline-block;
+    width:100%;
+    break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
+    margin:0 0 12px 0;
+  }
+}
+
+/* Narrow screens remain single column automatically; no horizontal scroll due to width clamp */
 
 #creationDataDialog {
   min-width: 60%;
