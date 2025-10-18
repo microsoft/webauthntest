@@ -1,5 +1,4 @@
 const {derToPEM} = require('./utils.js');
-const jsrsasign = require('jsrsasign');
 const crypto = require('crypto');
 const cbor = require('cbor');
 
@@ -102,12 +101,11 @@ const parseU2FAttestation = (attestationObject, authenticatorData, clientDataHas
         throw new Error("Attestation signature did not verify");
     }
 
-    const c = new jsrsasign.X509();
-    c.readCertPEM(pem);
+    const { X509Certificate } = require('crypto');
+    const cert = new X509Certificate(Buffer.from(attCert));
     const chainJSON = JSON.stringify([{
-        version: c.getVersion(),
-        subject: c.getSubjectString(),
-        issuer: c.getIssuerString()
+        subject: cert.subject,
+        issuer: cert.issuer
     }]);
 
     const hex = cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase();
@@ -135,15 +133,13 @@ const parsePackedAttestation = (attestationObject, authenticatorData, clientData
 
     if (attestationObject.attStmt.x5c)
     {
+        const { X509Certificate } = require('crypto');
         const chain = attestationObject.attStmt.x5c.map(x5c => {
-            const p = derToPEM(x5c.toString('base64'));
-            const c = new jsrsasign.X509();
-            c.readCertPEM(p);
+            const cert = new X509Certificate(Buffer.from(x5c));
             return {
-                version: c.getVersion(),
-                subject: c.getSubjectString(),
-                issuer: c.getIssuerString(),
-                extAaguid: c.getExtInfo("1.3.6.1.4.1.45724.1.1.4")
+                subject: cert.subject,
+                issuer: cert.issuer
+                // extAaguid: not supported natively; requires ASN.1 parsing if needed
             };
         });
         chainJSON = JSON.stringify(chain);

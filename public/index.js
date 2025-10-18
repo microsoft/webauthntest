@@ -409,8 +409,31 @@
                 return Promise.reject(response.error);
             }
             else {
-                var challenge = stringToArrayBuffer(response.result);
-                return Promise.resolve(challenge);
+                // Server returns base64 (or base64url)-encoded challenge; decode to ArrayBuffer
+                function base64ToArrayBuffer(base64input) {
+                    // Normalize base64url -> base64 and strip invalid characters
+                    let base64 = base64input.replace(/-/g, '+').replace(/_/g, '/');
+                    // Remove any characters that are not base64
+                    base64 = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+                    // Pad with '=' to make length a multiple of 4
+                    while (base64.length % 4) base64 += '=';
+                    // atob returns binary string
+                    const binary = atob(base64);
+                    const len = binary.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        bytes[i] = binary.charCodeAt(i);
+                    }
+                    return bytes.buffer;
+                }
+                try {
+                    var challenge = base64ToArrayBuffer(response.result);
+                    return Promise.resolve(challenge);
+                } catch (err) {
+                    console.error('Failed to decode challenge:', response.result, err);
+                    // Provide a clearer message to the user
+                    return Promise.reject('Received malformed challenge from server. See console for details.');
+                }
             }
         });
     }

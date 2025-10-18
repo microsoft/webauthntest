@@ -236,7 +236,7 @@
     function hexToBytes(hex){
         // Support optional leading 0x / 0X
         if(/^0x/i.test(hex.trim())) hex = hex.trim().slice(2);
-        hex = hex.replace(/[^0-9a-fA-F]/g,'');
+    hex = Array.from(hex).filter(c => '0123456789abcdefABCDEF'.includes(c)).join('');
         if(hex.length % 2) throw new Error('Hex length must be even');
         const out = new Uint8Array(hex.length/2);
         for(let i=0;i<out.length;i++) out[i] = parseInt(hex.substr(i*2,2),16);
@@ -244,7 +244,7 @@
     }
     function base64ToBytes(b64){
         if(typeof atob === 'undefined') throw new Error('Base64 decode not supported in this environment');
-        b64 = b64.replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
+    b64 = b64.split(/\s+/).join('').split('-').join('+').split('_').join('/');
         const pad = b64.length % 4; if(pad) b64 += '='.repeat(4-pad);
         const bin = atob(b64); const out = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i); return out;
     }

@@ -124,10 +124,10 @@
             // Support optional 0x / 0X hex prefix (not previously detected because of the 'x')
             // We only classify as hex if (after removing prefix + whitespace) length is even and non-zero.
             if(/^0x[0-9a-fA-F\s]*$/i.test(t)){
-                const body = t.slice(2).replace(/\s+/g,'');
+                const body = t.slice(2).split(/\s+/).join('');
                 if(body.length && body.length % 2 === 0) return 'hex';
             }
-            if(/^[0-9a-fA-F\s]+$/.test(t) && t.replace(/\s+/g,'').length % 2 === 0) return 'hex';
+            if(/^[0-9a-fA-F\s]+$/.test(t) && t.split(/\s+/).join('').length % 2 === 0) return 'hex';
             if(/^[A-Za-z0-9+\/\_\-]+=*$/.test(t) && t.length >= 4) return 'base64';
             if(/^\[[-0-9,\s]+\]$/.test(t)) return 'array';
             return 'unknown';
