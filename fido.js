@@ -33,7 +33,9 @@ fido.getChallenge = (uid) => {
     // Generate 32 random bytes and store base64-encoded challenge per user with expiry
     const raw = crypto.randomBytes(32);
     // Use base64url encoding for safe transport in URLs and JSON
-    const b64 = raw.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    let b64 = raw.toString('base64');
+    b64 = b64.split('+').join('-').split('/').join('_');
+    while (b64.endsWith('=')) b64 = b64.slice(0, -1);
     const expiresAt = Date.now() + CHALLENGE_EXPIRY_MS;
     // Store base64url (no padding) to make it safe for URLs and JSON
     challengeStore.set(uid, { challengeBase64: b64, expiresAt });
@@ -330,10 +332,12 @@ const validateClientData = async (clientData, uid, type) => {
         // clientData.challenge is base64url-encoded; normalize base64url and compare to stored base64url
         function normalizeBase64Url(b64u) {
             // Remove whitespace
-            b64u = (b64u || '').trim();
-            // Convert to base64url (no padding, -/_ instead of +/)
-            // If the client sent standard base64, convert '+'/'/' to '-'/'_' and strip '=' padding
-            return b64u.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            let s = (b64u || '').trim();
+            // Convert standard base64 to base64url by replacing chars
+            s = s.split('+').join('-').split('/').join('_');
+            // Strip trailing padding
+            while (s.endsWith('=')) s = s.slice(0, -1);
+            return s;
         }
     const clientB64Url = normalizeBase64Url(clientData.challenge);
     const stored = challengeStore.get(uid);
@@ -344,8 +348,8 @@ const validateClientData = async (clientData, uid, type) => {
         }
         // Compare raw bytes to be robust against minor encoding differences
         function base64UrlToBuffer(b64u) {
-            // convert base64url to base64
-            let b64 = b64u.replace(/-/g, '+').replace(/_/g, '/');
+            // convert base64url to base64 using safe string ops
+            let b64 = (b64u || '').split('-').join('+').split('_').join('/');
             while (b64.length % 4) b64 += '=';
             return Buffer.from(b64, 'base64');
         }
