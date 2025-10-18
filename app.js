@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const fido = require('./fido.js');
+const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const enforce = require('express-sslify');
 
@@ -12,7 +13,7 @@ const appVersion = `${process.env.npm_package_version}` || 'unknown';
 
 app.use(express.static('public'));
 app.use(cookieParser());
-app.use(express.json());
+app.use(bodyParser.json());
 
 app.get('/metadata', (req, res) => {
     res.status(200).json({ appVersion });
