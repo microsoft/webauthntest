@@ -1,5 +1,4 @@
 const {derToPEM} = require('./utils.js');
-// Removed jsrsasign; use native crypto.X509Certificate
 const crypto = require('crypto');
 const cbor = require('cbor');
 
