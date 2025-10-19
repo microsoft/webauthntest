@@ -1551,6 +1551,7 @@ try {
                     raw: ab,
                     pem: convertToPEM(ab),
                     fingerprintSHA256,
+                    fingerprintSHA256Colon,
                     publicKey,
                     extensions
                 };
