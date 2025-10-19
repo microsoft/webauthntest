@@ -1140,6 +1140,33 @@ try {
             var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
         });
+        $("a.viewCertificatesButton").click(async e => {
+            var id = $(e.currentTarget).attr("data-value");
+            var credential = credentials.find(c => c.id === id);
+            if (!credential) {
+                toast('Credential not found');
+                return;
+            }
+            try {
+                if (credential.creationData && credential.creationData.attestationObject) {
+                    const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
+                    const bytes = CBORPlayground.hexToBytes(hex);
+                    const top = CBORPlayground.decodeCbor(bytes);
+                    const found = findX5cInCbor(top);
+                    if (found && found.length) {
+                        const certs = await parseX5cArray(found);
+                        showCertificatesDialog(certs);
+                    } else {
+                        toast('No certificates found in attestation data');
+                    }
+                } else {
+                    toast('No attestation data available for this credential');
+                }
+            } catch (err) {
+                console.error(err);
+                toast('Failed to parse certificates: ' + (err && err.message ? err.message : err));
+            }
+        });
     }
 
     /**
@@ -1149,7 +1176,7 @@ try {
     function renderCredential(credential) {
         var html = '';
 
-        html += '<div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col" id="credential' + credential.id + '">';
+    html += '<div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col" id="credential-' + credential.idHex + '">';
         html += ' <div class="mdl-card__title">';
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
@@ -1183,11 +1210,35 @@ try {
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
             + credential.id
             + '">Update Transports</a>';
+        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="'
+            + credential.id
+            + '" style="display:none; margin-left:8px;">View Certificates</a>';
         html += ' </div>';
         html += '</div>';
 
 
         $("#credentialsContainer").append(html);
+
+        // After inserting into DOM, probe the attestationObject for x5c presence and show the button if found
+        try {
+            if (credential.creationData && credential.creationData.attestationObject) {
+                const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
+                const bytes = CBORPlayground.hexToBytes(hex);
+                const top = CBORPlayground.decodeCbor(bytes);
+                const found = findX5cInCbor(top);
+                if (found && found.length) {
+                    // show the button for this credential card
+                    const card = document.getElementById('credential-' + credential.idHex);
+                    if (card) {
+                        const btn = card.querySelector('a.viewCertificatesButton');
+                        if (btn) btn.style.display = 'inline-block';
+                    }
+                }
+            }
+        } catch (e) {
+            // non-fatal if parsing fails
+            console.warn('Error probing attestationObject for credential', credential.id, e);
+        }
 
     }
 
@@ -1196,8 +1247,10 @@ try {
      * @param {string} id id of credenital to highlight
      */
     function highlightCredential(id) {
-        var credentialCard = document.getElementById("credential" + id);
-
+        // id is base64 id; find credential to obtain its idHex
+        var credential = credentials.find(c => c.id === id);
+        if (!credential) return;
+        var credentialCard = document.getElementById('credential-' + credential.idHex);
         if (!credentialCard) return;
 
         credentialCard.classList.add("highlighted");
@@ -1230,36 +1283,7 @@ try {
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
         $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
 
-        // If attestationObjectHex contains x5c certificates, enable View Certificates button
-        const viewCertsBtn = document.getElementById('creationData_viewCertsButton');
-        if (viewCertsBtn) {
-            // Hide by default
-            viewCertsBtn.style.display = 'none';
-            try {
-                if (credential.creationData && credential.creationData.attestationObject) {
-                    const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
-                    const bytes = CBORPlayground.hexToBytes(hex);
-                    // attestationObject is CBOR: {fmt, authData, attStmt}
-                    const top = CBORPlayground.decodeCbor(bytes);
-                    // Find any x5c arrays in the map recursively
-                    const found = findX5cInCbor(top);
-                    if (found && found.length) {
-                        viewCertsBtn.style.display = 'inline-block';
-                        viewCertsBtn.onclick = async () => {
-                            try {
-                                const certs = await parseX5cArray(found);
-                                showCertificatesDialog(certs);
-                            } catch (e) {
-                                toast('Failed to parse certificates: ' + e.message);
-                                console.error(e);
-                            }
-                        };
-                    }
-                }
-            } catch (e) {
-                console.warn('Could not probe attestationObject for x5c', e);
-            }
-        }
+        // Note: Certificate viewing is handled per-credential on the main page
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
