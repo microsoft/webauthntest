@@ -227,6 +227,48 @@
                 // Auto-run decode after short delay to allow UI to settle
                 setTimeout(render, 50);
             }
+            // If caller passed ?json=... populate the JSON -> CBOR encoder
+            const j = params.get('json');
+            if(j) {
+                try { jsonInput.value = decodeURIComponent(j); } catch(e) { jsonInput.value = j; }
+                // set format hints and run encode after slight delay
+                setTimeout(()=> { encodeJson(false); }, 50);
+            }
+        } catch(e) { /* ignore */ }
+    })();
+
+    // PostMessage handshake: inform opener when ready to accept JSON payload and listen for payload
+    (function(){
+        try {
+            // If we were opened by another window, let it know we're ready
+            if(window.opener && !window.opener.closed){
+                try {
+                    window.opener.postMessage({ type: 'cbor-playground-ready' }, window.location.origin);
+                } catch(e) { /* ignore */ }
+            }
+
+            window.addEventListener('message', function(ev){
+                try {
+                    // Only accept messages from same origin
+                    if(ev.origin !== window.location.origin) return;
+                    var data = ev.data || {};
+                    if(data && data.type === 'cbor-playground-json'){
+                        var j = data.json || '';
+                        if(typeof j === 'string'){
+                            jsonInput.value = j;
+                            // Run encoder after brief delay so UI updates
+                            setTimeout(()=> encodeJson(false), 50);
+                        }
+                    } else if(data && data.type === 'cbor-playground-cbor'){
+                        var inp = data.input || '';
+                        if(typeof inp === 'string'){
+                            cborInput.value = inp;
+                            fmtEl.textContent = detectFormat(inp) || '';
+                            setTimeout(()=> render(), 50);
+                        }
+                    }
+                } catch(err){ /* ignore */ }
+            }, false);
         } catch(e) { /* ignore */ }
     })();
 

@@ -1241,6 +1241,8 @@ try {
     html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
     html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
         html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
+        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
             (credential.transports || []).forEach(t => {
@@ -1249,8 +1251,6 @@ try {
             });
             html += '</dd>';
         }
-        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
-        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
         html += '         </dl>';
         html += '     </div>';
         // Last Authentication Data (nicer UI)
@@ -1332,7 +1332,6 @@ try {
         }
 
         $("#creationData_attestationObject").text(credential.creationData.attestationObject);
-        $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
         $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
     $("#creationData_publicKeyType").text(publicKeyType);
@@ -1359,7 +1358,7 @@ try {
         try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
     }
 
-    // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
+    // Open CBOR playground in new tab with provided CBOR input using postMessage
     $(document).on('click', '.openCborButton', function(e){
         e.preventDefault();
         try {
@@ -1369,11 +1368,92 @@ try {
             if(!el) { toast('CBOR input not available'); return; }
             var raw = el.textContent || el.innerText || '';
             if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
-            // Encode the raw value as URI component; cbor.html will detect hex/base64
-            var u = './cbor.html?input=' + encodeURIComponent(raw.trim());
-            window.open(u, '_blank');
+
+            // Open child window and establish handshake to send CBOR payload via postMessage
+            var child = window.open('./cbor.html', '_blank');
+            if(!child) { toast('Popup blocked. Allow popups for this site.'); return; }
+
+            var origin = window.location.origin;
+            var payload = raw.trim();
+            var responded = false;
+
+            function onMessage(ev){
+                try {
+                    if(ev.origin !== origin) return;
+                    var data = ev.data || {};
+                    if(data && data.type === 'cbor-playground-ready'){
+                        ev.source.postMessage({ type: 'cbor-playground-cbor', input: payload }, origin);
+                        responded = true;
+                        window.removeEventListener('message', onMessage);
+                    }
+                } catch (err) { /* ignore */ }
+            }
+
+            window.addEventListener('message', onMessage);
+
+            // Fallback: if child doesn't handshake within timeout, open with ?input= as a backup
+            setTimeout(()=>{
+                if(responded) return;
+                try {
+                    var u = './cbor.html?input=' + encodeURIComponent(payload);
+                    child.location.href = u;
+                    window.removeEventListener('message', onMessage);
+                } catch(e){ /* ignore */ }
+            }, 1500);
+
         } catch (err) {
             console.error('Failed to open CBOR playground', err);
+            toast('Failed to open CBOR playground');
+        }
+    });
+
+    // Open CBOR playground in encode mode with provided JSON input using postMessage
+    $(document).on('click', '.openCborEncodeButton', function(e){
+        e.preventDefault();
+        try {
+            var targetSpan = $(this).attr('data-target-span');
+            if(!targetSpan) return;
+            var el = document.getElementById(targetSpan);
+            if(!el) { toast('ClientDataJSON not available'); return; }
+            var raw = el.textContent || el.innerText || '';
+            if(!raw || !raw.trim()) { toast('No ClientDataJSON to encode'); return; }
+
+            // Open child window and establish a handshake to send payload via postMessage
+            var child = window.open('./cbor.html', '_blank');
+            if(!child) { toast('Popup blocked. Allow popups for this site.'); return; }
+
+            var origin = window.location.origin;
+            var payload = raw.trim();
+            var responded = false;
+
+            function onMessage(ev){
+                try {
+                    // Only accept messages from same origin (cbor.html opened from same host)
+                    if(ev.origin !== origin) return;
+                    var data = ev.data || {};
+                    if(data && data.type === 'cbor-playground-ready'){
+                        // child is ready to receive json payload
+                        ev.source.postMessage({ type: 'cbor-playground-json', json: payload }, origin);
+                        responded = true;
+                        window.removeEventListener('message', onMessage);
+                    }
+                } catch (err) { /* ignore */ }
+            }
+
+            window.addEventListener('message', onMessage);
+
+            // Fallback: if child doesn't handshake within timeout, open with ?json= as a backup
+            setTimeout(()=>{
+                if(responded) return;
+                try {
+                    var u = './cbor.html?json=' + encodeURIComponent(payload);
+                    child.location.href = u;
+                    window.removeEventListener('message', onMessage);
+                } catch(e){ /* ignore */ }
+            }, 1500);
+
+        } catch (err) {
+            console.error('Failed to open CBOR playground for encode', err);
             toast('Failed to open CBOR playground');
         }
     });
