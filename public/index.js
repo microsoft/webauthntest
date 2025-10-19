@@ -1338,6 +1338,15 @@ try {
     $("#creationData_publicKeyType").text(publicKeyType);
     $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
         $("#creationData_extensionData").text(credential.creationData.extensionDataHex);
+        // Hide DECODE button if there's no extension data
+        try {
+            var creationExtText = (credential.creationData.extensionDataHex || '').toString().trim();
+            var btn = document.querySelector('.openCborButton[data-target-span="creationData_extensionData"]');
+            if (btn) {
+                if (!creationExtText || creationExtText === 'No extension data') btn.style.display = 'none';
+                else btn.style.display = 'inline-block';
+            }
+        } catch (e) { /* non-fatal */ }
         $("#creationData_residentKey").text(credential.metadata.residentKey);
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
         $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
@@ -1909,6 +1918,15 @@ try {
         $("#authenticationData_userHandleHex").text(credential.authenticationData.userHandleHex);
         $("#authenticationData_authenticatorDataHex").text(credential.authenticationData.authenticatorDataHex);
         $("#authenticationData_extensionData").text(credential.authenticationData.extensionDataHex);
+        // Hide DECODE button if there's no extension data
+        try {
+            var authExtText = (credential.authenticationData.extensionDataHex || '').toString().trim();
+            var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]');
+            if (btn2) {
+                if (!authExtText || authExtText === 'No extension data') btn2.style.display = 'none';
+                else btn2.style.display = 'inline-block';
+            }
+        } catch (e) { /* non-fatal */ }
         $("#authenticationData_clientDataJSON").text(credential.authenticationData.clientDataJSON);
         $("#authenticationData_signatureHex").text(credential.authenticationData.signatureHex);
         $("#authenticationData_authenticatorAttachment").text(credential.authenticationData.authenticatorAttachment);
