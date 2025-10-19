@@ -403,6 +403,10 @@ a {
 }
 .cred-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
 
+/* AAGUID copy button style mirrors Credential ID copy button */
+.aaguid-copy-id { padding: 6px 8px !important; min-width: 0 !important; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent !important; color: #1a73e8 !important; border: none !important; }
+.aaguid-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+
 /* Registration data block in credential cards */
 .reg-data { margin-top: 8px; padding: 8px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; }
 .reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -483,9 +487,10 @@ a {
 /* Ensure each cert card uses the full width of the dialog content area */
 #certsDialog .cert-card { width: 100%; box-sizing: border-box; }
 
+.cert-dialog-actions { display:flex; gap:8px; align-items:center; }
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
-   so Download Chain appears on the left and Close on the right. Use
-   explicit orders to survive MDL DOM upgrades. */
+  so Download Chain appears on the left and Close on the right. Use
+  explicit orders to survive MDL DOM upgrades. */
 .cert-dialog-actions {
   margin-top: 12px;
   display: flex;

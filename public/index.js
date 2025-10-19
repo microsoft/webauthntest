@@ -1235,11 +1235,11 @@ try {
     html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
         html += '         </div>';
         html += '         <dl class="reg-data-list">';
-    html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect cred-copy-id" data-idhex="' + credential.idHex + '" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
+    html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
     html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
+    html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
     html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
     html += '             <dt>Requested Discoverable</dt><dd>' + escapeHtml(String(credential.metadata.residentKey || '')) + '</dd>';
-    html += '             <dt>AAGUID</dt><dd>' + escapeHtml(credential.creationData.aaguid || '') + '</dd>';
     html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
         html += '             <dt>Authenticator Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
@@ -1370,31 +1370,32 @@ try {
         }
     });
 
-    // Copy Credential ID button handler (delegated)
-    $(document).on('click', '.cred-copy-id', async function(e){
+    // Generic copy-to-clipboard handler (delegated)
+    $(document).on('click', '.copy-to-clipboard', async function(e){
         e.preventDefault();
         try {
-            var idhex = this.getAttribute('data-idhex') || '';
-            if(!idhex) return toast('No Credential ID to copy');
+            var text = this.getAttribute('data-copy-text') || '';
+            var label = this.getAttribute('data-copy-label') || 'Value';
+            if(!text) return toast('No ' + label + ' to copy');
             try {
-                await navigator.clipboard.writeText(idhex);
-                toast('Credential ID copied to clipboard');
+                await navigator.clipboard.writeText(text);
+                toast(label + ' copied to clipboard');
                 return;
             } catch (err) {
                 // fallback to textarea + execCommand
             }
             try {
                 var ta = document.createElement('textarea');
-                ta.value = idhex;
+                ta.value = text;
                 ta.style.position = 'fixed';
                 ta.style.left = '-9999px';
                 document.body.appendChild(ta);
                 ta.select();
                 document.execCommand('copy');
                 ta.remove();
-                toast('Credential ID copied to clipboard (fallback)');
+                toast(label + ' copied to clipboard (fallback)');
             } catch (err2) {
-                toast('Copy failed');
+                console.error('Fallback copy failed', err2);
             }
         } catch (err) { console.error(err); toast('Copy failed'); }
     });
@@ -1753,7 +1754,7 @@ try {
             }
 
             // Action buttons
-            html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
+            html += '<div class="cert-actions">';
                 html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
                 html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
                 html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
@@ -1766,9 +1767,9 @@ try {
     html += '</div>'; // end content
     // dialog actions/footer: Download Chain on left, Close on right
     // Render buttons as direct siblings and push Close to the right using margin-left:auto
-    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; align-items:center;">';
+    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar">';
     html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
-    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x" style="margin-left:auto;">Close</button>';
+    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x">Close</button>';
     html += '</div>';
     dlg.innerHTML = html;
 
