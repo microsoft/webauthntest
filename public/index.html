@@ -777,7 +777,8 @@
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
-    <script src="index.js"></script>
+    <!-- Load app as an ES module which imports PKIJS directly from the CDN -->
+    <script type="module" src="index.js"></script>
 </body>
 
 </html>

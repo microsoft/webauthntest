@@ -1,6 +1,28 @@
 
 
 
+// This file is now loaded as an ES module (see index.html).
+// Import PKIJS + peer dependencies from Skypack and initialize the crypto engine.
+import * as asn1js from 'https://cdn.skypack.dev/asn1js@3.0.6';
+import * as pvutils from 'https://cdn.skypack.dev/pvutils@1.1.3';
+import * as pvtsutils from 'https://cdn.skypack.dev/pvtsutils@1.3.6';
+import * as pkijs from 'https://cdn.skypack.dev/pkijs@3.3.0';
+
+// Expose commonly used libs on window for compatibility with the rest of the app
+window.asn1js = asn1js;
+window.pvutils = pvutils;
+window.pvtsutils = pvtsutils;
+window.pkijs = pkijs;
+
+// Initialize PKIJS engine to use browser WebCrypto
+try {
+    if (pkijs && typeof pkijs.setEngine === 'function' && typeof pkijs.CryptoEngine === 'function') {
+        const engine = new pkijs.CryptoEngine({ name: 'webcrypto', crypto: window.crypto });
+        pkijs.setEngine('webcrypto', engine);
+    }
+} catch (e) {
+    console.warn('PKIJS engine init failed:', e);
+}
 
 (function () {
     /**
