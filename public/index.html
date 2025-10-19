@@ -188,7 +188,7 @@
                     </li>
                 </ul>
                 <div id="algorithmsWarning" class="alg-warning" style="display:none;">Select at least one algorithm.</div>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="algorithmsResetOrder">Reset Order</button>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="algorithmsResetOrder">Reset Order</button>
             </span>
 
             <hr>
@@ -226,7 +226,7 @@
                         </div>
                     </li>
                 </ul>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="hintsResetOrderCreate">Reset Order</button>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="hintsResetOrderCreate">Reset Order</button>
             </span>
 
             <hr>
@@ -351,8 +351,8 @@
         </div>
 
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button" id="createDialog_createButton">Create</button>
-            <button type="button" class="mdl-button close" id="createDialog_cancelButton">Cancel</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="createDialog_createButton">Create</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="createDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
@@ -457,7 +457,7 @@
                         </div>
                     </li>
                 </ul>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" id="hintsResetOrderGet">Reset Order</button>
+                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="hintsResetOrderGet">Reset Order</button>
             </span>
             <hr>
             <span>
@@ -520,14 +520,14 @@
 
         </div>
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button" id="getDialog_getButton">Get</button>
-            <button type="button" class="mdl-button close" id="getDialog_cancelButton">Cancel</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="getDialog_getButton">Get</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="getDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
     <dialog class="mdl-dialog" id="creationDataDialog">
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="creationDataDialog_xButton">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="creationDataDialog_xButton">
                 <i class="material-icons">close</i>
             </button>
         </div>
@@ -550,6 +550,7 @@
             </p>
             <p>
                 <b>Extensions</b>
+                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
                 <br>
                 <span id="creationData_extensionData"></span>
             </p>
@@ -559,12 +560,8 @@
                 <span id="creationData_publicKeyType"></span>
             </p>
             <p>
-                <b>Public Key</b>
-                <br>
-                <span id="creationData_publicKey"></span>
-            </p>
-            <p>
                 <b>Public Key (CBOR)</b>
+                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
                 <br>
                 <span id="creationData_publicKeyCbor"></span>
             </p>
@@ -575,6 +572,7 @@
             </p>
             <p>
                 <b>Attestation Object</b>
+                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
                 <br>
                 <span id="creationData_attestationObject"></span>
             </p>
@@ -591,7 +589,7 @@
         </div>
 
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="creationDataDialog_closeButton">
+            <button type="button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect close" id="creationDataDialog_closeButton">
                 Close
             </button>
         </div>
@@ -599,7 +597,7 @@
 
     <dialog class="mdl-dialog" id="authenticationDataDialog">
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="authenticationDataDialog_xButton">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="authenticationDataDialog_xButton">
                 <i class="material-icons">close</i>
             </button>
         </div>
@@ -627,6 +625,7 @@
             </p>
             <p>
                 <b>Extensions</b>
+                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
                 <br>
                 <span id="authenticationData_extensionData"></span>
             </p>
@@ -648,7 +647,7 @@
         </div>
 
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="authenticationDataDialog_closeButton">
+            <button type="button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect close" id="authenticationDataDialog_closeButton">
                 Close
             </button>
         </div>
@@ -656,7 +655,7 @@
 
     <dialog class="mdl-dialog" id="updateTransportsDialog">
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="updateTransportsDialog_xButton">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="updateTransportsDialog_xButton">
                 <i class="material-icons">close</i>
             </button>
         </div>
@@ -686,13 +685,29 @@
                 </label>
             </div>
             <div class="transport-actions">
-                <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="updateTransportsDialog_clearButton">Clear All</button>
-                <button type="button" class="mdl-button mdl-js-button mdl-button--raised" id="updateTransportsDialog_selectAllButton">Select All</button>
+        <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="updateTransportsDialog_clearButton">Clear All</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="updateTransportsDialog_selectAllButton">Select All</button>
             </div>
         </div>
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button" id="updateTransportsDialog_saveButton">Save</button>
-            <button type="button" class="mdl-button close" id="updateTransportsDialog_cancelButton">Cancel</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="updateTransportsDialog_saveButton">Save</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="updateTransportsDialog_cancelButton">Cancel</button>
+        </div>
+    </dialog>
+
+    <dialog class="mdl-dialog" id="confirmDeleteDialog">
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="confirmDeleteDialog_xButton">
+                <i class="material-icons">close</i>
+            </button>
+        </div>
+        <h3 class="mdl-dialog__title">Confirm Delete</h3>
+        <div class="mdl-dialog__content">
+            <p>Are you sure you want to delete this credential? This action cannot be undone.</p>
+        </div>
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button mdl-js-button mdl-button--colored" id="confirmDeleteDialog_confirm">Delete</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="confirmDeleteDialog_cancel">Cancel</button>
         </div>
     </dialog>
 
@@ -721,7 +736,7 @@
         </div>
 
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button close" id="moreDialog_closeButton">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="moreDialog_closeButton">
                 Close
             </button>
         </div>
@@ -734,7 +749,7 @@
             <div class="mdl-layout__header-row">
             </div>
             <div class="mdl-layout__header-row">
-                <h3>WebAuthn Test App</h3>
+                <h3><a href="index.html" class="title-link">WebAuthn Test App</a></h3>
                 <button class="mdl-button mdl-js-button mdl-js-ripple-effect" id="signOutButton">
                     Sign Out
                 </button>

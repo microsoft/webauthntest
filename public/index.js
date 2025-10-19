@@ -163,7 +163,13 @@ try {
         });
 
         $('#cborButton').click(() => {
-            window.location.href = "./cbor.html";
+            // Open CBOR Playground in a new tab so the app remains available
+            try {
+                window.open("./cbor.html", "_blank");
+            } catch (e) {
+                // Fallback to navigate in current tab if popup blocked
+                window.location.href = "./cbor.html";
+            }
         });
 
         $('#createDialog_createButton').click(() => {
@@ -258,6 +264,26 @@ try {
             $('#updateTransportsDialog_clearButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => resetTransportCheckbox(t));
             });
+
+            // Confirm Delete dialog handlers
+            const confirmDeleteDialog = document.getElementById('confirmDeleteDialog');
+            if (confirmDeleteDialog) {
+                $('#confirmDeleteDialog_confirm').click(() => {
+                    const id = confirmDeleteDialog._deleteId;
+                    if (id) {
+                        deleteCredential(id).then(()=>{
+                            confirmDeleteDialog.close();
+                        }).catch(err => {
+                            toast('Delete failed: ' + (err && err.message ? err.message : err));
+                            confirmDeleteDialog.close();
+                        });
+                    } else {
+                        confirmDeleteDialog.close();
+                    }
+                });
+                $('#confirmDeleteDialog_cancel').click(() => { confirmDeleteDialog.close(); });
+                $('#confirmDeleteDialog_xButton').click(() => { confirmDeleteDialog.close(); });
+            }
             $('#updateTransportsDialog_selectAllButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => setTransportCheckbox(t, true));
             });
@@ -1126,15 +1152,27 @@ try {
         });
 
         $("a.deleteCredentialButton").click(e => {
-            deleteCredential($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            // show confirmation dialog
+            try {
+                const dlg = document.querySelector('#confirmDeleteDialog');
+                dlg._deleteId = id;
+                dlg.showModal();
+                try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) {}
+            } catch(err) {
+                // fallback: delete immediately
+                deleteCredential(id).catch(err=> toast('Delete failed: '+(err && err.message?err.message:err)));
+            }
         });
 
         $("a.creationDataDetails").click(e => {
-            showCreationData($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            showCreationData(id);
         });
 
         $("a.authenticationDataDetails").click(e => {
-            showAuthenticationData($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            showAuthenticationData(id);
         });
         $("a.updateTransportsButton").click(e => {
             var id = $(e.currentTarget).attr("data-value");
@@ -1189,27 +1227,41 @@ try {
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
         html += ' <div class="mdl-card__supporting-text mdl-card--expand">';
-        html += '     <p><b>Credential ID</b><br/>' + credential.idHex + '</p>';
-        html += '     <p><b>RP ID</b><br/>' + credential.metadata.rpId + '</p>';
-        html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
-        html += '     <p>';
-        html += '         <b>Credential Registration Data</b>';
-        html += '         <a href="#" class="creationDataDetails" data-value="' + credential.id + '">[more details]</a>';
-        html += '         <br>Key Type: ' + credential.creationData.publicKeySummary + ' (' + credential.creationData.publicKeyAlgorithm +')';
-        html += '         <br>Requested Discoverable Credential: ' + credential.metadata.residentKey;
-        html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
-        html += '         <br>Authenticator Attachment: ' + credential.creationData.authenticatorAttachment;
+    // Identity fields moved into registration details list below
+    // AAGUID will be shown inside the registration details list for consistent styling
+        // Render registration data as a compact key/value list for readability
+        html += '     <div class="reg-data">';
+        html += '         <div class="reg-data-header"><b>Credential Registration Data</b> ';
+    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
+        html += '         </div>';
+        html += '         <dl class="reg-data-list">';
+    html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
+    html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
+    html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
+    html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
+    html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
+        html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
-            html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
+            html += '             <dt>Transports</dt><dd>';
+            (credential.transports || []).forEach(t => {
+                // Use MDL chip markup for decorative chips
+                html += '<span class="mdl-chip" aria-hidden="true"><span class="mdl-chip__text">' + escapeHtml(t) + '</span></span> ';
+            });
+            html += '</dd>';
         }
-        html += '         <br>PRF Enabled: ' + credential.creationData.prfEnabled;
-        html += '         <br>' + credential.creationData.authenticatorDataSummary;
-        html += '     </p>';
-        html += '     <p>';
-        html += '         <b>Last Authentication Data</b>';
-        html += '         <a href="#" class="authenticationDataDetails" data-value="' + credential.id + '">[more details]</a>';
-        html += '         <br>' + credential.authenticationData.authenticatorDataSummary;
-        html += '     </p>';
+        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
+        html += '         </dl>';
+        html += '     </div>';
+        // Last Authentication Data (nicer UI)
+        html += '     <div class="reg-data">';
+        html += '         <div class="reg-data-header"><b>Last Authentication Data</b> ';
+    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
+        html += '         </div>';
+        html += '         <dl class="reg-data-list">';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</dd>';
+        html += '         </dl>';
+        html += '     </div>';
         html += ' </div>';
         html += ' <div class="mdl-card__actions mdl-card--border">';
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect deleteCredentialButton" data-value="'
@@ -1283,9 +1335,8 @@ try {
         $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
         $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
-        $("#creationData_publicKeyType").text(publicKeyType);
-        $("#creationData_publicKey").text(credential.creationData.publicKey2);
-        $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
+    $("#creationData_publicKeyType").text(publicKeyType);
+    $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
         $("#creationData_extensionData").text(credential.creationData.extensionDataHex);
         $("#creationData_residentKey").text(credential.metadata.residentKey);
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
@@ -1295,7 +1346,58 @@ try {
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
+        // Ensure newly-added MDL icon buttons are upgraded
+        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
     }
+
+    // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
+    $(document).on('click', '.openCborButton', function(e){
+        e.preventDefault();
+        try {
+            var targetSpan = $(this).attr('data-target-span');
+            if(!targetSpan) return;
+            var el = document.getElementById(targetSpan);
+            if(!el) { toast('CBOR input not available'); return; }
+            var raw = el.textContent || el.innerText || '';
+            if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
+            // Encode the raw value as URI component; cbor.html will detect hex/base64
+            var u = './cbor.html?input=' + encodeURIComponent(raw.trim());
+            window.open(u, '_blank');
+        } catch (err) {
+            console.error('Failed to open CBOR playground', err);
+            toast('Failed to open CBOR playground');
+        }
+    });
+
+    // Generic copy-to-clipboard handler (delegated)
+    $(document).on('click', '.copy-to-clipboard', async function(e){
+        e.preventDefault();
+        try {
+            var text = this.getAttribute('data-copy-text') || '';
+            var label = this.getAttribute('data-copy-label') || 'Value';
+            if(!text) return toast('No ' + label + ' to copy');
+            try {
+                await navigator.clipboard.writeText(text);
+                toast(label + ' copied to clipboard');
+                return;
+            } catch (err) {
+                // fallback to textarea + execCommand
+            }
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                toast(label + ' copied to clipboard (fallback)');
+            } catch (err2) {
+                console.error('Fallback copy failed', err2);
+            }
+        } catch (err) { console.error(err); toast('Copy failed'); }
+    });
 
     /**
      * Recursively searches a decoded CBOR value for x5c key and returns the first found array of byte strings
@@ -1651,10 +1753,10 @@ try {
             }
 
             // Action buttons
-            html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
-            html += '<button class="mdl-button mdl-js-button cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
-            html += '<button class="mdl-button mdl-js-button cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
-            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
+            html += '<div class="cert-actions">';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
             html += '</div>';
 
             html += '</div>'; // end column
@@ -1664,9 +1766,9 @@ try {
     html += '</div>'; // end content
     // dialog actions/footer: Download Chain on left, Close on right
     // Render buttons as direct siblings and push Close to the right using margin-left:auto
-    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; align-items:center;">';
-    html += '<button class="mdl-button mdl-js-button mdl-button--raised" id="certsDownloadChain">Download Chain</button>';
-    html += '<button class="mdl-button" id="certsDialog_x" style="margin-left:auto;">Close</button>';
+    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar">';
+    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x">Close</button>';
     html += '</div>';
     dlg.innerHTML = html;
 
@@ -1794,7 +1896,7 @@ try {
     }
 
     function escapeHtml(str) {
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     /**

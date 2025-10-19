@@ -56,6 +56,16 @@ body .mdl-layout__header-row h3 {
   font-weight: 400;
 }
 
+/* Header title link (used in index.html and cbor.html) */
+.title-link {
+  color: inherit; /* match surrounding header text */
+  text-decoration: none; /* remove underline */
+  display: inline-block;
+}
+.title-link:focus, .title-link:hover {
+  text-decoration: underline; /* subtle affordance on hover/focus */
+}
+
 body .mdl-layout__tab-bar-button {
   display: none;
 }
@@ -379,6 +389,38 @@ a {
 }
 .mdl-card__actions .view-cert-btn { margin-left: 8px; }
 
+/* Copy button next to credential ID: visually similar to cert-copy-fingerprint */
+.cred-copy-id {
+  padding: 6px 8px !important;
+  min-width: 0 !important;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  color: #1a73e8 !important;
+  border: none !important;
+}
+.cred-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+
+/* AAGUID copy button style mirrors Credential ID copy button */
+.aaguid-copy-id { padding: 6px 8px !important; min-width: 0 !important; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent !important; color: #1a73e8 !important; border: none !important; }
+.aaguid-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+
+/* Registration data block in credential cards */
+.reg-data { margin-top: 8px; padding: 8px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; }
+.reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.reg-data-list { margin:0; padding:0; display:grid; grid-template-columns: 160px 1fr; gap:6px 12px; align-items:start; }
+.reg-data-list dt { font-weight:600; color:#333; }
+.reg-data-list dd { margin:0; color:#555; display:flex; align-items:center; gap:8px; overflow-wrap:anywhere; word-break:break-all; }
+.reg-data-list dd::before { content: ""; }
+.reg-data-list dd .credential-id { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
+
+/* Transport chips for credential transports */
+/* Transport chips for credential transports (non-interactive decorative chips) */
+/* Small spacing helper for MDL chips inside reg-data */
+.reg-data .mdl-chip { margin-right: 6px; margin-bottom: 4px; }
+
 /* Certificate dialog action buttons under each cert */
 .cert-actions { display:flex; gap:8px; margin-top:8px; }
 .cert-actions .material-icons { vertical-align: middle; }
@@ -445,9 +487,10 @@ a {
 /* Ensure each cert card uses the full width of the dialog content area */
 #certsDialog .cert-card { width: 100%; box-sizing: border-box; }
 
+.cert-dialog-actions { display:flex; gap:8px; align-items:center; }
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
-   so Download Chain appears on the left and Close on the right. Use
-   explicit orders to survive MDL DOM upgrades. */
+  so Download Chain appears on the left and Close on the right. Use
+  explicit orders to survive MDL DOM upgrades. */
 .cert-dialog-actions {
   margin-top: 12px;
   display: flex;
@@ -522,3 +565,9 @@ a {
 
 /* Make dialog content tighter */
 .mdl-dialog__content { padding: 12px 16px 0 16px; }
+
+/* Styling for the Decode CBOR button in the creation data dialog */
+.openCborButton {
+  margin-left: 8px; /* keep spacing but defer visual style to MDL */
+}
+.openCborButton.mdl-button { min-width: 0; }
