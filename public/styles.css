@@ -389,6 +389,20 @@ a {
 }
 .mdl-card__actions .view-cert-btn { margin-left: 8px; }
 
+/* Copy button next to credential ID: visually similar to cert-copy-fingerprint */
+.cred-copy-id {
+  padding: 6px 8px !important;
+  min-width: 0 !important;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  color: #1a73e8 !important;
+  border: none !important;
+}
+.cred-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+
 /* Certificate dialog action buttons under each cert */
 .cert-actions { display:flex; gap:8px; margin-top:8px; }
 .cert-actions .material-icons { vertical-align: middle; }

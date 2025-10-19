@@ -1227,7 +1227,7 @@ try {
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
         html += ' <div class="mdl-card__supporting-text mdl-card--expand">';
-        html += '     <p><b>Credential ID</b><br/>' + credential.idHex + '</p>';
+    html += '     <p><b>Credential ID</b><br/>' + credential.idHex + ' <button class="mdl-button cred-copy-id" data-idhex="' + credential.idHex + '" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></p>';
         html += '     <p><b>RP ID</b><br/>' + credential.metadata.rpId + '</p>';
         html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
         html += '     <p>';
@@ -1353,6 +1353,35 @@ try {
             console.error('Failed to open CBOR playground', err);
             toast('Failed to open CBOR playground');
         }
+    });
+
+    // Copy Credential ID button handler (delegated)
+    $(document).on('click', '.cred-copy-id', async function(e){
+        e.preventDefault();
+        try {
+            var idhex = this.getAttribute('data-idhex') || '';
+            if(!idhex) return toast('No Credential ID to copy');
+            try {
+                await navigator.clipboard.writeText(idhex);
+                toast('Credential ID copied to clipboard');
+                return;
+            } catch (err) {
+                // fallback to textarea + execCommand
+            }
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = idhex;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                toast('Credential ID copied to clipboard (fallback)');
+            } catch (err2) {
+                toast('Copy failed');
+            }
+        } catch (err) { console.error(err); toast('Copy failed'); }
     });
 
     /**
