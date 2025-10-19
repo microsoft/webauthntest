@@ -1417,10 +1417,11 @@ try {
         });
 
     html += '</div>'; // end content
-    // dialog actions/footer
-    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">';
-    html += '<button class="mdl-button mdl-js-button mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
-    html += '<button class="mdl-button" id="certsDialog_x">Close</button>';
+    // dialog actions/footer: Download Chain on left, Close on right
+    // Render buttons as direct siblings and push Close to the right using margin-left:auto
+    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; align-items:center;">';
+    html += '<button class="mdl-button mdl-js-button mdl-button--raised" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="mdl-button" id="certsDialog_x" style="margin-left:auto;">Close</button>';
     html += '</div>';
     dlg.innerHTML = html;
 
