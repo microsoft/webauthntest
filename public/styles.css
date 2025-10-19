@@ -56,6 +56,16 @@ body .mdl-layout__header-row h3 {
   font-weight: 400;
 }
 
+/* Header title link (used in index.html and cbor.html) */
+.title-link {
+  color: inherit; /* match surrounding header text */
+  text-decoration: none; /* remove underline */
+  display: inline-block;
+}
+.title-link:focus, .title-link:hover {
+  text-decoration: underline; /* subtle affordance on hover/focus */
+}
+
 body .mdl-layout__tab-bar-button {
   display: none;
 }

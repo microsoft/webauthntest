@@ -163,7 +163,13 @@ try {
         });
 
         $('#cborButton').click(() => {
-            window.location.href = "./cbor.html";
+            // Open CBOR Playground in a new tab so the app remains available
+            try {
+                window.open("./cbor.html", "_blank");
+            } catch (e) {
+                // Fallback to navigate in current tab if popup blocked
+                window.location.href = "./cbor.html";
+            }
         });
 
         $('#createDialog_createButton').click(() => {
