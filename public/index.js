@@ -258,6 +258,26 @@ try {
             $('#updateTransportsDialog_clearButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => resetTransportCheckbox(t));
             });
+
+            // Confirm Delete dialog handlers
+            const confirmDeleteDialog = document.getElementById('confirmDeleteDialog');
+            if (confirmDeleteDialog) {
+                $('#confirmDeleteDialog_confirm').click(() => {
+                    const id = confirmDeleteDialog._deleteId;
+                    if (id) {
+                        deleteCredential(id).then(()=>{
+                            confirmDeleteDialog.close();
+                        }).catch(err => {
+                            toast('Delete failed: ' + (err && err.message ? err.message : err));
+                            confirmDeleteDialog.close();
+                        });
+                    } else {
+                        confirmDeleteDialog.close();
+                    }
+                });
+                $('#confirmDeleteDialog_cancel').click(() => { confirmDeleteDialog.close(); });
+                $('#confirmDeleteDialog_xButton').click(() => { confirmDeleteDialog.close(); });
+            }
             $('#updateTransportsDialog_selectAllButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => setTransportCheckbox(t, true));
             });
@@ -1126,15 +1146,27 @@ try {
         });
 
         $("a.deleteCredentialButton").click(e => {
-            deleteCredential($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            // show confirmation dialog
+            try {
+                const dlg = document.querySelector('#confirmDeleteDialog');
+                dlg._deleteId = id;
+                dlg.showModal();
+                try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) {}
+            } catch(err) {
+                // fallback: delete immediately
+                deleteCredential(id).catch(err=> toast('Delete failed: '+(err && err.message?err.message:err)));
+            }
         });
 
         $("a.creationDataDetails").click(e => {
-            showCreationData($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            showCreationData(id);
         });
 
         $("a.authenticationDataDetails").click(e => {
-            showAuthenticationData($(event.target).attr("data-value"));
+            const id = $(e.currentTarget).attr("data-value");
+            showAuthenticationData(id);
         });
         $("a.updateTransportsButton").click(e => {
             var id = $(e.currentTarget).attr("data-value");
@@ -1194,7 +1226,7 @@ try {
         html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
         html += '     <p>';
         html += '         <b>Credential Registration Data</b>';
-        html += '         <a href="#" class="creationDataDetails" data-value="' + credential.id + '">[more details]</a>';
+    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
         html += '         <br>Key Type: ' + credential.creationData.publicKeySummary + ' (' + credential.creationData.publicKeyAlgorithm +')';
         html += '         <br>Requested Discoverable Credential: ' + credential.metadata.residentKey;
         html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
@@ -1207,7 +1239,7 @@ try {
         html += '     </p>';
         html += '     <p>';
         html += '         <b>Last Authentication Data</b>';
-        html += '         <a href="#" class="authenticationDataDetails" data-value="' + credential.id + '">[more details]</a>';
+    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
         html += '         <br>' + credential.authenticationData.authenticatorDataSummary;
         html += '     </p>';
         html += ' </div>';
