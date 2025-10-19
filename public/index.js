@@ -1236,12 +1236,11 @@ try {
         html += '         </div>';
         html += '         <dl class="reg-data-list">';
     html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
-    html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
     html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
+    html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
     html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
-    html += '             <dt>Requested Discoverable</dt><dd>' + escapeHtml(String(credential.metadata.residentKey || '')) + '</dd>';
     html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
-        html += '             <dt>Authenticator Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
+        html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
             (credential.transports || []).forEach(t => {
