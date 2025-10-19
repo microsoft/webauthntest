@@ -150,7 +150,7 @@ fido.makeCredential = async (uid, attestation) => {
             clientDataJSON: "none",
             clientDataJSONHex: "none",
             signatureHex: "none",
-            extensionDataHex: defaultTo(authenticatorData.extensionDataHex, "No extension data"),
+            extensionDataHex: "No extension data",
             authenticatorAttachment: "none",
             prfFirst: "none",
             prfSecond: "none",

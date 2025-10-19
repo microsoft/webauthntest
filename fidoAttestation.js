@@ -54,7 +54,7 @@ fidoAttestation.parse = (attestationObject, authenticatorData, clientDataHash) =
  */
 const parseTPMAttestation = (attestationObject, authenticatorData, clientDataHash) => {    
     return {
-        summary: "tpm (unverified)",
+        summary: "tpm",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
@@ -172,7 +172,7 @@ const parsePackedAttestation = (attestationObject, authenticatorData, clientData
     }
     else
     {
-        summary = "packed (unverified)";
+        summary = "packed (self-attestation)";
     }
 
     return {
@@ -191,7 +191,7 @@ const parsePackedAttestation = (attestationObject, authenticatorData, clientData
  */
 const parseAndroidSafetyNetAttestation = (attestationObject, authenticatorData, clientDataHash) => {
     return {
-        summary: "android-safetynet (unverified)",
+        summary: "android-safetynet",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
@@ -206,7 +206,7 @@ const parseAndroidSafetyNetAttestation = (attestationObject, authenticatorData, 
  */
 const parseAndroidKeyAttestation = (attestationObject, authenticatorData, clientDataHash) => {
     return {
-        summary: "android-key (unverified)",
+        summary: "android-key",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
@@ -221,7 +221,7 @@ const parseAndroidKeyAttestation = (attestationObject, authenticatorData, client
  */
 const parseAppleAttestation = (attestationObject, authenticatorData, clientDataHash) => {
     return {
-        summary: "apple (unverified)",
+        summary: "apple",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
@@ -236,7 +236,7 @@ const parseAppleAttestation = (attestationObject, authenticatorData, clientDataH
  */
 const parseNoneAttestation = (attestationObject, authenticatorData, clientDataHash) => {
     return {
-        summary: "none (unverified)",
+        summary: "none",
         chainJSON: "none",
         hex: cbor.encode(attestationObject.attStmt).toString('hex').toUpperCase()
     }
