@@ -1374,7 +1374,7 @@ try {
      * @param {Array<Object>} certs
      */
     function showCertificatesDialog(certs) {
-        // Build dialog HTML dynamically
+        // Build an enhanced dialog with download/copy actions
         let dlg = document.getElementById('certsDialog');
         if (!dlg) {
             dlg = document.createElement('dialog');
@@ -1382,26 +1382,139 @@ try {
             dlg.id = 'certsDialog';
             document.body.appendChild(dlg);
         }
-        let html = '<div class="mdl-dialog__actions"><button class="mdl-button" id="certsDialog_x">Close</button></div>';
-        html += '<h3 class="mdl-dialog__title">Certificates</h3>';
-        html += '<div class="mdl-dialog__content">';
+
+    let html = '';
+    html += '<h3 class="mdl-dialog__title">Certificates</h3>';
+    html += '<div class="mdl-dialog__content">';
+
         certs.forEach((c, idx) => {
-            html += '<div class="mdl-card mdl-shadow--2dp" style="margin-bottom:12px; padding:10px; background:#fff;">';
-            html += '<b>Certificate ' + (idx+1) + '</b><br/>';
-            html += '<b>Subject:</b> ' + JSON.stringify(c.subject) + '<br/>';
-            html += '<b>Issuer:</b> ' + JSON.stringify(c.issuer) + '<br/>';
-            html += '<b>Serial:</b> ' + c.serialNumber + '<br/>';
-            html += '<b>Validity:</b> ' + c.notBefore + ' -> ' + c.notAfter + '<br/>';
-            html += '<pre style="white-space:pre-wrap; background:#f6f6f6; padding:8px;">' + escapeHtml(c.pem) + '</pre>';
+            // Format subject and issuer succinctly
+            function formatName(arr) {
+                try {
+                    return arr.map(tv => (tv.type || '') + ': ' + (tv.value || '')).join(', ');
+                } catch (e) { return JSON.stringify(arr); }
+            }
+
+            html += '<div class="mdl-card mdl-shadow--2dp cert-card" style="margin-bottom:12px; padding:12px; background:#fff;">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+            html += '<div><b>Certificate ' + (idx+1) + '</b><br/>';
+            html += '<small><b>Subject:</b> ' + escapeHtml(formatName(c.subject)) + '</small><br/>';
+            html += '<small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer)) + '</small><br/>';
+            html += '<small><b>Serial:</b> ' + escapeHtml(c.serialNumber) + '</small><br/>';
+            html += '<small><b>Validity:</b> ' + escapeHtml(c.notBefore) + ' → ' + escapeHtml(c.notAfter) + '</small></div>';
+
+            // Action buttons (Download PEM, Download DER, Copy PEM)
+            html += '</div>'; // end header row
+
+            // No inline PEM shown; downloads available below
+            // Actions below note
+            html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
+            html += '<button class="mdl-button mdl-js-button mdl-button--colored cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;Download PEM</button>';
+            html += '<button class="mdl-button mdl-js-button mdl-button--colored cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;Download DER</button>';
+            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;Copy PEM</button>';
+            html += '</div>';
             html += '</div>';
         });
-        html += '</div>';
-        dlg.innerHTML = html;
-        // wire close
-        const closeBtn = dlg.querySelector('#certsDialog_x');
-        closeBtn.addEventListener('click', () => dlg.close());
+
+    html += '</div>'; // end content
+    // dialog actions/footer
+    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">';
+    html += '<button class="mdl-button mdl-js-button mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="mdl-button" id="certsDialog_x">Close</button>';
+    html += '</div>';
+    dlg.innerHTML = html;
+
+    // Wire actions (close button appended after content)
+    const closeBtn = dlg.querySelector('#certsDialog_x');
+    if (closeBtn) closeBtn.addEventListener('click', () => dlg.close());
+
+    // Download chain: concatenate PEMs into one file
+    const downloadChainBtn = dlg.querySelector('#certsDownloadChain');
+    if (downloadChainBtn) {
+        downloadChainBtn.addEventListener('click', () => {
+            const allPem = certs.map(c => c.pem).join('\n');
+            const blob = new Blob([allPem], { type: 'application/x-pem-file' });
+            downloadBlob('certificate-chain.pem', blob);
+        });
+    }
+
+        // Helper: download PEM/DER and copy
+        function downloadBlob(filename, blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+                a.remove();
+            }, 1000);
+        }
+
+        // Upgrade MDL components inside dialog before wiring handlers
+        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch (e) { /* ignore */ }
+
+        // Attach per-cert button handlers
+        dlg.querySelectorAll('.cert-download-pem').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                const pem = cert.pem;
+                const blob = new Blob([pem], { type: 'application/x-pem-file' });
+                downloadBlob('certificate-' + (idx+1) + '.pem', blob);
+            });
+        });
+
+        dlg.querySelectorAll('.cert-download-der').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                const ab = cert.raw || null;
+                if (!ab) return toast('DER data not available');
+                const blob = new Blob([ab], { type: 'application/octet-stream' });
+                downloadBlob('certificate-' + (idx+1) + '.der', blob);
+            });
+        });
+
+        dlg.querySelectorAll('.cert-copy-pem').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                try {
+                    await navigator.clipboard.writeText(cert.pem);
+                    toast('PEM copied to clipboard');
+                } catch (err) {
+                    // fallback: use temporary textarea and execCommand
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.pem;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('PEM copied to clipboard (fallback)');
+                    } catch (err2) {
+                        toast('Copy failed; please download the PEM');
+                    }
+                }
+            });
+        });
+
         if (!dlg.showModal) dialogPolyfill.registerDialog(dlg);
         dlg.showModal();
+        // Move keyboard focus to Close button for accessibility
+        try {
+            if (closeBtn) {
+                closeBtn.setAttribute('tabindex', '0');
+                closeBtn.focus();
+            }
+        } catch (e) { /* ignore focus errors */ }
     }
 
     function escapeHtml(str) {
