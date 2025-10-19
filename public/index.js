@@ -1294,7 +1294,28 @@ try {
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
+        // Ensure newly-added MDL icon buttons are upgraded
+        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
     }
+
+    // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
+    $(document).on('click', '.openCborButton', function(e){
+        e.preventDefault();
+        try {
+            var targetSpan = $(this).attr('data-target-span');
+            if(!targetSpan) return;
+            var el = document.getElementById(targetSpan);
+            if(!el) { toast('CBOR input not available'); return; }
+            var raw = el.textContent || el.innerText || '';
+            if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
+            // Encode the raw value as URI component; cbor.html will detect hex/base64
+            var u = './cbor.html?input=' + encodeURIComponent(raw.trim());
+            window.open(u, '_blank');
+        } catch (err) {
+            console.error('Failed to open CBOR playground', err);
+            toast('Failed to open CBOR playground');
+        }
+    });
 
     /**
      * Recursively searches a decoded CBOR value for x5c key and returns the first found array of byte strings

@@ -215,6 +215,21 @@
         });
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
 
+    // If caller passed ?input=... then populate and auto-decode
+    (function(){
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const inp = params.get('input');
+            if(inp) {
+                // decodeURIComponent was used by index.js, but accept raw too
+                try { inputEl.value = decodeURIComponent(inp); } catch(e) { inputEl.value = inp; }
+                fmtEl.textContent = detectFormat(inputEl.value) || '';
+                // Auto-run decode after short delay to allow UI to settle
+                setTimeout(render, 50);
+            }
+        } catch(e) { /* ignore */ }
+    })();
+
     // ---------------- JSON -> CBOR Encoding Logic ----------------
         const jsonInput = document.getElementById('jsonInput');
         // Set multiline placeholder via JS so \n escapes become actual newlines

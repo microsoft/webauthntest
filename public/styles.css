@@ -522,3 +522,9 @@ a {
 
 /* Make dialog content tighter */
 .mdl-dialog__content { padding: 12px 16px 0 16px; }
+
+/* Styling for the Decode CBOR button in the creation data dialog */
+.openCborButton {
+  margin-left: 8px; /* keep spacing but defer visual style to MDL */
+}
+.openCborButton.mdl-button { min-width: 0; }
