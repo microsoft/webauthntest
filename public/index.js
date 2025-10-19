@@ -1140,6 +1140,14 @@ try {
             var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
         });
+        // Ensure MDL upgrades newly added elements so styles/ripples apply
+        try {
+            if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') {
+                componentHandler.upgradeDom();
+            }
+        } catch (e) {
+            console.warn('MDL upgradeDom failed', e);
+        }
     $(".viewCertificatesButton").click(async e => {
             var id = $(e.currentTarget).attr("data-value");
             var credential = credentials.find(c => c.id === id);
