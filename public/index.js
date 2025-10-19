@@ -1704,9 +1704,9 @@ try {
 
             // Action buttons
             html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
-            html += '<button class="mdl-button mdl-js-button cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
-            html += '<button class="mdl-button mdl-js-button cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
-            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
+                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
             html += '</div>';
 
             html += '</div>'; // end column
@@ -1717,8 +1717,8 @@ try {
     // dialog actions/footer: Download Chain on left, Close on right
     // Render buttons as direct siblings and push Close to the right using margin-left:auto
     html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; align-items:center;">';
-    html += '<button class="mdl-button mdl-js-button mdl-button--raised" id="certsDownloadChain">Download Chain</button>';
-    html += '<button class="mdl-button" id="certsDialog_x" style="margin-left:auto;">Close</button>';
+    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x" style="margin-left:auto;">Close</button>';
     html += '</div>';
     dlg.innerHTML = html;
 

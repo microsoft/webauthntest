@@ -42,11 +42,11 @@
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <span>Decode CBOR to JSON</span>
-                        <button id="decodeBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Decode</button>
+                        <button id="decodeBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored">Decode</button>
                     </div>
                     <textarea id="cborInput" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
                     <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                        <button id="clearBtn" class="mdl-button mdl-js-button">Clear</button>
+                        <button id="clearBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored">Clear</button>
                         <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
                         <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                         <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
@@ -74,11 +74,11 @@
                 <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:24px;">
                     <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
                         <span>Encode JSON to CBOR</span>
-                        <button id="encodeRun" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Encode</button>
+                        <button id="encodeRun" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored">Encode</button>
                     </div>
                     <textarea id="jsonInput" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                        <button id="encodeClear" class="mdl-button mdl-js-button">Clear</button>
+                        <button id="encodeClear" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored">Clear</button>
                         <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
                         <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                         <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
