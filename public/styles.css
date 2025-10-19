@@ -392,6 +392,19 @@ a {
   padding: 0 16px 24px;
 }
 
+/* Layout certificate cards as a single column (top-to-bottom). Each card
+   stretches to fill the dialog content width so available space on the right
+   is used. This keeps the vertical flow but makes entries flexible. */
+#certsDialog .mdl-dialog__content {
+  display: flex !important;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Ensure each cert card uses the full width of the dialog content area */
+#certsDialog .cert-card { width: 100%; box-sizing: border-box; }
+
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
    so Download Chain appears on the left and Close on the right. Use
    explicit orders to survive MDL DOM upgrades. */
