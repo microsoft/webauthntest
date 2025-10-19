@@ -1328,6 +1328,28 @@ try {
     }
 
     /**
+     * Helper: map common OIDs to friendly names
+     */
+    function oidToName(oid) {
+        const map = {
+            '1.3.6.1.5.5.7.3.1': 'TLS Web Server Authentication',
+            '1.3.6.1.5.5.7.3.2': 'TLS Web Client Authentication',
+            '1.3.6.1.5.5.7.3.3': 'Code Signing',
+            '1.3.6.1.5.5.7.3.4': 'E-mail Protection',
+            '1.3.6.1.5.5.7.3.8': 'Time Stamping',
+            '1.3.6.1.5.5.7.3.9': 'OCSP Signing',
+            '2.5.29.37': 'Extended Key Usage',
+            '1.2.840.113549.1.1.1': 'RSA Encryption',
+            '1.2.840.10045.2.1': 'EC Public Key',
+            '2.5.4.3': 'Common Name',
+            '2.5.4.6': 'Country',
+            '2.5.4.10': 'Organization',
+            '2.5.4.11': 'Organizational Unit'
+        };
+        return map[oid] || oid;
+    }
+
+    /**
      * Parses an x5c array (elements are byte strings Uint8Array) using PKIjs to extract human-readable fields
      * @param {Array<Uint8Array>} x5cArray
      * @returns {Promise<Array<Object>>} parsed certificates
@@ -1342,15 +1364,78 @@ try {
                 const asn1 = asn1js.fromBER(ab);
                 if (asn1.offset === -1) throw new Error('ASN.1 parse error');
                 const cert = new pkijs.Certificate({ schema: asn1.result });
+                // Helper to extract type/value pairs
+                const extractTV = (tav) => tav.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || (tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex)) })).filter(Boolean);
+
+                // Compute SHA-256 fingerprint
+                let fingerprintSHA256 = null;
+                try {
+                    const hash = await crypto.subtle.digest('SHA-256', ab);
+                    const h = Array.from(new Uint8Array(hash)).map(b => ('0' + b.toString(16)).slice(-2)).join('').toUpperCase();
+                    fingerprintSHA256 = h.match(/.{1,2}/g).join(':');
+                } catch (e) { /* ignore digest errors */ }
+
+                // Determine public key algorithm and size
+                let publicKey = { algorithm: cert.subjectPublicKeyInfo.algorithm.algorithmId || null, size: null };
+                try {
+                    const alg = cert.subjectPublicKeyInfo.algorithm.algorithmId || '';
+                    // RSA: parse RSAPublicKey to get modulus length
+                    if (alg === '1.2.840.113549.1.1.1') { // rsaEncryption
+                        const spk = cert.subjectPublicKeyInfo.subjectPublicKey.valueBlock.valueHex;
+                        const spkAsn = asn1js.fromBER(spk);
+                        if (spkAsn.offset !== -1) {
+                            // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER }
+                            const rsaPub = new pkijs.RSAPublicKey({ schema: spkAsn.result });
+                            const modHex = pvtsutils.Convert.ToHex(rsaPub.modulus.valueBlock.valueHex);
+                            publicKey.size = (modHex.length / 2) * 8; // bits
+                        }
+                    } else if (alg === '1.2.840.10045.2.1') { // ecPublicKey
+                        // Try to get named curve OID
+                        const params = cert.subjectPublicKeyInfo.algorithm.algorithmParams;
+                        if (params && params.valueBlock && params.valueBlock.toString) {
+                            publicKey.size = null; // curve name unknown here; keep null
+                        }
+                    }
+                } catch (e) { /* ignore public key parse errors */ }
+
+                // Extract some common extensions
+                const extensions = {};
+                if (Array.isArray(cert.extensions)) {
+                    cert.extensions.forEach(ext => {
+                        try {
+                            if (ext.extnID === '2.5.29.19') { // BasicConstraints
+                                const bc = ext.parsedValue;
+                                extensions.basicConstraints = { cA: !!bc.cA, pathLenConstraint: bc.pathLenConstraint || null };
+                            } else if (ext.extnID === '2.5.29.15') { // KeyUsage
+                                const ku = ext.parsedValue; // BitString
+                                extensions.keyUsage = ku.wBits ? ku.wBits.join(',') : Object.keys(ku).filter(k => ku[k]).join(',');
+                            } else if (ext.extnID === '2.5.29.37') { // ExtKeyUsage
+                                const eku = ext.parsedValue; // array of OIDs
+                                if (Array.isArray(eku.keyPurposes)) {
+                                    extensions.extKeyUsage = eku.keyPurposes.map(k => k.toString());
+                                }
+                            } else if (ext.extnID === '2.5.29.17') { // SubjectAltName
+                                const san = ext.parsedValue; // GeneralNames
+                                if (Array.isArray(san.altNames)) {
+                                    extensions.subjectAltName = san.altNames.map(n => ({ type: n.typeName, value: n.value }));
+                                }
+                            }
+                        } catch (e) { /* ignore */ }
+                    });
+                }
+
                 const parsed = {
-                    subject: cert.subject.typesAndValues.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex) })).filter(Boolean),
-                    issuer: cert.issuer.typesAndValues.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex) })).filter(Boolean),
+                    subject: extractTV(cert.subject.typesAndValues),
+                    issuer: extractTV(cert.issuer.typesAndValues),
                     serialNumber: pvtsutils.Convert.ToHex(cert.serialNumber.valueBlock.valueHex).toUpperCase(),
                     notBefore: cert.notBefore.value.toString(),
                     notAfter: cert.notAfter.value.toString(),
                     signatureAlgorithm: cert.signatureAlgorithm.algorithmId,
                     raw: ab,
-                    pem: convertToPEM(ab)
+                    pem: convertToPEM(ab),
+                    fingerprintSHA256,
+                    publicKey,
+                    extensions
                 };
                 results.push(parsed);
             } catch (e) {
@@ -1388,31 +1473,51 @@ try {
     html += '<div class="mdl-dialog__content">';
 
         certs.forEach((c, idx) => {
-            // Format subject and issuer succinctly
+            // Helper to render name arrays and prefer commonName when present
             function formatName(arr) {
                 try {
+                    const cn = arr.find(tv => tv.type && (tv.type.toLowerCase().endsWith('2.5.4.3') || tv.type.toLowerCase().endsWith('cn')));
+                    if (cn) return (cn.value || cn.value) + ' (' + arr.map(tv => (tv.type || '') + ':' + (tv.value || '')).join(', ') + ')';
                     return arr.map(tv => (tv.type || '') + ': ' + (tv.value || '')).join(', ');
                 } catch (e) { return JSON.stringify(arr); }
             }
 
             html += '<div class="mdl-card mdl-shadow--2dp cert-card" style="margin-bottom:12px; padding:12px; background:#fff;">';
-            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
-            html += '<div><b>Certificate ' + (idx+1) + '</b><br/>';
-            html += '<small><b>Subject:</b> ' + escapeHtml(formatName(c.subject)) + '</small><br/>';
-            html += '<small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer)) + '</small><br/>';
-            html += '<small><b>Serial:</b> ' + escapeHtml(c.serialNumber) + '</small><br/>';
-            html += '<small><b>Validity:</b> ' + escapeHtml(c.notBefore) + ' → ' + escapeHtml(c.notAfter) + '</small></div>';
+            html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+            html += '<div><b>Certificate ' + (idx+1) + '</b></div>';
+            html += '<div><small><b>Subject:</b> ' + escapeHtml(formatName(c.subject || [])) + '</small></div>';
+            html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
+            html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + '</small></div>';
+            html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
+            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml(c.fingerprintSHA256) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint">Copy</button></small></div>';
+            if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
+                html += '<div><small><b>Public Key:</b> ' + escapeHtml((c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
+            }
+            // Extensions
+            if (c.extensions) {
+                if (c.extensions.basicConstraints) {
+                    html += '<div><small><b>Basic Constraints:</b> CA=' + (c.extensions.basicConstraints.cA ? 'true' : 'false') + (c.extensions.basicConstraints.pathLenConstraint ? ', pathLen=' + c.extensions.basicConstraints.pathLenConstraint : '') + '</small></div>';
+                }
+                if (c.extensions.keyUsage) {
+                    html += '<div><small><b>Key Usage:</b> ' + escapeHtml(String(c.extensions.keyUsage)) + '</small></div>';
+                }
+                if (c.extensions.extKeyUsage) {
+                    html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(c.extensions.extKeyUsage.join(', ')) + '</small></div>';
+                }
+                if (c.extensions.subjectAltName) {
+                    const san = c.extensions.subjectAltName.map(n => (n.type + ':' + String(n.value))).join(', ');
+                    html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
+                }
+            }
 
-            // Action buttons (Download PEM, Download DER, Copy PEM)
-            html += '</div>'; // end header row
-
-            // No inline PEM shown; downloads available below
-            // Actions below note
+            // Action buttons
             html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
-            html += '<button class="mdl-button mdl-js-button mdl-button--colored cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;Download PEM</button>';
-            html += '<button class="mdl-button mdl-js-button mdl-button--colored cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;Download DER</button>';
-            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;Copy PEM</button>';
+            html += '<button class="mdl-button mdl-js-button cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
+            html += '<button class="mdl-button mdl-js-button cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
+            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
             html += '</div>';
+
+            html += '</div>'; // end column
             html += '</div>';
         });
 
@@ -1502,6 +1607,34 @@ try {
                         toast('PEM copied to clipboard (fallback)');
                     } catch (err2) {
                         toast('Copy failed; please download the PEM');
+                    }
+                }
+            });
+        });
+
+        // Copy fingerprint handlers
+        dlg.querySelectorAll('.cert-copy-fingerprint').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert || !cert.fingerprintSHA256) return;
+                try {
+                    await navigator.clipboard.writeText(cert.fingerprintSHA256);
+                    toast('Fingerprint copied to clipboard');
+                } catch (err) {
+                    // fallback
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.fingerprintSHA256;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('Fingerprint copied to clipboard (fallback)');
+                    } catch (err2) {
+                        toast('Copy failed');
                     }
                 }
             });
