@@ -383,6 +383,31 @@ a {
 .cert-actions { display:flex; gap:8px; margin-top:8px; }
 .cert-actions .material-icons { vertical-align: middle; }
 
+/* Make per-cert action buttons visually consistent */
+#certsDialog .cert-actions .mdl-button {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  background: transparent !important;
+  border: none !important;
+  color: #1a73e8 !important; /* use a consistent primary/link color */
+  text-transform: none !important;
+  font-weight: 500 !important;
+  padding: 6px 8px !important;
+  min-width: 0 !important;
+}
+
+#certsDialog .cert-actions .mdl-button .material-icons {
+  color: inherit !important;
+  font-size: 20px !important;
+  line-height: 20px !important;
+}
+
+/* hover effect to match other action links/buttons */
+#certsDialog .cert-actions .mdl-button:hover {
+  background: rgba(26,115,232,0.06) !important;
+}
+
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
 #certsDialog.mdl-dialog, dialog#certsDialog {
