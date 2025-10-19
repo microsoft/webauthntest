@@ -1241,6 +1241,8 @@ try {
     html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
     html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
         html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
+        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
             (credential.transports || []).forEach(t => {
@@ -1249,8 +1251,6 @@ try {
             });
             html += '</dd>';
         }
-        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
-        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
         html += '         </dl>';
         html += '     </div>';
         // Last Authentication Data (nicer UI)
@@ -1331,8 +1331,7 @@ try {
             publicKeyType += "(" + credential.creationData.publicKeyAlgorithm +") ";
         }
 
-        $("#creationData_attestationObject").text(credential.creationData.attestationObject);
-        $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
+    $("#creationData_attestationObject").text(credential.creationData.attestationObject);
         $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
     $("#creationData_publicKeyType").text(publicKeyType);
