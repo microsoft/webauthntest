@@ -1140,7 +1140,7 @@ try {
             var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
         });
-        $("a.viewCertificatesButton").click(async e => {
+    $(".viewCertificatesButton").click(async e => {
             var id = $(e.currentTarget).attr("data-value");
             var credential = credentials.find(c => c.id === id);
             if (!credential) {
@@ -1210,9 +1210,7 @@ try {
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
             + credential.id
             + '">Update Transports</a>';
-        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="'
-            + credential.id
-            + '" style="display:none; margin-left:8px;">View Certificates</a>';
+    html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
         html += ' </div>';
         html += '</div>';
 
@@ -1230,8 +1228,10 @@ try {
                     // show the button for this credential card
                     const card = document.getElementById('credential-' + credential.idHex);
                     if (card) {
-                        const btn = card.querySelector('a.viewCertificatesButton');
+                        const btn = card.querySelector('.viewCertificatesButton');
                         if (btn) btn.style.display = 'inline-block';
+                        // Ensure MDL styles are applied if componentHandler is available
+                        try { if (window.componentHandler && typeof componentHandler.upgradeElement === 'function') componentHandler.upgradeElement(btn); } catch(e) { }
                     }
                 }
             }
