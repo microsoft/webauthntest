@@ -1,6 +1,28 @@
 
 
 
+// This file is now loaded as an ES module (see index.html).
+// Import PKIJS + peer dependencies from Skypack and initialize the crypto engine.
+import * as asn1js from 'https://cdn.skypack.dev/asn1js@3.0.6';
+import * as pvutils from 'https://cdn.skypack.dev/pvutils@1.1.3';
+import * as pvtsutils from 'https://cdn.skypack.dev/pvtsutils@1.3.6';
+import * as pkijs from 'https://cdn.skypack.dev/pkijs@3.3.0';
+
+// Expose commonly used libs on window for compatibility with the rest of the app
+window.asn1js = asn1js;
+window.pvutils = pvutils;
+window.pvtsutils = pvtsutils;
+window.pkijs = pkijs;
+
+// Initialize PKIJS engine to use browser WebCrypto
+try {
+    if (pkijs && typeof pkijs.setEngine === 'function' && typeof pkijs.CryptoEngine === 'function') {
+        const engine = new pkijs.CryptoEngine({ name: 'webcrypto', crypto: window.crypto });
+        pkijs.setEngine('webcrypto', engine);
+    }
+} catch (e) {
+    console.warn('PKIJS engine init failed:', e);
+}
 
 (function () {
     /**
@@ -1118,6 +1140,41 @@
             var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
         });
+        // Ensure MDL upgrades newly added elements so styles/ripples apply
+        try {
+            if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') {
+                componentHandler.upgradeDom();
+            }
+        } catch (e) {
+            console.warn('MDL upgradeDom failed', e);
+        }
+    $(".viewCertificatesButton").click(async e => {
+            var id = $(e.currentTarget).attr("data-value");
+            var credential = credentials.find(c => c.id === id);
+            if (!credential) {
+                toast('Credential not found');
+                return;
+            }
+            try {
+                if (credential.creationData && credential.creationData.attestationObject) {
+                    const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
+                    const bytes = CBORPlayground.hexToBytes(hex);
+                    const top = CBORPlayground.decodeCbor(bytes);
+                    const found = findX5cInCbor(top);
+                    if (found && found.length) {
+                        const certs = await parseX5cArray(found);
+                        showCertificatesDialog(certs);
+                    } else {
+                        toast('No certificates found in attestation data');
+                    }
+                } else {
+                    toast('No attestation data available for this credential');
+                }
+            } catch (err) {
+                console.error(err);
+                toast('Failed to parse certificates: ' + (err && err.message ? err.message : err));
+            }
+        });
     }
 
     /**
@@ -1127,7 +1184,7 @@
     function renderCredential(credential) {
         var html = '';
 
-        html += '<div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col" id="credential' + credential.id + '">';
+    html += '<div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col" id="credential-' + credential.idHex + '">';
         html += ' <div class="mdl-card__title">';
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
@@ -1161,11 +1218,35 @@
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
             + credential.id
             + '">Update Transports</a>';
+    html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
         html += ' </div>';
         html += '</div>';
 
 
         $("#credentialsContainer").append(html);
+
+        // After inserting into DOM, probe the attestationObject for x5c presence and show the button if found
+        try {
+            if (credential.creationData && credential.creationData.attestationObject) {
+                const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
+                const bytes = CBORPlayground.hexToBytes(hex);
+                const top = CBORPlayground.decodeCbor(bytes);
+                const found = findX5cInCbor(top);
+                if (found && found.length) {
+                    // show the button for this credential card
+                    const card = document.getElementById('credential-' + credential.idHex);
+                    if (card) {
+                        const btn = card.querySelector('.viewCertificatesButton');
+                        if (btn) btn.style.display = 'inline-block';
+                        // Ensure MDL styles are applied if componentHandler is available
+                        try { if (window.componentHandler && typeof componentHandler.upgradeElement === 'function') componentHandler.upgradeElement(btn); } catch(e) { }
+                    }
+                }
+            }
+        } catch (e) {
+            // non-fatal if parsing fails
+            console.warn('Error probing attestationObject for credential', credential.id, e);
+        }
 
     }
 
@@ -1174,8 +1255,10 @@
      * @param {string} id id of credenital to highlight
      */
     function highlightCredential(id) {
-        var credentialCard = document.getElementById("credential" + id);
-
+        // id is base64 id; find credential to obtain its idHex
+        var credential = credentials.find(c => c.id === id);
+        if (!credential) return;
+        var credentialCard = document.getElementById('credential-' + credential.idHex);
         if (!credentialCard) return;
 
         credentialCard.classList.add("highlighted");
@@ -1208,9 +1291,510 @@
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
         $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
 
+        // Note: Certificate viewing is handled per-credential on the main page
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
+    }
+
+    /**
+     * Recursively searches a decoded CBOR value for x5c key and returns the first found array of byte strings
+     * @param {any} node decoded CBOR value (from CBORPlayground.decodeCbor)
+     * @returns {Array<Uint8Array>|null}
+     */
+    function findX5cInCbor(node) {
+        if (!node || typeof node !== 'object') return null;
+        // Handle map-like objects where keys are strings
+        if (!Array.isArray(node)) {
+            if (Object.prototype.hasOwnProperty.call(node, 'x5c')) {
+                const val = node['x5c'];
+                if (Array.isArray(val)) return val;
+            }
+            // Iterate properties
+            for (const k of Object.keys(node)) {
+                const v = node[k];
+                const found = findX5cInCbor(v);
+                if (found) return found;
+            }
+        }
+        // Arrays: search elements
+        if (Array.isArray(node)) {
+            for (const el of node) {
+                const found = findX5cInCbor(el);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Helper: map common OIDs to friendly names
+     */
+    function oidToName(oid) {
+        const map = {
+            '1.3.6.1.5.5.7.3.1': 'TLS Web Server Authentication',
+            '1.3.6.1.5.5.7.3.2': 'TLS Web Client Authentication',
+            '1.3.6.1.5.5.7.3.3': 'Code Signing',
+            '1.3.6.1.5.5.7.3.4': 'E-mail Protection',
+            '1.3.6.1.5.5.7.3.8': 'Time Stamping',
+            '1.3.6.1.5.5.7.3.9': 'OCSP Signing',
+            '2.5.29.37': 'Extended Key Usage',
+            '1.2.840.113549.1.1.1': 'RSA Encryption',
+            '1.2.840.10045.2.1': 'EC Public Key',
+            '2.5.4.3': 'Common Name',
+            '2.5.4.6': 'Country',
+            '2.5.4.10': 'Organization',
+            '2.5.4.11': 'Organizational Unit'
+        };
+        return map[oid] || oid;
+    }
+
+    /**
+     * Parses an x5c array (elements are byte strings Uint8Array) using PKIjs to extract human-readable fields
+     * @param {Array<Uint8Array>} x5cArray
+     * @returns {Promise<Array<Object>>} parsed certificates
+     */
+    async function parseX5cArray(x5cArray) {
+        const results = [];
+        for (const item of x5cArray) {
+            try {
+                // Convert Uint8Array -> ArrayBuffer
+                const ab = item.buffer.slice(item.byteOffset || 0, (item.byteOffset || 0) + item.byteLength);
+                // Parse with PKIjs
+                const asn1 = asn1js.fromBER(ab);
+                if (asn1.offset === -1) throw new Error('ASN.1 parse error');
+                const cert = new pkijs.Certificate({ schema: asn1.result });
+                // Helper to extract type/value pairs
+                const extractTV = (tav) => tav.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || (tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex)) })).filter(Boolean);
+
+                // Compute SHA-256 fingerprint
+                let fingerprintSHA256 = null;
+                let fingerprintSHA256Colon = null;
+                try {
+                    const hash = await crypto.subtle.digest('SHA-256', ab);
+                    const h = Array.from(new Uint8Array(hash)).map(b => ('0' + b.toString(16)).slice(-2)).join('').toUpperCase();
+                    fingerprintSHA256 = h; // plain, no colons
+                    fingerprintSHA256Colon = h.match(/.{1,2}/g).join(':');
+                } catch (e) { /* ignore digest errors */ }
+
+                // Determine public key algorithm and size
+                let publicKey = { algorithm: cert.subjectPublicKeyInfo.algorithm.algorithmId || null, size: null };
+                try {
+                    const alg = cert.subjectPublicKeyInfo.algorithm.algorithmId || '';
+                    // RSA: parse RSAPublicKey to get modulus length
+                    if (alg === '1.2.840.113549.1.1.1') { // rsaEncryption
+                        const spk = cert.subjectPublicKeyInfo.subjectPublicKey.valueBlock.valueHex;
+                        const spkAsn = asn1js.fromBER(spk);
+                        if (spkAsn.offset !== -1) {
+                            // RSAPublicKey ::= SEQUENCE { modulus INTEGER, publicExponent INTEGER }
+                            const rsaPub = new pkijs.RSAPublicKey({ schema: spkAsn.result });
+                            const modHex = pvtsutils.Convert.ToHex(rsaPub.modulus.valueBlock.valueHex);
+                            publicKey.size = (modHex.length / 2) * 8; // bits
+                        }
+                    } else if (alg === '1.2.840.10045.2.1') { // ecPublicKey
+                        // Try to get named curve OID
+                        const params = cert.subjectPublicKeyInfo.algorithm.algorithmParams;
+                        if (params && params.valueBlock && params.valueBlock.toString) {
+                            publicKey.size = null; // curve name unknown here; keep null
+                        }
+                    }
+                } catch (e) { /* ignore public key parse errors */ }
+
+                // Extract some common extensions
+                const extensions = {};
+                if (Array.isArray(cert.extensions)) {
+                    // Helper to format GeneralName entries from PKIjs SubjectAltName parsing
+                    function formatGeneralName(n) {
+                        try {
+                            // If the parsed value is a plain string like '4:3040...'(hex blob), try to parse hex after colon
+                            if (typeof n === 'string') {
+                                const m = n.match(/^\d+:(?:[0-9a-fA-F])+$/);
+                                if (m) {
+                                    const hex = n.split(':')[1];
+                                    try {
+                                        const bytes = pvtsutils.Convert.FromHex(hex);
+                                        const asn = asn1js.fromBER(bytes.buffer);
+                                        if (asn && asn.offset !== -1) {
+                                            const collected = [];
+                                            function walkNode(node) {
+                                                if (!node) return;
+                                                if (node.valueBlock && Array.isArray(node.valueBlock.value)) node.valueBlock.value.forEach(walkNode);
+                                                if (node.valueBlock) {
+                                                    const vb = node.valueBlock;
+                                                    if (vb.value) collected.push(String(vb.value));
+                                                    else if (vb.valueHex) {
+                                                        try { collected.push(pvtsutils.BufferSourceConverter.toString(vb.valueHex)); } catch (e) { collected.push(pvtsutils.Convert.ToHex(vb.valueHex)); }
+                                                    }
+                                                }
+                                            }
+                                            walkNode(asn.result);
+                                            if (collected.length) return collected.join(', ');
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                }
+                            }
+                            // Common string types
+                            if (n.typeName && (n.typeName === 'dNSName' || n.typeName === 'uniformResourceIdentifier' || n.typeName === 'rfc822Name')) {
+                                return String(n.value || n); // often already a string
+                            }
+                            if (n.typeName === 'iPAddress') {
+                                // value may be an OctetString (valueBlock.valueHex)
+                                if (n.value && n.value.valueBlock && n.value.valueBlock.valueHex) {
+                                    const bytes = new Uint8Array(n.value.valueBlock.valueHex);
+                                    if (bytes.length === 4) return Array.from(bytes).join('.');
+                                    // IPv6-ish: hex pairs
+                                    return Array.from(bytes).map(b => ('0' + b.toString(16)).slice(-2)).join(':');
+                                }
+                                return String(n.value || n);
+                            }
+                            // directoryName or other structured types
+                            if (n.typeName === 'directoryName' && n.value && Array.isArray(n.value.typesAndValues)) {
+                                return n.value.typesAndValues.map(tv => (tv.type || '') + ':' + (tv.value && (tv.value.valueBlock && (tv.value.valueBlock.value || (tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex)))) || '')).join(', ');
+                            }
+
+                            // If we have valueBlock.valueHex, attempt to parse it as ASN.1 and extract inner strings
+                            if (n.value && n.value.valueBlock && n.value.valueBlock.valueHex) {
+                                try {
+                                    const inner = asn1js.fromBER(n.value.valueBlock.valueHex);
+                                    if (inner && inner.offset !== -1 && inner.result) {
+                                        const collected = [];
+                                        // recursive extractor
+                                        function walk(node) {
+                                            if (!node) return;
+                                            if (Array.isArray(node.valueBlock && node.valueBlock.value)) {
+                                                node.valueBlock.value.forEach(child => walk(child));
+                                            }
+                                            // string types
+                                            if (node.valueBlock) {
+                                                const vb = node.valueBlock;
+                                                if (vb.value) collected.push(String(vb.value));
+                                                else if (vb.valueHex) {
+                                                    try { collected.push(pvtsutils.BufferSourceConverter.toString(vb.valueHex)); } catch (e) { collected.push(pvtsutils.Convert.ToHex(vb.valueHex)); }
+                                                }
+                                            }
+                                            // if node has result property (for parsed objects)
+                                            if (node.result && typeof node.result === 'object') walk(node.result);
+                                        }
+                                        walk(inner.result);
+                                        if (collected.length) return collected.join(', ');
+                                        // If ASN.1 walk found nothing, try scanning for UTF8String (tag 0x0C) sequences
+                                        try {
+                                            const vbHex = node.valueBlock && node.valueBlock.valueHex ? new Uint8Array(node.valueBlock.valueHex) : null;
+                                            if (vbHex && vbHex.length) {
+                                                const parts = [];
+                                                for (let j = 0; j < vbHex.length - 2; j++) {
+                                                    if (vbHex[j] === 0x0C) { // UTF8String tag
+                                                        const len = vbHex[j+1];
+                                                        if (len && j+2+len <= vbHex.length) {
+                                                            const slice = vbHex.slice(j+2, j+2+len);
+                                                            try { parts.push(pvtsutils.BufferSourceConverter.toString(slice)); } catch(e) { parts.push(pvtsutils.Convert.ToHex(slice)); }
+                                                            j += 1 + len;
+                                                        }
+                                                    }
+                                                }
+                                                if (parts.length) return parts.join(', ');
+                                            }
+                                        } catch (e) { /* ignore */ }
+                                    }
+                                } catch (e) {
+                                    // fallthrough to other heuristics
+                                }
+                            }
+
+                            // Fallbacks: some parsed values are ASN.1 objects with valueBlock
+                            if (n.value && n.value.valueBlock) {
+                                const vb = n.value.valueBlock;
+                                if (vb.value) return String(vb.value);
+                                if (vb.valueHex) {
+                                    try { return pvtsutils.BufferSourceConverter.toString(vb.valueHex); } catch (e) { return pvtsutils.Convert.ToHex(vb.valueHex); }
+                                }
+                            }
+
+                            // If type is OID or custom, attempt to stringify
+                            if (n.type) return String(n.value || n);
+                            return String(n.value || n);
+                        } catch (e) {
+                            try { return JSON.stringify(n); } catch (e2) { return String(n); }
+                        }
+                    }
+
+                    cert.extensions.forEach(ext => {
+                        try {
+                            if (ext.extnID === '2.5.29.19') { // BasicConstraints
+                                const bc = ext.parsedValue;
+                                extensions.basicConstraints = { cA: !!bc.cA, pathLenConstraint: bc.pathLenConstraint || null };
+                            } else if (ext.extnID === '2.5.29.15') { // KeyUsage
+                                const ku = ext.parsedValue; // BitString
+                                extensions.keyUsage = ku.wBits ? ku.wBits.join(',') : Object.keys(ku).filter(k => ku[k]).join(',');
+                            } else if (ext.extnID === '2.5.29.37') { // ExtKeyUsage
+                                const eku = ext.parsedValue; // array of OIDs
+                                if (Array.isArray(eku.keyPurposes)) {
+                                    extensions.extKeyUsage = eku.keyPurposes.map(k => k.toString());
+                                }
+                            } else if (ext.extnID === '2.5.29.17') { // SubjectAltName
+                                const san = ext.parsedValue; // GeneralNames
+                                if (Array.isArray(san.altNames)) {
+                                    extensions.subjectAltName = san.altNames.map(n => ({ type: n.typeName || n.type, value: formatGeneralName(n) }));
+                                }
+                            }
+                        } catch (e) { /* ignore */ }
+                    });
+                }
+
+                const parsed = {
+                    subject: extractTV(cert.subject.typesAndValues),
+                    issuer: extractTV(cert.issuer.typesAndValues),
+                    serialNumber: pvtsutils.Convert.ToHex(cert.serialNumber.valueBlock.valueHex).toUpperCase(),
+                    notBefore: cert.notBefore.value.toString(),
+                    notAfter: cert.notAfter.value.toString(),
+                    signatureAlgorithm: cert.signatureAlgorithm.algorithmId,
+                    raw: ab,
+                    pem: convertToPEM(ab),
+                    fingerprintSHA256,
+                    fingerprintSHA256Colon,
+                    publicKey,
+                    extensions
+                };
+                results.push(parsed);
+            } catch (e) {
+                console.warn('Failed to parse cert in x5c', e);
+            }
+        }
+        return results;
+    }
+
+    function convertToPEM(arrayBuffer) {
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        const b64 = btoa(binary);
+        const chunks = b64.match(/.{1,64}/g) || [];
+        return '-----BEGIN CERTIFICATE-----\n' + chunks.join('\n') + '\n-----END CERTIFICATE-----\n';
+    }
+
+    /**
+     * Renders a modal dialog with certificate details
+     * @param {Array<Object>} certs
+     */
+    function showCertificatesDialog(certs) {
+        // Build an enhanced dialog with download/copy actions
+        let dlg = document.getElementById('certsDialog');
+        if (!dlg) {
+            dlg = document.createElement('dialog');
+            dlg.className = 'mdl-dialog';
+            dlg.id = 'certsDialog';
+            document.body.appendChild(dlg);
+        }
+
+    let html = '';
+    html += '<h3 class="mdl-dialog__title">Certificates</h3>';
+    html += '<div class="mdl-dialog__content">';
+
+        certs.forEach((c, idx) => {
+            // Helper to render name arrays and prefer commonName when present
+            function formatName(arr) {
+                try {
+                    const cn = arr.find(tv => tv.type && (tv.type.toLowerCase().endsWith('2.5.4.3') || tv.type.toLowerCase().endsWith('cn')));
+                    if (cn) return (cn.value || cn.value) + ' (' + arr.map(tv => (tv.type || '') + ':' + (tv.value || '')).join(', ') + ')';
+                    return arr.map(tv => (tv.type || '') + ': ' + (tv.value || '')).join(', ');
+                } catch (e) { return JSON.stringify(arr); }
+            }
+
+            html += '<div class="mdl-card mdl-shadow--2dp cert-card" style="margin-bottom:12px; padding:12px; background:#fff;">';
+            html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+            html += '<div><b>Certificate ' + (idx+1) + '</b></div>';
+            html += '<div><small><b>Subject:</b> ' + escapeHtml(formatName(c.subject || [])) + '</small></div>';
+            html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
+            html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + '</small></div>';
+            html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
+            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
+            if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
+                const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
+                html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
+            }
+            // Extensions
+            if (c.extensions) {
+                if (c.extensions.basicConstraints) {
+                    html += '<div><small><b>Basic Constraints:</b> CA=' + (c.extensions.basicConstraints.cA ? 'true' : 'false') + (c.extensions.basicConstraints.pathLenConstraint ? ', pathLen=' + c.extensions.basicConstraints.pathLenConstraint : '') + '</small></div>';
+                }
+                if (c.extensions.keyUsage) {
+                    html += '<div><small><b>Key Usage:</b> ' + escapeHtml(String(c.extensions.keyUsage)) + '</small></div>';
+                }
+                if (c.extensions.extKeyUsage) {
+                    const ekus = c.extensions.extKeyUsage.map(o => (oidToName(o) + ' (' + o + ')'));
+                    html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(ekus.join(', ')) + '</small></div>';
+                }
+                if (c.extensions.subjectAltName) {
+                        // Decode possible id:HEX patterns inside SAN values to ASCII when practical
+                        function decodeIdHex(val) {
+                            try {
+                                return val.replace(/id:([0-9A-Fa-f]{2,})/g, (m, hex) => {
+                                    try {
+                                        const bytes = pvtsutils.Convert.FromHex(hex);
+                                        const str = pvtsutils.BufferSourceConverter.toString(bytes);
+                                        return `id:${hex} (${str})`;
+                                    } catch (e) {
+                                        return m;
+                                    }
+                                });
+                            } catch (e) { return val; }
+                        }
+
+                        const san = c.extensions.subjectAltName.map(n => {
+                            const t = n.type || '';
+                            const rawVal = (typeof n.value === 'object') ? JSON.stringify(n.value) : String(n.value);
+                            const val = decodeIdHex(rawVal);
+                            return t + ':' + val;
+                        }).join(', ');
+                        html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
+                    }
+            }
+
+            // Action buttons
+            html += '<div class="cert-actions" style="margin-top:8px; display:flex; gap:8px;">';
+            html += '<button class="mdl-button mdl-js-button cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
+            html += '<button class="mdl-button mdl-js-button cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
+            html += '<button class="mdl-button mdl-js-button cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
+            html += '</div>';
+
+            html += '</div>'; // end column
+            html += '</div>';
+        });
+
+    html += '</div>'; // end content
+    // dialog actions/footer: Download Chain on left, Close on right
+    // Render buttons as direct siblings and push Close to the right using margin-left:auto
+    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar" style="display:flex; gap:8px; align-items:center;">';
+    html += '<button class="mdl-button mdl-js-button mdl-button--raised" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="mdl-button" id="certsDialog_x" style="margin-left:auto;">Close</button>';
+    html += '</div>';
+    dlg.innerHTML = html;
+
+    // Wire actions (close button appended after content)
+    const closeBtn = dlg.querySelector('#certsDialog_x');
+    if (closeBtn) closeBtn.addEventListener('click', () => dlg.close());
+
+    // Download chain: concatenate PEMs into one file
+    const downloadChainBtn = dlg.querySelector('#certsDownloadChain');
+    if (downloadChainBtn) {
+        downloadChainBtn.addEventListener('click', () => {
+            const allPem = certs.map(c => c.pem).join('\n');
+            const blob = new Blob([allPem], { type: 'application/x-pem-file' });
+            downloadBlob('certificate-chain.pem', blob);
+        });
+    }
+
+        // Helper: download PEM/DER and copy
+        function downloadBlob(filename, blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+                a.remove();
+            }, 1000);
+        }
+
+        // Upgrade MDL components inside dialog before wiring handlers
+        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch (e) { /* ignore */ }
+
+        // Attach per-cert button handlers
+        dlg.querySelectorAll('.cert-download-pem').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                const pem = cert.pem;
+                const blob = new Blob([pem], { type: 'application/x-pem-file' });
+                downloadBlob('certificate-' + (idx+1) + '.pem', blob);
+            });
+        });
+
+        dlg.querySelectorAll('.cert-download-der').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                const ab = cert.raw || null;
+                if (!ab) return toast('DER data not available');
+                const blob = new Blob([ab], { type: 'application/octet-stream' });
+                downloadBlob('certificate-' + (idx+1) + '.der', blob);
+            });
+        });
+
+        dlg.querySelectorAll('.cert-copy-pem').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert) return;
+                try {
+                    await navigator.clipboard.writeText(cert.pem);
+                    toast('PEM copied to clipboard');
+                } catch (err) {
+                    // fallback: use temporary textarea and execCommand
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.pem;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('PEM copied to clipboard (fallback)');
+                    } catch (err2) {
+                        toast('Copy failed; please download the PEM');
+                    }
+                }
+            });
+        });
+
+        // Copy fingerprint handlers
+        dlg.querySelectorAll('.cert-copy-fingerprint').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert || !cert.fingerprintSHA256) return;
+                try {
+                    // copy plain fingerprint (no colons) if available
+                    const toCopy = cert.fingerprintSHA256 || cert.fingerprintSHA256Colon || '';
+                    await navigator.clipboard.writeText(toCopy);
+                    toast('Fingerprint copied to clipboard');
+                } catch (err) {
+                    // fallback
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.fingerprintSHA256 || cert.fingerprintSHA256Colon || '';
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('Fingerprint copied to clipboard (fallback)');
+                    } catch (err2) {
+                        toast('Copy failed');
+                    }
+                }
+            });
+        });
+
+        if (!dlg.showModal) dialogPolyfill.registerDialog(dlg);
+        dlg.showModal();
+        // Move keyboard focus to Close button for accessibility
+        try {
+            if (closeBtn) {
+                closeBtn.setAttribute('tabindex', '0');
+                closeBtn.focus();
+            }
+        } catch (e) { /* ignore focus errors */ }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     /**
