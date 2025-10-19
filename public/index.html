@@ -570,6 +570,9 @@
                 <b>Attestation Statement Chain</b>
                 <br>
                 <span id="creationData_attestationStatementChainJSON"></span>
+                <div style="margin-top:8px;">
+                    <button class="mdl-button mdl-js-button mdl-button--raised" id="creationData_viewCertsButton" style="display:none;">View Certificates</button>
+                </div>
             </p>
             <p>
                 <b>Attestation Object</b>
@@ -777,6 +780,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="cbor.js"></script>
     <!-- Load app as an ES module which imports PKIJS directly from the CDN -->
     <script type="module" src="index.js"></script>
 </body>

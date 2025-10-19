@@ -1230,9 +1230,150 @@ try {
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
         $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
 
+        // If attestationObjectHex contains x5c certificates, enable View Certificates button
+        const viewCertsBtn = document.getElementById('creationData_viewCertsButton');
+        if (viewCertsBtn) {
+            // Hide by default
+            viewCertsBtn.style.display = 'none';
+            try {
+                if (credential.creationData && credential.creationData.attestationObject) {
+                    const hex = credential.creationData.attestationObject.replace(/\s+/g, '');
+                    const bytes = CBORPlayground.hexToBytes(hex);
+                    // attestationObject is CBOR: {fmt, authData, attStmt}
+                    const top = CBORPlayground.decodeCbor(bytes);
+                    // Find any x5c arrays in the map recursively
+                    const found = findX5cInCbor(top);
+                    if (found && found.length) {
+                        viewCertsBtn.style.display = 'inline-block';
+                        viewCertsBtn.onclick = async () => {
+                            try {
+                                const certs = await parseX5cArray(found);
+                                showCertificatesDialog(certs);
+                            } catch (e) {
+                                toast('Failed to parse certificates: ' + e.message);
+                                console.error(e);
+                            }
+                        };
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not probe attestationObject for x5c', e);
+            }
+        }
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
+    }
+
+    /**
+     * Recursively searches a decoded CBOR value for x5c key and returns the first found array of byte strings
+     * @param {any} node decoded CBOR value (from CBORPlayground.decodeCbor)
+     * @returns {Array<Uint8Array>|null}
+     */
+    function findX5cInCbor(node) {
+        if (!node || typeof node !== 'object') return null;
+        // Handle map-like objects where keys are strings
+        if (!Array.isArray(node)) {
+            if (Object.prototype.hasOwnProperty.call(node, 'x5c')) {
+                const val = node['x5c'];
+                if (Array.isArray(val)) return val;
+            }
+            // Iterate properties
+            for (const k of Object.keys(node)) {
+                const v = node[k];
+                const found = findX5cInCbor(v);
+                if (found) return found;
+            }
+        }
+        // Arrays: search elements
+        if (Array.isArray(node)) {
+            for (const el of node) {
+                const found = findX5cInCbor(el);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Parses an x5c array (elements are byte strings Uint8Array) using PKIjs to extract human-readable fields
+     * @param {Array<Uint8Array>} x5cArray
+     * @returns {Promise<Array<Object>>} parsed certificates
+     */
+    async function parseX5cArray(x5cArray) {
+        const results = [];
+        for (const item of x5cArray) {
+            try {
+                // Convert Uint8Array -> ArrayBuffer
+                const ab = item.buffer.slice(item.byteOffset || 0, (item.byteOffset || 0) + item.byteLength);
+                // Parse with PKIjs
+                const asn1 = asn1js.fromBER(ab);
+                if (asn1.offset === -1) throw new Error('ASN.1 parse error');
+                const cert = new pkijs.Certificate({ schema: asn1.result });
+                const parsed = {
+                    subject: cert.subject.typesAndValues.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex) })).filter(Boolean),
+                    issuer: cert.issuer.typesAndValues.map(tv => ({ type: tv.type, value: tv.value.valueBlock.value || tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex) })).filter(Boolean),
+                    serialNumber: pvtsutils.Convert.ToHex(cert.serialNumber.valueBlock.valueHex).toUpperCase(),
+                    notBefore: cert.notBefore.value.toString(),
+                    notAfter: cert.notAfter.value.toString(),
+                    signatureAlgorithm: cert.signatureAlgorithm.algorithmId,
+                    raw: ab,
+                    pem: convertToPEM(ab)
+                };
+                results.push(parsed);
+            } catch (e) {
+                console.warn('Failed to parse cert in x5c', e);
+            }
+        }
+        return results;
+    }
+
+    function convertToPEM(arrayBuffer) {
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        const b64 = btoa(binary);
+        const chunks = b64.match(/.{1,64}/g) || [];
+        return '-----BEGIN CERTIFICATE-----\n' + chunks.join('\n') + '\n-----END CERTIFICATE-----\n';
+    }
+
+    /**
+     * Renders a modal dialog with certificate details
+     * @param {Array<Object>} certs
+     */
+    function showCertificatesDialog(certs) {
+        // Build dialog HTML dynamically
+        let dlg = document.getElementById('certsDialog');
+        if (!dlg) {
+            dlg = document.createElement('dialog');
+            dlg.className = 'mdl-dialog';
+            dlg.id = 'certsDialog';
+            document.body.appendChild(dlg);
+        }
+        let html = '<div class="mdl-dialog__actions"><button class="mdl-button" id="certsDialog_x">Close</button></div>';
+        html += '<h3 class="mdl-dialog__title">Certificates</h3>';
+        html += '<div class="mdl-dialog__content">';
+        certs.forEach((c, idx) => {
+            html += '<div class="mdl-card mdl-shadow--2dp" style="margin-bottom:12px; padding:10px; background:#fff;">';
+            html += '<b>Certificate ' + (idx+1) + '</b><br/>';
+            html += '<b>Subject:</b> ' + JSON.stringify(c.subject) + '<br/>';
+            html += '<b>Issuer:</b> ' + JSON.stringify(c.issuer) + '<br/>';
+            html += '<b>Serial:</b> ' + c.serialNumber + '<br/>';
+            html += '<b>Validity:</b> ' + c.notBefore + ' -> ' + c.notAfter + '<br/>';
+            html += '<pre style="white-space:pre-wrap; background:#f6f6f6; padding:8px;">' + escapeHtml(c.pem) + '</pre>';
+            html += '</div>';
+        });
+        html += '</div>';
+        dlg.innerHTML = html;
+        // wire close
+        const closeBtn = dlg.querySelector('#certsDialog_x');
+        closeBtn.addEventListener('click', () => dlg.close());
+        if (!dlg.showModal) dialogPolyfill.registerDialog(dlg);
+        dlg.showModal();
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     /**
