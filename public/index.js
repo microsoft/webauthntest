@@ -1230,19 +1230,28 @@ try {
     html += '     <p><b>Credential ID</b><br/>' + credential.idHex + ' <button class="mdl-button cred-copy-id" data-idhex="' + credential.idHex + '" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></p>';
         html += '     <p><b>RP ID</b><br/>' + credential.metadata.rpId + '</p>';
         html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
-        html += '     <p>';
-        html += '         <b>Credential Registration Data</b>';
+        // Render registration data as a compact key/value list for readability
+        html += '     <div class="reg-data">';
+        html += '         <div class="reg-data-header"><b>Credential Registration Data</b> ';
     html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
-        html += '         <br>Key Type: ' + credential.creationData.publicKeySummary + ' (' + credential.creationData.publicKeyAlgorithm +')';
-        html += '         <br>Requested Discoverable Credential: ' + credential.metadata.residentKey;
-        html += '         <br>Attestation Type: ' + credential.creationData.attestationStatementSummary;
-        html += '         <br>Authenticator Attachment: ' + credential.creationData.authenticatorAttachment;
+        html += '         </div>';
+        html += '         <dl class="reg-data-list">';
+        html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
+        html += '             <dt>Requested Discoverable</dt><dd>' + escapeHtml(String(credential.metadata.residentKey || '')) + '</dd>';
+        html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
+        html += '             <dt>Authenticator Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
-            html += '         <br>Transports: [' + credential.transports.join(', ') + ']';
+            html += '             <dt>Transports</dt><dd>';
+            (credential.transports || []).forEach(t => {
+                // Use MDL chip markup for decorative chips
+                html += '<span class="mdl-chip" aria-hidden="true"><span class="mdl-chip__text">' + escapeHtml(t) + '</span></span> ';
+            });
+            html += '</dd>';
         }
-        html += '         <br>PRF Enabled: ' + credential.creationData.prfEnabled;
-        html += '         <br>' + credential.creationData.authenticatorDataSummary;
-        html += '     </p>';
+        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
+        html += '         </dl>';
+        html += '     </div>';
         html += '     <p>';
         html += '         <b>Last Authentication Data</b>';
     html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
