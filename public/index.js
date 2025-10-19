@@ -1227,18 +1227,20 @@ try {
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
         html += ' <div class="mdl-card__supporting-text mdl-card--expand">';
-    html += '     <p><b>Credential ID</b><br/>' + credential.idHex + ' <button class="mdl-button cred-copy-id" data-idhex="' + credential.idHex + '" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></p>';
-        html += '     <p><b>RP ID</b><br/>' + credential.metadata.rpId + '</p>';
-        html += '     <p><b>AAGUID </b><br/>' + credential.creationData.aaguid + '</p>';
+    // Identity fields moved into registration details list below
+    // AAGUID will be shown inside the registration details list for consistent styling
         // Render registration data as a compact key/value list for readability
         html += '     <div class="reg-data">';
         html += '         <div class="reg-data-header"><b>Credential Registration Data</b> ';
     html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
         html += '         </div>';
         html += '         <dl class="reg-data-list">';
-        html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
-        html += '             <dt>Requested Discoverable</dt><dd>' + escapeHtml(String(credential.metadata.residentKey || '')) + '</dd>';
-        html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
+    html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect cred-copy-id" data-idhex="' + credential.idHex + '" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
+    html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
+    html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
+    html += '             <dt>Requested Discoverable</dt><dd>' + escapeHtml(String(credential.metadata.residentKey || '')) + '</dd>';
+    html += '             <dt>AAGUID</dt><dd>' + escapeHtml(credential.creationData.aaguid || '') + '</dd>';
+    html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
         html += '             <dt>Authenticator Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
@@ -1252,11 +1254,15 @@ try {
         html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
         html += '         </dl>';
         html += '     </div>';
-        html += '     <p>';
-        html += '         <b>Last Authentication Data</b>';
+        // Last Authentication Data (nicer UI)
+        html += '     <div class="reg-data">';
+        html += '         <div class="reg-data-header"><b>Last Authentication Data</b> ';
     html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
-        html += '         <br>' + credential.authenticationData.authenticatorDataSummary;
-        html += '     </p>';
+        html += '         </div>';
+        html += '         <dl class="reg-data-list">';
+        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</dd>';
+        html += '         </dl>';
+        html += '     </div>';
         html += ' </div>';
         html += ' <div class="mdl-card__actions mdl-card--border">';
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect deleteCredentialButton" data-value="'

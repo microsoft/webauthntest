@@ -408,8 +408,9 @@ a {
 .reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 .reg-data-list { margin:0; padding:0; display:grid; grid-template-columns: 160px 1fr; gap:6px 12px; align-items:start; }
 .reg-data-list dt { font-weight:600; color:#333; }
-.reg-data-list dd { margin:0; color:#555; }
+.reg-data-list dd { margin:0; color:#555; display:flex; align-items:center; gap:8px; overflow-wrap:anywhere; word-break:break-all; }
 .reg-data-list dd::before { content: ""; }
+.reg-data-list dd .credential-id { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
 
 /* Transport chips for credential transports */
 /* Transport chips for credential transports (non-interactive decorative chips) */
