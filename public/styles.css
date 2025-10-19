@@ -388,7 +388,8 @@ a {
 #certsDialog.mdl-dialog, dialog#certsDialog {
   width: auto;
   max-width: 1100px;
-  padding: 0 16px;
+  /* add bottom padding so footer buttons aren't flush to the dialog edge */
+  padding: 0 16px 24px;
 }
 
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
@@ -400,6 +401,8 @@ a {
   gap: 8px;
   justify-content: space-between;
   align-items: center;
+  /* create breathing room below the buttons */
+  padding-bottom: 12px;
 }
 
 /* Force left-to-right direction inside the certs dialog to avoid RTL or
@@ -419,6 +422,31 @@ a {
 #certsDialog .cert-dialog-actions > div:last-child { order: 1 !important; }
 #certsDialog #certsDownloadChain { order: 0 !important; }
 #certsDialog #certsDialog_x { order: 1 !important; }
+
+/* Strong positioning: pin Download Chain to the left and Close to the right
+   inside the dialog footer so layout is deterministic across environments. */
+#certsDialog .cert-dialog-actions { position: relative !important; }
+#certsDialog #certsDownloadChain {
+  position: absolute !important;
+  left: 16px !important;
+}
+#certsDialog #certsDialog_x {
+  position: absolute !important;
+  right: 16px !important;
+  margin-left: 0 !important; /* clear any inline margin-left */
+}
+
+/* Responsive fallback: on narrow viewports, revert to normal flow so buttons
+   wrap and maintain accessibility on small screens. */
+@media (max-width: 520px) {
+  #certsDialog .cert-dialog-actions { position: static !important; }
+  #certsDialog #certsDownloadChain,
+  #certsDialog #certsDialog_x {
+    position: static !important;
+    margin-left: 0 !important;
+    display: inline-block !important;
+  }
+}
 
 /* Improve cert card visuals */
 .cert-card {
