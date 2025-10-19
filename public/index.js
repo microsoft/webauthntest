@@ -1401,6 +1401,121 @@ try {
                 // Extract some common extensions
                 const extensions = {};
                 if (Array.isArray(cert.extensions)) {
+                    // Helper to format GeneralName entries from PKIjs SubjectAltName parsing
+                    function formatGeneralName(n) {
+                        try {
+                            // If the parsed value is a plain string like '4:3040...'(hex blob), try to parse hex after colon
+                            if (typeof n === 'string') {
+                                const m = n.match(/^\d+:(?:[0-9a-fA-F])+$/);
+                                if (m) {
+                                    const hex = n.split(':')[1];
+                                    try {
+                                        const bytes = pvtsutils.Convert.FromHex(hex);
+                                        const asn = asn1js.fromBER(bytes.buffer);
+                                        if (asn && asn.offset !== -1) {
+                                            const collected = [];
+                                            function walkNode(node) {
+                                                if (!node) return;
+                                                if (node.valueBlock && Array.isArray(node.valueBlock.value)) node.valueBlock.value.forEach(walkNode);
+                                                if (node.valueBlock) {
+                                                    const vb = node.valueBlock;
+                                                    if (vb.value) collected.push(String(vb.value));
+                                                    else if (vb.valueHex) {
+                                                        try { collected.push(pvtsutils.BufferSourceConverter.toString(vb.valueHex)); } catch (e) { collected.push(pvtsutils.Convert.ToHex(vb.valueHex)); }
+                                                    }
+                                                }
+                                            }
+                                            walkNode(asn.result);
+                                            if (collected.length) return collected.join(', ');
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                }
+                            }
+                            // Common string types
+                            if (n.typeName && (n.typeName === 'dNSName' || n.typeName === 'uniformResourceIdentifier' || n.typeName === 'rfc822Name')) {
+                                return String(n.value || n); // often already a string
+                            }
+                            if (n.typeName === 'iPAddress') {
+                                // value may be an OctetString (valueBlock.valueHex)
+                                if (n.value && n.value.valueBlock && n.value.valueBlock.valueHex) {
+                                    const bytes = new Uint8Array(n.value.valueBlock.valueHex);
+                                    if (bytes.length === 4) return Array.from(bytes).join('.');
+                                    // IPv6-ish: hex pairs
+                                    return Array.from(bytes).map(b => ('0' + b.toString(16)).slice(-2)).join(':');
+                                }
+                                return String(n.value || n);
+                            }
+                            // directoryName or other structured types
+                            if (n.typeName === 'directoryName' && n.value && Array.isArray(n.value.typesAndValues)) {
+                                return n.value.typesAndValues.map(tv => (tv.type || '') + ':' + (tv.value && (tv.value.valueBlock && (tv.value.valueBlock.value || (tv.value.valueBlock.valueHex && pvtsutils.BufferSourceConverter.toString(tv.value.valueBlock.valueHex)))) || '')).join(', ');
+                            }
+
+                            // If we have valueBlock.valueHex, attempt to parse it as ASN.1 and extract inner strings
+                            if (n.value && n.value.valueBlock && n.value.valueBlock.valueHex) {
+                                try {
+                                    const inner = asn1js.fromBER(n.value.valueBlock.valueHex);
+                                    if (inner && inner.offset !== -1 && inner.result) {
+                                        const collected = [];
+                                        // recursive extractor
+                                        function walk(node) {
+                                            if (!node) return;
+                                            if (Array.isArray(node.valueBlock && node.valueBlock.value)) {
+                                                node.valueBlock.value.forEach(child => walk(child));
+                                            }
+                                            // string types
+                                            if (node.valueBlock) {
+                                                const vb = node.valueBlock;
+                                                if (vb.value) collected.push(String(vb.value));
+                                                else if (vb.valueHex) {
+                                                    try { collected.push(pvtsutils.BufferSourceConverter.toString(vb.valueHex)); } catch (e) { collected.push(pvtsutils.Convert.ToHex(vb.valueHex)); }
+                                                }
+                                            }
+                                            // if node has result property (for parsed objects)
+                                            if (node.result && typeof node.result === 'object') walk(node.result);
+                                        }
+                                        walk(inner.result);
+                                        if (collected.length) return collected.join(', ');
+                                        // If ASN.1 walk found nothing, try scanning for UTF8String (tag 0x0C) sequences
+                                        try {
+                                            const vbHex = node.valueBlock && node.valueBlock.valueHex ? new Uint8Array(node.valueBlock.valueHex) : null;
+                                            if (vbHex && vbHex.length) {
+                                                const parts = [];
+                                                for (let j = 0; j < vbHex.length - 2; j++) {
+                                                    if (vbHex[j] === 0x0C) { // UTF8String tag
+                                                        const len = vbHex[j+1];
+                                                        if (len && j+2+len <= vbHex.length) {
+                                                            const slice = vbHex.slice(j+2, j+2+len);
+                                                            try { parts.push(pvtsutils.BufferSourceConverter.toString(slice)); } catch(e) { parts.push(pvtsutils.Convert.ToHex(slice)); }
+                                                            j += 1 + len;
+                                                        }
+                                                    }
+                                                }
+                                                if (parts.length) return parts.join(', ');
+                                            }
+                                        } catch (e) { /* ignore */ }
+                                    }
+                                } catch (e) {
+                                    // fallthrough to other heuristics
+                                }
+                            }
+
+                            // Fallbacks: some parsed values are ASN.1 objects with valueBlock
+                            if (n.value && n.value.valueBlock) {
+                                const vb = n.value.valueBlock;
+                                if (vb.value) return String(vb.value);
+                                if (vb.valueHex) {
+                                    try { return pvtsutils.BufferSourceConverter.toString(vb.valueHex); } catch (e) { return pvtsutils.Convert.ToHex(vb.valueHex); }
+                                }
+                            }
+
+                            // If type is OID or custom, attempt to stringify
+                            if (n.type) return String(n.value || n);
+                            return String(n.value || n);
+                        } catch (e) {
+                            try { return JSON.stringify(n); } catch (e2) { return String(n); }
+                        }
+                    }
+
                     cert.extensions.forEach(ext => {
                         try {
                             if (ext.extnID === '2.5.29.19') { // BasicConstraints
@@ -1417,7 +1532,7 @@ try {
                             } else if (ext.extnID === '2.5.29.17') { // SubjectAltName
                                 const san = ext.parsedValue; // GeneralNames
                                 if (Array.isArray(san.altNames)) {
-                                    extensions.subjectAltName = san.altNames.map(n => ({ type: n.typeName, value: n.value }));
+                                    extensions.subjectAltName = san.altNames.map(n => ({ type: n.typeName || n.type, value: formatGeneralName(n) }));
                                 }
                             }
                         } catch (e) { /* ignore */ }
@@ -1489,9 +1604,10 @@ try {
             html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
             html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + '</small></div>';
             html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
-            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml(c.fingerprintSHA256) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint">Copy</button></small></div>';
+            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml(c.fingerprintSHA256) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
-                html += '<div><small><b>Public Key:</b> ' + escapeHtml((c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
+                const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
+                html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
             }
             // Extensions
             if (c.extensions) {
@@ -1502,10 +1618,15 @@ try {
                     html += '<div><small><b>Key Usage:</b> ' + escapeHtml(String(c.extensions.keyUsage)) + '</small></div>';
                 }
                 if (c.extensions.extKeyUsage) {
-                    html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(c.extensions.extKeyUsage.join(', ')) + '</small></div>';
+                    const ekus = c.extensions.extKeyUsage.map(o => (oidToName(o) + ' (' + o + ')'));
+                    html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(ekus.join(', ')) + '</small></div>';
                 }
                 if (c.extensions.subjectAltName) {
-                    const san = c.extensions.subjectAltName.map(n => (n.type + ':' + String(n.value))).join(', ');
+                    const san = c.extensions.subjectAltName.map(n => {
+                        const t = n.type || '';
+                        const val = (typeof n.value === 'object') ? JSON.stringify(n.value) : String(n.value);
+                        return t + ':' + val;
+                    }).join(', ');
                     html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
                 }
             }

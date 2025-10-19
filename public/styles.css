@@ -408,6 +408,10 @@ a {
   background: rgba(26,115,232,0.06) !important;
 }
 
+/* Icon-only copy button next to fingerprint */
+#certsDialog .cert-copy-fingerprint { padding: 4px 6px !important; min-width: 36px; height: 36px; display:inline-flex; align-items:center; justify-content:center; }
+#certsDialog .cert-copy-fingerprint .material-icons { font-size:18px !important; }
+
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
 #certsDialog.mdl-dialog, dialog#certsDialog {
