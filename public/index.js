@@ -1283,9 +1283,8 @@ try {
         $("#creationData_attestationStatementChainJSON").text(credential.creationData.attestationStatementChainJSON);
         $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
         $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
-        $("#creationData_publicKeyType").text(publicKeyType);
-        $("#creationData_publicKey").text(credential.creationData.publicKey2);
-        $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
+    $("#creationData_publicKeyType").text(publicKeyType);
+    $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
         $("#creationData_extensionData").text(credential.creationData.extensionDataHex);
         $("#creationData_residentKey").text(credential.metadata.residentKey);
         $("#creationData_PRF_First").text(credential.creationData.prfFirst);
