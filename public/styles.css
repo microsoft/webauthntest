@@ -409,8 +409,19 @@ a {
 }
 
 /* Icon-only copy button next to fingerprint */
-#certsDialog .cert-copy-fingerprint { padding: 4px 6px !important; min-width: 36px; height: 36px; display:inline-flex; align-items:center; justify-content:center; }
-#certsDialog .cert-copy-fingerprint .material-icons { font-size:18px !important; }
+/* Copy fingerprint icon style: match per-cert action buttons */
+#certsDialog .cert-copy-fingerprint {
+  padding: 6px 8px !important;
+  min-width: 0 !important;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  color: #1a73e8 !important;
+  border: none !important;
+}
+#certsDialog .cert-copy-fingerprint .material-icons { font-size:18px !important; color: inherit !important; }
 
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */

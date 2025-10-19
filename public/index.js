@@ -1369,10 +1369,12 @@ try {
 
                 // Compute SHA-256 fingerprint
                 let fingerprintSHA256 = null;
+                let fingerprintSHA256Colon = null;
                 try {
                     const hash = await crypto.subtle.digest('SHA-256', ab);
                     const h = Array.from(new Uint8Array(hash)).map(b => ('0' + b.toString(16)).slice(-2)).join('').toUpperCase();
-                    fingerprintSHA256 = h.match(/.{1,2}/g).join(':');
+                    fingerprintSHA256 = h; // plain, no colons
+                    fingerprintSHA256Colon = h.match(/.{1,2}/g).join(':');
                 } catch (e) { /* ignore digest errors */ }
 
                 // Determine public key algorithm and size
@@ -1604,7 +1606,7 @@ try {
             html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
             html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + '</small></div>';
             html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
-            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml(c.fingerprintSHA256) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
+            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
                 const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
                 html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
@@ -1622,13 +1624,29 @@ try {
                     html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(ekus.join(', ')) + '</small></div>';
                 }
                 if (c.extensions.subjectAltName) {
-                    const san = c.extensions.subjectAltName.map(n => {
-                        const t = n.type || '';
-                        const val = (typeof n.value === 'object') ? JSON.stringify(n.value) : String(n.value);
-                        return t + ':' + val;
-                    }).join(', ');
-                    html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
-                }
+                        // Decode possible id:HEX patterns inside SAN values to ASCII when practical
+                        function decodeIdHex(val) {
+                            try {
+                                return val.replace(/id:([0-9A-Fa-f]{2,})/g, (m, hex) => {
+                                    try {
+                                        const bytes = pvtsutils.Convert.FromHex(hex);
+                                        const str = pvtsutils.BufferSourceConverter.toString(bytes);
+                                        return `id:${hex} (${str})`;
+                                    } catch (e) {
+                                        return m;
+                                    }
+                                });
+                            } catch (e) { return val; }
+                        }
+
+                        const san = c.extensions.subjectAltName.map(n => {
+                            const t = n.type || '';
+                            const rawVal = (typeof n.value === 'object') ? JSON.stringify(n.value) : String(n.value);
+                            const val = decodeIdHex(rawVal);
+                            return t + ':' + val;
+                        }).join(', ');
+                        html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
+                    }
             }
 
             // Action buttons
@@ -1740,13 +1758,15 @@ try {
                 const cert = certs[idx];
                 if (!cert || !cert.fingerprintSHA256) return;
                 try {
-                    await navigator.clipboard.writeText(cert.fingerprintSHA256);
+                    // copy plain fingerprint (no colons) if available
+                    const toCopy = cert.fingerprintSHA256 || cert.fingerprintSHA256Colon || '';
+                    await navigator.clipboard.writeText(toCopy);
                     toast('Fingerprint copied to clipboard');
                 } catch (err) {
                     // fallback
                     try {
                         const ta = document.createElement('textarea');
-                        ta.value = cert.fingerprintSHA256;
+                        ta.value = cert.fingerprintSHA256 || cert.fingerprintSHA256Colon || '';
                         ta.style.position = 'fixed';
                         ta.style.left = '-9999px';
                         document.body.appendChild(ta);
