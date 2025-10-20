@@ -1164,6 +1164,78 @@ try {
         });
     }
 
+    /**
+     * Authenticate a single credential by id using get() with userVerification required
+     * @param {string} id base64 id of credential
+     * @returns {Promise<any>} server response
+     */
+    async function authenticateCredentialById(id) {
+        if (typeof(PublicKeyCredential) === "undefined")
+            return Promise.reject("Error: WebAuthn APIs are not present on this device");
+
+        const credential = credentials.find(c => c.id === id);
+        if (!credential) return Promise.reject('Credential not found');
+
+        // Build allowCredentials array with only this credential and include transports if present
+        const allowCred = {
+            type: 'public-key',
+            id: Uint8Array.from(atob(credential.id), c => c.charCodeAt(0))
+        };
+        if (Array.isArray(credential.transports) && credential.transports.length > 0) {
+            allowCred.transports = credential.transports.slice();
+        }
+
+        // Get a fresh challenge from server
+        const challenge = await getChallenge();
+
+        const getOptions = {
+            challenge: challenge,
+            allowCredentials: [allowCred],
+            userVerification: 'required',
+            timeout: 600000
+        };
+
+        // Use a fresh AbortController for this operation
+        if (ongoingAuth != null) {
+            try { ongoingAuth.abort('Cancel ongoing authentication'); } catch (e) {}
+        }
+        ongoingAuth = new AbortController();
+
+        const assertion = await navigator.credentials.get({ publicKey: getOptions, signal: ongoingAuth.signal });
+        // Build the payload similar to getAssertion
+        var prfFirstHex = "";
+        var prfSecondHex = "";
+        var clientExtensionResults = assertion.getClientExtensionResults ? assertion.getClientExtensionResults() : {};
+        if (typeof clientExtensionResults.prf !== 'undefined') {
+            if (typeof clientExtensionResults.prf.results !== 'undefined') {
+                if (typeof clientExtensionResults.prf.results.first !== 'undefined') {
+                    prfFirstHex = arrayBufferToHexString(clientExtensionResults.prf.results.first);
+                }
+                if (typeof clientExtensionResults.prf.results.second !== 'undefined') {
+                    prfSecondHex = arrayBufferToHexString(clientExtensionResults.prf.results.second);
+                }
+            }
+        }
+
+        var payload = {
+            id: arrayBufferToBase64(assertion.rawId),
+            clientDataJSON: arrayBufferToUTF8(assertion.response.clientDataJSON),
+            userHandle: arrayBufferToBase64(assertion.response.userHandle),
+            signature: arrayBufferToBase64(assertion.response.signature),
+            authenticatorData: arrayBufferToBase64(assertion.response.authenticatorData),
+            authenticatorAttachment: assertion.authenticatorAttachment,
+            prfFirst: prfFirstHex,
+            prfSecond: prfSecondHex,
+            metadata: { rpId: getOptions.rpId }
+        };
+
+        ongoingAuth = null;
+        return rest_put('/assertion', payload).then(r => r.json()).then(resp => {
+            if (resp.error) return Promise.reject(resp.error);
+            return Promise.resolve(resp.result || {});
+        });
+    }
+
     //#endregion Event Handling
 
 
@@ -1259,6 +1331,27 @@ try {
                 toast('Failed to parse certificates: ' + (err && err.message ? err.message : err));
             }
         });
+        $("a.authenticateCredentialButton").click(async e => {
+            e.preventDefault();
+            const id = $(e.currentTarget).attr("data-value");
+            try {
+                disableControls();
+                const result = await authenticateCredentialById(id);
+                // If server returns an id, highlight it
+                if (result && result.id) {
+                    await updateCredentials();
+                    highlightCredential(result.id);
+                    toast('Successful assertion for credential');
+                } else {
+                    // fallback: refresh list
+                    await updateCredentials();
+                }
+            } catch (err) {
+                toast('ERROR: ' + (err && err.message ? err.message : err));
+            } finally {
+                enableControls();
+            }
+        });
     }
 
     /**
@@ -1325,6 +1418,9 @@ try {
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
             + credential.id
             + '">Update Transports</a>';
+        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticateCredentialButton" data-value="'
+            + credential.id
+            + '">Authenticate</a>';
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
         html += ' </div>';
         html += '</div>';
