@@ -1266,8 +1266,9 @@ try {
         html += '         <dl class="reg-data-list">';
     // Render Credential ID as a mono block (formatted hex with copy button) to match other hex displays
     var credIdSpanId = 'credentialId_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
+    // Render a placeholder pre for the credential id; we'll format it after insertion based on element width
     html += '             <dt>Credential ID</dt><dd>';
-    html += '<div class="mono-block"><pre class="mono" id="' + credIdSpanId + '">' + escapeHtml(credential.idHex || '') + '</pre>';
+    html += '<div class="mono-block"><pre class="mono" id="' + credIdSpanId + '"></pre>';
     html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
     html += '</div></dd>';
         html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
@@ -1316,12 +1317,58 @@ try {
             // Setup copy button visibility and raw value for the credential id mono-block we just added
             var spanEl = document.getElementById(credIdSpanId);
             if (spanEl) {
-                // store raw normalized hex on the element
-                try { spanEl.setAttribute('data-raw', normalizeHexForRaw(credential.idHex || '')); } catch (e) {}
+                // store raw normalized hex on the element (unformatted uppercase hex)
+                var rawNormalized = normalizeHexForRaw(credential.idHex || '');
+                try { spanEl.setAttribute('data-raw', rawNormalized); } catch (e) {}
+
+                // compute bytesPerRow based on the actual element width and font metrics
+                try {
+                    var rect = spanEl.getBoundingClientRect();
+                    var elWidth = rect.width || spanEl.clientWidth || 400;
+                    // Measure single character width using a canvas with computed font
+                    var cs = window.getComputedStyle(spanEl);
+                    var fontSpec = (cs && cs.font) ? cs.font : ((cs && cs.fontSize ? cs.fontSize + ' ' + (cs.fontFamily || 'monospace') : '13px monospace'));
+                    var canvas = document.createElement('canvas');
+                    var ctx = canvas.getContext('2d');
+                    try { ctx.font = fontSpec; } catch(e) { ctx.font = '13px monospace'; }
+                    var charWidth = Math.max(4, ctx.measureText('0').width || 7);
+                    // approximate characters per byte in formatted view: 'AA:' -> 3 chars per byte
+                    var perByteChars = 3;
+                    var capacity = Math.floor(elWidth / (charWidth * perByteChars));
+                    // Determine available options: per-element `data-bytes-options` (CSV) has highest priority,
+                    // then global `window.CREDENTIAL_ID_BYTES_OPTIONS` (array), otherwise default set.
+                    var defaultOptions = [4,8,16,32,64];
+                    var options = null;
+                    try {
+                        var attr = spanEl.getAttribute && spanEl.getAttribute('data-bytes-options');
+                        if (attr && attr.toString().trim()) {
+                            options = attr.toString().split(',').map(s => parseInt(s.trim(),10)).filter(n => !isNaN(n) && n>0);
+                        }
+                    } catch(e) { options = null; }
+                    if ((!options || !options.length) && Array.isArray(window.CREDENTIAL_ID_BYTES_OPTIONS)) {
+                        try { options = window.CREDENTIAL_ID_BYTES_OPTIONS.slice().map(n=>parseInt(n,10)).filter(n=>!isNaN(n)&&n>0); } catch(e) { options = null; }
+                    }
+                    if (!options || !options.length) options = defaultOptions.slice();
+                    // sort descending so we try largest first
+                    options = options.sort((a,b)=>b-a);
+
+                    // pick the largest option that fits capacity; capacity measured in formatted "bytes" slots
+                    var bytesPerRowCred = options[options.length-1] || defaultOptions[0];
+                    for (var i = 0; i < options.length; i++) {
+                        if (capacity >= options[i]) { bytesPerRowCred = options[i]; break; }
+                    }
+                    // format and set text
+                    var formatted = hexToColonLines(credential.idHex || '', bytesPerRowCred);
+                    spanEl.textContent = sanitizeForDisplay(formatted);
+                } catch (e) {
+                    // Fallback: just put raw value
+                    spanEl.textContent = sanitizeForDisplay(credential.idHex || '');
+                }
+
                 // wire up buttons that reference this span id
                 updateCopyButtonVisibility(credIdSpanId);
                 var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + credIdSpanId + '"]');
-                Array.from(btns).forEach(b => { try { b.setAttribute('data-copy-raw', normalizeHexForRaw(credential.idHex || '')); } catch (e) {} });
+                Array.from(btns).forEach(b => { try { b.setAttribute('data-copy-raw', rawNormalized); } catch (e) {} });
             }
         } catch (e) { /* non-fatal */ }
 
