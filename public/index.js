@@ -1493,15 +1493,20 @@ try {
                         } catch (e) { el.textContent = sanitizeForDisplay(hexValue || ''); }
                     }
                     apply();
-                    // Attach observer once
+                    // Attach observer/listener, but first clean up any previous ones so the
+                    // newly attached callback uses the current `apply` closure and current value.
                     try {
-                        if (typeof ResizeObserver !== 'undefined' && !el._hexObserverAttached) {
+                        if (typeof ResizeObserver !== 'undefined') {
+                            try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
                             var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                             ro.observe(el);
                             if (el.parentElement) ro.observe(el.parentElement);
+                            el._hexObserver = ro;
                             el._hexObserverAttached = true;
-                        } else if (typeof ResizeObserver === 'undefined') {
-                            window.addEventListener('resize', debounce(apply, 150));
+                        } else {
+                            try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                            el._hexResizeListener = debounce(apply, 150);
+                            window.addEventListener('resize', el._hexResizeListener);
                         }
                     } catch (e) { /* ignore observer failures */ }
                 } catch (e) { /* ignore */ }
@@ -2527,13 +2532,21 @@ try {
 
             apply();
             try {
-                if (typeof ResizeObserver !== 'undefined' && !el._hexObserverAttached) {
+                if (typeof ResizeObserver !== 'undefined') {
+                    // If a previous observer exists for this element, disconnect it so the
+                    // new observer's callback (which closes over the current `apply`) is used.
+                    try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
                     var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                     ro.observe(el);
                     if (el.parentElement) ro.observe(el.parentElement);
+                    el._hexObserver = ro;
                     el._hexObserverAttached = true;
-                } else if (typeof ResizeObserver === 'undefined') {
-                    window.addEventListener('resize', debounce(apply, 150));
+                } else {
+                    // Fallback for environments without ResizeObserver: ensure we remove any
+                    // previously attached resize listener for this element before adding a new one
+                    try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                    el._hexResizeListener = debounce(apply, 150);
+                    window.addEventListener('resize', el._hexResizeListener);
                 }
             } catch (e) { /* ignore observer failures */ }
         } catch (e) { /* ignore */ }
@@ -2574,13 +2587,17 @@ try {
 
             apply();
             try {
-                if (typeof ResizeObserver !== 'undefined' && !el._hexObserverAttached) {
+                if (typeof ResizeObserver !== 'undefined') {
+                    try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
                     var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                     ro.observe(el);
                     if (el.parentElement) ro.observe(el.parentElement);
+                    el._hexObserver = ro;
                     el._hexObserverAttached = true;
-                } else if (typeof ResizeObserver === 'undefined') {
-                    window.addEventListener('resize', debounce(apply, 150));
+                } else {
+                    try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                    el._hexResizeListener = debounce(apply, 150);
+                    window.addEventListener('resize', el._hexResizeListener);
                 }
             } catch (e) { /* ignore observer failures */ }
         } catch (e) { /* ignore */ }
@@ -2611,6 +2628,23 @@ try {
      */
     function showAuthenticationData(id) {
         var credential = credentials.find(c => c.id === id);
+
+        // Defensive: clear previous dialog values before populating new credential
+        // This prevents stale values from remaining when the new credential omits fields.
+        try {
+            ['authenticationData_authenticatorAttachment','authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second'].forEach(function(spanId) {
+                try {
+                    var el = document.getElementById(spanId);
+                    if (!el) return;
+                    // Clear textual content
+                    try { el.textContent = ''; } catch (e) { try { el.innerText = ''; } catch (e) {} }
+                    // Remove any previously stored raw data attribute used by copy buttons
+                    try { if (el.removeAttribute) el.removeAttribute('data-raw'); } catch (e) {}
+                } catch (e) { /* ignore per-span */ }
+            });
+            // Also hide decode button until we decide to show it below
+            try { var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]'); if (btn2) btn2.style.display = 'none'; } catch (e) {}
+        } catch (e) { /* non-fatal */ }
 
         // Render hex blobs nicely (colon-separated pairs, multi-line) similar to certificates view
         (function renderAuthHex() {
