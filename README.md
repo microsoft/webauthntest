@@ -18,7 +18,7 @@ Things you need to deploy
 Before deploying, you'll need to define the following environment variables inside app services application settings so they can be accessed by this NODEJS app at runtime:
 - MONGODB_URL - connection URL to your mongodb. Get it from cosmos db settings. Pick the latest Node.js 3.0 connection string under quick start.
 - JWT_SECRET - some long random string
-- HOSTNAME - hostname of your deployed service (e.g. "webauthntestapp.azurewebsites.net")
+- HOSTNAME - hostname of your deployed service (e.g. "ctap.azurewebsites.net")
 - ENFORCE_SSL_AZURE - set to "true"
 
 ## Contributing
@@ -28,3 +28,4 @@ When you submit a pull request, a CLA-bot will automatically determine whether y
 
 ## Code of Conduct
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
