@@ -55,10 +55,28 @@ try {
             dialogPolyfill.registerDialog(creationDataDialog);
         }
 
+        // Cleanup observers/listeners when creation dialog closes
+        try {
+            creationDataDialog.addEventListener('close', function cleanupCreationDialog() {
+                try {
+                    cleanupHexObserversForElements(['creationData_publicKeyCbor','creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second']);
+                } catch (e) { /* non-fatal */ }
+            });
+        } catch (e) { /* ignore */ }
+
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         if (!authenticationDataDialog.showModal) {
             dialogPolyfill.registerDialog(authenticationDataDialog);
         }
+
+        // Cleanup observers/listeners when authentication dialog closes
+        try {
+            authenticationDataDialog.addEventListener('close', function cleanupAuthenticationDialog() {
+                try {
+                    cleanupHexObserversForElements(['authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second']);
+                } catch (e) { /* non-fatal */ }
+            });
+        } catch (e) { /* ignore */ }
 
         var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
         if (updateTransportsDialog && !updateTransportsDialog.showModal) {
@@ -1264,14 +1282,20 @@ try {
         html += '         </div>';
         html += '         <div class="reg-data-body">';
         html += '         <dl class="reg-data-list">';
-        html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
-        html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
-        html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
-        html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
-        html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
-        html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
-        html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
-        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
+    // Render Credential ID as a mono block (formatted hex with copy button) to match other hex displays
+    var credIdSpanId = 'credentialId_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
+    var aaguidSpanId = 'aaguid_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
+    // Render a placeholder pre for the credential id; we'll format it after insertion based on element width
+    html += '             <dt>Credential ID</dt><dd>';
+    html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
+    html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
+    html += '</div></dd>';
+        html += '             <dt>AAGUID</dt><dd><div class="mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></div></div></dd>';
+    html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
+    html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
+    html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
+    // RP ID and PRF Enabled moved to the Registration Details dialog
+    html += '             <dt>Authenticator Data</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</span></dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
             (credential.transports || []).forEach(t => {
@@ -1290,7 +1314,7 @@ try {
     html += '         </span>';
     html += '         </div>';
         html += '         <dl class="reg-data-list">';
-        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</dd>';
+    html += '             <dt>Authenticator Data</dt><dd><span class="mono">' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</span></dd>';
         html += '         </dl>';
         html += '     </div>';
         html += ' </div>';
@@ -1307,6 +1331,41 @@ try {
 
 
         $("#credentialsContainer").append(html);
+        try {
+            // Setup copy button visibility and raw value for the credential id mono-block we just added
+            var spanEl = document.getElementById(credIdSpanId);
+            if (spanEl) {
+                // store raw normalized hex on the element (unformatted uppercase hex)
+                var rawNormalized = normalizeHexForRaw(credential.idHex || '');
+                try { spanEl.setAttribute('data-raw', rawNormalized); } catch (e) {}
+
+                // Use the shared responsive helper to format this element and reapply on resize
+                try { attachResponsiveHex(credIdSpanId, credential.idHex); } catch (e) { /* ignore */ }
+
+                // wire up buttons that reference this span id
+                updateCopyButtonVisibility(credIdSpanId);
+                var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + credIdSpanId + '"]');
+                Array.from(btns).forEach(b => { try { b.setAttribute('data-copy-raw', rawNormalized); } catch (e) {} });
+                // Re-evaluate visibility after buttons have data-copy-raw set
+                try { updateCopyButtonVisibility(credIdSpanId); } catch (e) {}
+            }
+            // Wire up AAGUID mono-block similar to credential id
+            try {
+                var aaguidEl = document.getElementById(aaguidSpanId);
+                if (aaguidEl) {
+                    var aaguidRaw = normalizeHexForRaw(credential.creationData.aaguid || '');
+                    try { aaguidEl.setAttribute('data-raw', aaguidRaw); } catch (e) {}
+                    // Render AAGUID as contiguous hex (no colon separators). Treat as plain text
+                    // so the responsive helper does not insert colon-separated formatting.
+                    try { attachResponsiveHex(aaguidSpanId, credential.creationData.aaguid, true); } catch (e) { /* ignore */ }
+                    updateCopyButtonVisibility(aaguidSpanId);
+                    var aBtns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + aaguidSpanId + '"]');
+                    Array.from(aBtns).forEach(b => { try { b.setAttribute('data-copy-raw', aaguidRaw); } catch (e) {} });
+                    // Ensure visibility is recalculated after data-copy-raw is wired
+                    try { updateCopyButtonVisibility(aaguidSpanId); } catch (e) {}
+                }
+            } catch (e) { /* non-fatal */ }
+        } catch (e) { /* non-fatal */ }
 
         // Wire up collapse/expand toggle for the registration details just added
         try {
@@ -1432,10 +1491,7 @@ try {
     // similar to how public keys are rendered in the Certificates view.
     (function renderHexBlobs() {
         try {
-            var dlg = document.getElementById('creationDataDialog');
-            var dlgWidth = (dlg && dlg.getBoundingClientRect) ? (dlg.getBoundingClientRect().width || window.innerWidth) : window.innerWidth;
-            var bytesPerRow = (dlgWidth >= 900) ? 32 : 16;
-
+            // Helper: convert hex string into colon-separated lines of perRow bytes
             function hexToColonLines(hex, perRow) {
                 if (!hex && hex !== '') return '';
                 var rawTrim = String(hex || '').toString().trim();
@@ -1445,18 +1501,64 @@ try {
                 s = s.replace(/^0x/i, '');
                 var pairs = s.match(/.{1,2}/g) || [];
                 var lines = [];
-                for (var i = 0; i < pairs.length; i += perRow) {
-                    lines.push(pairs.slice(i, i + perRow).join(':'));
-                }
+                for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
                 return lines.join('\n');
             }
 
-            $("#creationData_attestationObject").text(sanitizeForDisplay(hexToColonLines(credential.creationData.attestationObject, bytesPerRow)));
-            $("#creationData_clientDataJSON").text(sanitizeForDisplay(credential.creationData.clientDataJSON));
-            $("#creationData_authenticatorDataHex").text(sanitizeForDisplay(hexToColonLines(credential.creationData.authenticatorDataHex, bytesPerRow)));
+            // Format a given target element and attach a ResizeObserver so formatting re-applies when the element's width changes
+            function formatTarget(elementId, hexValue, isPlainText) {
+                try {
+                    var el = document.getElementById(elementId);
+                    if (!el) return;
+                    // Store an unformatted raw value on the element for copy helpers
+                    try {
+                        var rawForCopyLocal = normalizeHexForRaw(hexValue || '');
+                        if (rawForCopyLocal && el.setAttribute) el.setAttribute('data-raw', rawForCopyLocal);
+                    } catch (e) {}
+                    function apply() {
+                        try {
+                            if (isPlainText) {
+                                // Ensure plaintext pre blocks wrap
+                                try { el.classList.add('hex-plain-wrap'); } catch(e) {}
+                                try { el.classList.remove('hex-mono'); } catch(e) {}
+                                // use raw text without hex formatting
+                                el.textContent = sanitizeForDisplay(hexValue || '');
+                                return;
+                            } else {
+                                try { el.classList.remove('hex-plain-wrap'); } catch(e) {}
+                                try { el.classList.add('hex-mono'); } catch(e) {}
+                            }
+                            var per = computeBytesPerRowForElement(el);
+                            var formatted = sanitizeForDisplay(hexToColonLines(hexValue, per));
+                            el.textContent = formatted;
+                        } catch (e) { el.textContent = sanitizeForDisplay(hexValue || ''); }
+                    }
+                    apply();
+                    // Attach observer/listener, but first clean up any previous ones so the
+                    // newly attached callback uses the current `apply` closure and current value.
+                    try {
+                        if (typeof ResizeObserver !== 'undefined') {
+                        try { if (el.id) cleanupHexObserversForElements([el.id]); else { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } } catch (e) {}
+                            var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
+                            ro.observe(el);
+                            if (el.parentElement) ro.observe(el.parentElement);
+                            el._hexObserver = ro;
+                            el._hexObserverAttached = true;
+                        } else {
+                            try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                            el._hexResizeListener = debounce(apply, 150);
+                            window.addEventListener('resize', el._hexResizeListener);
+                        }
+                    } catch (e) { /* ignore observer failures */ }
+                } catch (e) { /* ignore */ }
+            }
+
+            formatTarget('creationData_attestationObject', credential.creationData.attestationObject);
+            formatTarget('creationData_clientDataJSON', credential.creationData.clientDataJSON, true);
+            formatTarget('creationData_authenticatorDataHex', credential.creationData.authenticatorDataHex);
             $("#creationData_publicKeyType").text(sanitizeForDisplay(publicKeyType));
-            $("#creationData_publicKeyCbor").text(sanitizeForDisplay(hexToColonLines(credential.creationData.publicKeyHex, bytesPerRow)));
-            $("#creationData_extensionData").text(sanitizeForDisplay(hexToColonLines(credential.creationData.extensionDataHex, bytesPerRow)));
+            formatTarget('creationData_publicKeyCbor', credential.creationData.publicKeyHex);
+            formatTarget('creationData_extensionData', credential.creationData.extensionDataHex);
         } catch (e) {
             // fallback to original raw values if formatting fails
             $("#creationData_attestationObject").text(sanitizeForDisplay(credential.creationData.attestationObject));
@@ -1467,6 +1569,9 @@ try {
             $("#creationData_extensionData").text(sanitizeForDisplay(credential.creationData.extensionDataHex));
         }
     })();
+
+    // NOTE: attachResponsiveHex helpers were moved to top-level helpers so they are
+    // available to all UI renderers (creation, authentication, certificates, etc.).
         // Hide DECODE button if there's no extension data
         try {
             var creationExtText = (credential.creationData.extensionDataHex || '').toString().trim();
@@ -1483,6 +1588,9 @@ try {
         // Show/hide copy buttons depending on whether the corresponding field has content
         try {
             ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+    // Populate RP ID and PRF Enabled moved into the dialog
+    $("#creationData_rpId").text(sanitizeForDisplay(credential.metadata.rpId));
+    $("#creationData_prfEnabled").text(sanitizeForDisplay(String(credential.creationData.prfEnabled || '')));
         } catch (e) { /* non-fatal */ }
 
         // Ensure copy buttons copy the original raw (unformatted) hex when applicable
@@ -1504,7 +1612,9 @@ try {
                 'creationData_authenticatorDataHex': normalizeHex(credential.creationData.authenticatorDataHex || ''),
                 'creationData_extensionData': normalizeHex(credential.creationData.extensionDataHex || ''),
                 'creationData_publicKeyCbor': normalizeHex(credential.creationData.publicKeyHex || ''),
-                'creationData_attestationObject': normalizeHex(credential.creationData.attestationObject || '')
+                'creationData_attestationObject': normalizeHex(credential.creationData.attestationObject || ''),
+                // ClientDataJSON is typically JSON text rather than raw hex; store the sanitized text so copy buttons can use it
+                'creationData_clientDataJSON': (credential.creationData.clientDataJSON || '').toString().trim()
             };
             Object.keys(rawMap).forEach(spanId => {
                 const btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
@@ -1515,6 +1625,10 @@ try {
                 const el = document.getElementById(spanId);
                 if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
             });
+            // Re-evaluate copy button visibility now that we've set data-copy-raw / data-raw for the fields
+            try {
+                ['creationData_clientDataJSON'].forEach(id => updateCopyButtonVisibility(id));
+            } catch (e) { /* ignore */ }
         } catch (e) { /* ignore */ }
 
         // Note: Certificate viewing is handled per-credential on the main page
@@ -1523,6 +1637,10 @@ try {
         creationDataDialog.showModal();
         // Ensure newly-added MDL icon buttons are upgraded
         try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
+        // After any MDL upgrade, re-evaluate copy button visibility to be safe
+        try {
+            ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* ignore */ }
     }
 
     // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
@@ -2230,30 +2348,15 @@ try {
 
         // Render public key blocks responsively: 16-byte rows on narrow screens,
         // 32-byte rows on wider screens. We use the raw hex kept in a data attribute.
-        const pkRender = () => {
+        // Render public key blocks responsively using attachResponsiveHex per element
+        try {
             const blocks = dlg.querySelectorAll('.public-key-hex');
-            const width = dlg.getBoundingClientRect().width || window.innerWidth;
-            const bytesPerRow = (width >= 900) ? 32 : 16; // 32 pairs vs 16 pairs
             blocks.forEach(el => {
                 const raw = el.getAttribute('data-public-key-raw') || '';
-                const pairs = (raw.match(/.{1,2}/g) || []);
-                const lines = [];
-                for (let i = 0; i < pairs.length; i += bytesPerRow) {
-                    lines.push(pairs.slice(i, i + bytesPerRow).join(':'));
-                }
-                el.textContent = lines.join('\n');
+                // Use attachResponsiveHex to format and attach ResizeObserver
+                try { attachResponsiveHexForElement(el, raw); } catch (e) { /* ignore */ }
             });
-        };
-
-        // Debounced resize handler
-        let pkResizeTimer = null;
-        const onPkResize = () => {
-            clearTimeout(pkResizeTimer);
-            pkResizeTimer = setTimeout(pkRender, 120);
-        };
-        // Initial render
-        try { pkRender(); } catch (e) { /* ignore */ }
-        window.addEventListener('resize', onPkResize);
+        } catch (e) { /* ignore */ }
 
         // Wire up public key toggle buttons (collapsed by default). The toggle
         // is rendered inline inside the small label div and the actual
@@ -2330,6 +2433,268 @@ try {
     }
 
     /**
+     * Helper: disconnect any stored ResizeObserver and remove resize listener
+     * for the provided element ids. Used to centralize cleanup logic.
+     * @param {Array<string>} spanIds
+     */
+    function cleanupHexObserversForElements(spanIds) {
+        try {
+            if (!Array.isArray(spanIds)) return;
+            spanIds.forEach(function(spanId) {
+                try {
+            var el = document.getElementById(spanId);
+            if (!el) return;
+            try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
+            try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+            // Also clear any data-raw attribute on the element used for copy
+            try { if (el.removeAttribute) el.removeAttribute('data-raw'); } catch (e) {}
+                    // Clear textual content to avoid leftovers
+                    try { el.textContent = ''; } catch (e) { try { el.innerText = ''; } catch (e) {} }
+                } catch (e) { /* ignore per-element */ }
+            });
+        } catch (e) { /* non-fatal */ }
+    }
+
+    /**
+     * Normalize a hex-like string to an uppercase contiguous hex string (no 0x, no spaces).
+     * Returns empty string for sentinel values or non-hex input.
+     */
+    function normalizeHexForRaw(h) {
+        if (h === undefined || h === null) return '';
+        var rawTrim = String(h || '').toString().trim();
+        var lower = rawTrim.toLowerCase();
+        if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+        var s = rawTrim.replace(/\s+/g, '');
+        s = s.replace(/^0x/i, '');
+        if (!/^[0-9a-fA-F]*$/.test(s)) return rawTrim;
+        return s.toUpperCase();
+    }
+
+    /**
+     * Format a hex string into colon-separated byte pairs and break into lines of perRow pairs.
+     * Example: "AABBCCDDEEFF" -> "AA:BB:CC:DD\nEE:FF" when perRow=4
+     */
+    function hexToColonLines(hex, perRow) {
+        if (!hex && hex !== '') return '';
+        var rawTrim = String(hex || '').toString().trim();
+        var lower = rawTrim.toLowerCase();
+        if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+        var s = rawTrim.replace(/\s+/g, '');
+        s = s.replace(/^0x/i, '');
+        var pairs = s.match(/.{1,2}/g) || [];
+        var lines = [];
+        for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
+        return lines.join('\n');
+    }
+
+    /**
+     * Small debounce helper: returns a debounced version of fn
+     * @param {Function} fn
+     * @param {number} wait
+     */
+    function debounce(fn, wait) {
+        var t = null;
+        return function () {
+            var args = arguments;
+            var ctx = this;
+            clearTimeout(t);
+            t = setTimeout(function () { try { fn.apply(ctx, args); } catch (e) {} }, wait || 100);
+        };
+    }
+
+    /**
+     * Compute the best-fitting bytes-per-row for a given element by measuring
+     * a representative formatted sample that includes colons.
+     * Options may be provided via element attribute `data-bytes-options` or
+     * via global `window.CREDENTIAL_ID_BYTES_OPTIONS`. Falls back to defaults.
+     * @param {HTMLElement} el
+     * @param {Array<number>} [defaultOptions]
+     */
+    function computeBytesPerRowForElement(el, defaultOptions) {
+        try {
+            if (!el) return (defaultOptions && defaultOptions[0]) || 16;
+            var options = null;
+            try {
+                var attr = el.getAttribute && el.getAttribute('data-bytes-options');
+                if (attr && attr.toString().trim()) options = attr.toString().split(',').map(s => parseInt(s.trim(),10)).filter(n=>!isNaN(n)&&n>0);
+            } catch(e) { options = null; }
+            if ((!options || !options.length) && Array.isArray(window.CREDENTIAL_ID_BYTES_OPTIONS)) {
+                try { options = window.CREDENTIAL_ID_BYTES_OPTIONS.slice().map(n=>parseInt(n,10)).filter(n=>!isNaN(n)&&n>0); } catch(e) { options = null; }
+            }
+            var defaults = defaultOptions && defaultOptions.length ? defaultOptions.slice() : [4,8,16,32,64];
+            if (!options || !options.length) options = defaults.slice();
+            options = options.sort((a,b)=>b-a);
+
+            // measure available text width inside element
+            var rect = el.getBoundingClientRect();
+            var elWidth = rect.width || el.clientWidth || 400;
+            var cs = window.getComputedStyle(el);
+            var pl = parseFloat(cs.paddingLeft) || 0; var pr = parseFloat(cs.paddingRight) || 0;
+            var bl = parseFloat(cs.borderLeftWidth) || 0; var br = parseFloat(cs.borderRightWidth) || 0;
+            var reserve = 6;
+            var textAvailableWidth = Math.max(0, elWidth - pl - pr - bl - br - reserve);
+
+            // prepare canvas with element font
+            var canvas = document.createElement('canvas'); var ctx = canvas.getContext('2d');
+            var fontSpec = (cs && cs.font) ? cs.font : ((cs && cs.fontSize) ? cs.fontSize + ' ' + (cs.fontFamily || 'monospace') : '13px monospace');
+            try { ctx.font = fontSpec; } catch(e) { ctx.font = '13px monospace'; }
+
+            function measureLineWidthForBytes(nBytes) {
+                var pairs = new Array(nBytes).fill('00');
+                var sample = pairs.join(':');
+                var m = ctx.measureText(sample);
+                var measured = (m && m.width) ? m.width : (sample.length * 7);
+                return measured + 2;
+            }
+
+            var chosen = options[options.length-1] || defaults[0];
+            for (var i = 0; i < options.length; i++) {
+                var opt = options[i];
+                try {
+                    var w = measureLineWidthForBytes(opt);
+                    if (w <= textAvailableWidth) { chosen = opt; break; }
+                } catch (e) {
+                    // fallback simple heuristic
+                    var charWidth = Math.max(4, ctx.measureText('0').width || 7);
+                    var capacity = Math.floor(textAvailableWidth / (charWidth * 3));
+                    if (capacity >= opt) { chosen = opt; break; }
+                }
+            }
+            return chosen;
+        } catch (e) { return (defaultOptions && defaultOptions[0]) || 16; }
+    }
+
+    /**
+     * Attach responsive formatting to a target element by id.
+     * It will compute bytes-per-row and format the provided hexValue (or plain text)
+     * and re-apply on ResizeObserver or window resize.
+     * @param {string} elementId
+     * @param {string} hexValue
+     * @param {boolean} [isPlainText]
+     */
+    function attachResponsiveHex(elementId, hexValue, isPlainText) {
+        try {
+            var el = document.getElementById(elementId);
+            if (!el) return;
+            // Store an unformatted raw value on the element for copy helpers
+            try {
+                var rawForCopy = normalizeHexForRaw(hexValue || '');
+                if (rawForCopy && el.setAttribute) el.setAttribute('data-raw', rawForCopy);
+            } catch (e) {}
+            function hexToColonLinesLocal(hex, perRow) {
+                if (!hex && hex !== '') return '';
+                var rawTrim = String(hex || '').toString().trim();
+                var lower = rawTrim.toLowerCase();
+                if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                var s = rawTrim.replace(/\s+/g, '');
+                s = s.replace(/^0x/i, '');
+                var pairs = s.match(/.{1,2}/g) || [];
+                var lines = [];
+                for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
+                return lines.join('\n');
+            }
+
+            function apply() {
+                try {
+                    if (isPlainText) {
+                        // Ensure plaintext pre blocks wrap
+                        try { el.classList.add('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.remove('hex-mono'); } catch (e) {}
+                        el.textContent = sanitizeForDisplay(hexValue || '');
+                        return;
+                    } else {
+                        // Ensure hex non-wrapping class present
+                        try { el.classList.remove('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.add('hex-mono'); } catch (e) {}
+                    }
+                    var per = computeBytesPerRowForElement(el);
+                    el.textContent = sanitizeForDisplay(hexToColonLinesLocal(hexValue, per));
+                } catch (e) { el.textContent = sanitizeForDisplay(hexValue || ''); }
+            }
+
+            apply();
+            try {
+                if (typeof ResizeObserver !== 'undefined') {
+                    // Ensure any previous observer/listener is cleaned up before attaching a new one.
+                    try {
+                        if (el.id) cleanupHexObserversForElements([el.id]);
+                        else { try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {} }
+                    } catch (e) {}
+                    var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
+                    ro.observe(el);
+                    if (el.parentElement) ro.observe(el.parentElement);
+                    el._hexObserver = ro;
+                    el._hexObserverAttached = true;
+                } else {
+                    // Fallback for environments without ResizeObserver: ensure we remove any
+                    // previously attached resize listener for this element before adding a new one
+                    try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                    el._hexResizeListener = debounce(apply, 150);
+                    window.addEventListener('resize', el._hexResizeListener);
+                }
+            } catch (e) { /* ignore observer failures */ }
+        } catch (e) { /* ignore */ }
+    }
+
+    // Variant that accepts an element directly (useful when elements are created dynamically)
+    function attachResponsiveHexForElement(el, hexValue, isPlainText) {
+        try {
+            if (!el) return;
+            // Store an unformatted raw value on the element for copy helpers
+            try {
+                var rawForCopyEl = normalizeHexForRaw(hexValue || '');
+                if (rawForCopyEl && el.setAttribute) el.setAttribute('data-raw', rawForCopyEl);
+            } catch (e) {}
+            function hexToColonLinesLocal(hex, perRow) {
+                if (!hex && hex !== '') return '';
+                var rawTrim = String(hex || '').toString().trim();
+                var lower = rawTrim.toLowerCase();
+                if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                var s = rawTrim.replace(/\s+/g, '');
+                s = s.replace(/^0x/i, '');
+                var pairs = s.match(/.{1,2}/g) || [];
+                var lines = [];
+                for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
+                return lines.join('\n');
+            }
+
+            function apply() {
+                try {
+                    if (isPlainText) {
+                        try { el.classList.add('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.remove('hex-mono'); } catch (e) {}
+                        el.textContent = sanitizeForDisplay(hexValue || '');
+                        return;
+                    } else {
+                        try { el.classList.remove('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.add('hex-mono'); } catch (e) {}
+                    }
+                    var per = computeBytesPerRowForElement(el);
+                    el.textContent = sanitizeForDisplay(hexToColonLinesLocal(hexValue, per));
+                } catch (e) { el.textContent = sanitizeForDisplay(hexValue || ''); }
+            }
+
+            apply();
+            try {
+                if (typeof ResizeObserver !== 'undefined') {
+                    try { if (el.id) cleanupHexObserversForElements([el.id]); else { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } } catch (e) {}
+                    var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
+                    ro.observe(el);
+                    if (el.parentElement) ro.observe(el.parentElement);
+                    el._hexObserver = ro;
+                    el._hexObserverAttached = true;
+                } else {
+                    try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+                    el._hexResizeListener = debounce(apply, 150);
+                    window.addEventListener('resize', el._hexResizeListener);
+                }
+            } catch (e) { /* ignore observer failures */ }
+        } catch (e) { /* ignore */ }
+    }
+
+    // HexDebug removed: debugging overlay and related UI were removed per request.
+
+    /**
      * Show or hide copy button(s) that reference a span id via data-copy-span
      * @param {string} spanId id of the element whose text determines visibility
      */
@@ -2337,7 +2702,18 @@ try {
         try {
             var el = document.getElementById(spanId);
             var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
-            var raw = el ? (el.textContent || el.innerText || '') : '';
+            // Prefer an explicit unformatted value stored on the element (data-raw)
+            var raw = '';
+            try { if (el && el.getAttribute) raw = el.getAttribute('data-raw') || ''; } catch (e) { raw = ''; }
+            // Fallback to button-level data-copy-raw (some flows set that directly)
+            if (!raw) {
+                try {
+                    var found = Array.from(btns).map(b => b.getAttribute('data-copy-raw') || '').find(v => v && v.toString().trim());
+                    if (found) raw = found;
+                } catch (e) { /* ignore */ }
+            }
+            // Final fallback to visible textContent/innerText
+            if (!raw) raw = el ? (el.textContent || el.innerText || '') : '';
             var text = raw ? raw.toString().trim() : '';
             var lower = text.toLowerCase();
             // Treat explicit 'no extension data' and 'none' as empty values
@@ -2353,13 +2729,27 @@ try {
     function showAuthenticationData(id) {
         var credential = credentials.find(c => c.id === id);
 
+        // Defensive: clear previous dialog values before populating new credential
+        // This prevents stale values from remaining when the new credential omits fields.
+        try {
+            ['authenticationData_authenticatorAttachment','authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second'].forEach(function(spanId) {
+                try {
+                    var el = document.getElementById(spanId);
+                    if (!el) return;
+                    // Clear textual content
+                    try { el.textContent = ''; } catch (e) { try { el.innerText = ''; } catch (e) {} }
+                    // Remove any previously stored raw data attribute used by copy buttons
+                    try { if (el.removeAttribute) el.removeAttribute('data-raw'); } catch (e) {}
+                } catch (e) { /* ignore per-span */ }
+            });
+            // Also hide decode button until we decide to show it below
+            try { var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]'); if (btn2) btn2.style.display = 'none'; } catch (e) {}
+        } catch (e) { /* non-fatal */ }
+
         // Render hex blobs nicely (colon-separated pairs, multi-line) similar to certificates view
         (function renderAuthHex() {
             try {
-                var dlg = document.getElementById('authenticationDataDialog');
-                var dlgWidth = (dlg && dlg.getBoundingClientRect) ? (dlg.getBoundingClientRect().width || window.innerWidth) : window.innerWidth;
-                var bytesPerRow = (dlgWidth >= 900) ? 32 : 16;
-
+                // For each displayed hex field in authentication dialog, compute bytes-per-row per-element
                 function hexToColonLines(hex, perRow) {
                     if (!hex && hex !== '') return '';
                     var rawTrim = String(hex || '').toString().trim();
@@ -2374,20 +2764,18 @@ try {
                     return lines.join('\n');
                 }
 
-                $("#authenticationData_userHandleHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.userHandleHex, bytesPerRow)));
-                $("#authenticationData_authenticatorDataHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.authenticatorDataHex, bytesPerRow)));
-                $("#authenticationData_extensionData").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.extensionDataHex, bytesPerRow)));
-                // Also format signature and PRF values as colon-separated hex for readability
-                $("#authenticationData_signatureHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.signatureHex, bytesPerRow)));
-                $("#authenticationData_PRF_First").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.prfFirst, bytesPerRow)));
-                $("#authenticationData_PRF_Second").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.prfSecond, bytesPerRow)));
+                // Use responsive helper to attach ResizeObserver-driven formatting to authentication dialog fields
+                attachResponsiveHex('authenticationData_userHandleHex', credential.authenticationData.userHandleHex);
+                attachResponsiveHex('authenticationData_clientDataJSON', credential.authenticationData.clientDataJSON, true);
+                attachResponsiveHex('authenticationData_authenticatorDataHex', credential.authenticationData.authenticatorDataHex);
+                attachResponsiveHex('authenticationData_extensionData', credential.authenticationData.extensionDataHex);
+                attachResponsiveHex('authenticationData_signatureHex', credential.authenticationData.signatureHex);
+                attachResponsiveHex('authenticationData_PRF_First', credential.authenticationData.prfFirst);
+                attachResponsiveHex('authenticationData_PRF_Second', credential.authenticationData.prfSecond);
             } catch (e) {
-                $("#authenticationData_userHandleHex").text(sanitizeForDisplay(credential.authenticationData.userHandleHex));
-                $("#authenticationData_authenticatorDataHex").text(sanitizeForDisplay(credential.authenticationData.authenticatorDataHex));
-                $("#authenticationData_extensionData").text(sanitizeForDisplay(credential.authenticationData.extensionDataHex));
-                $("#authenticationData_signatureHex").text(sanitizeForDisplay(credential.authenticationData.signatureHex));
-                $("#authenticationData_PRF_First").text(sanitizeForDisplay(credential.authenticationData.prfFirst));
-                $("#authenticationData_PRF_Second").text(sanitizeForDisplay(credential.authenticationData.prfSecond));
+                // Don't clobber fields that may have been formatted by attachResponsiveHex.
+                // Log the error for diagnostics instead.
+                console.warn('renderAuthHex failed:', e);
             }
         })();
         // Hide DECODE button if there's no extension data
@@ -2435,11 +2823,17 @@ try {
                 });
                 const el = document.getElementById(spanId);
                 if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
+                // Ensure visibility is recalculated after wiring the raw values
+                try { updateCopyButtonVisibility(spanId); } catch (e) {}
             });
         } catch (e) { /* ignore */ }
 
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         authenticationDataDialog.showModal();
+        // After MDL upgrades/showModal, re-evaluate copy button visibility
+        try {
+            ['authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* ignore */ }
     }
 
     /**

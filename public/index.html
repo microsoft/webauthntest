@@ -537,10 +537,13 @@
                 <div class="reg-data-body">
                     <dl class="reg-data-list">
                         <dt>Require Resident Key</dt>
-                        <dd><span id="creationData_residentKey"></span></dd>
+                        <dd><span id="creationData_residentKey" class="mono"></span></dd>
 
                         <dt>Public Key Type</dt>
-                        <dd><span id="creationData_publicKeyType"></span></dd>
+                        <dd><span id="creationData_publicKeyType" class="mono"></span></dd>
+
+                        <dt>RP ID</dt>
+                        <dd><span id="creationData_rpId" class="mono"></span></dd>
 
                         <dt>Public Key (CBOR)
                             <div class="decode-action-left">
@@ -549,7 +552,7 @@
                         </dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_publicKeyCbor"></pre>
+                                <pre class="mono hex-mono" id="creationData_publicKeyCbor"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_publicKeyCbor" data-copy-label="Public Key (CBOR)" title="Copy Public Key (CBOR)">
                                         <i class="material-icons">content_copy</i>
@@ -561,7 +564,7 @@
                         <dt>Client Data JSON</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_clientDataJSON"></pre>
+                                <pre class="mono hex-mono" id="creationData_clientDataJSON"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
                                         <i class="material-icons">content_copy</i>
@@ -573,7 +576,7 @@
                         <dt>Authenticator Data</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_authenticatorDataHex"></pre>
+                                <pre class="mono hex-mono" id="creationData_authenticatorDataHex"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
                                         <i class="material-icons">content_copy</i>
@@ -589,7 +592,7 @@
                         </dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_extensionData"></pre>
+                                <pre class="mono hex-mono" id="creationData_extensionData"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
                                         <i class="material-icons">content_copy</i>
@@ -605,7 +608,7 @@
                         </dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_attestationObject"></pre>
+                                <pre class="mono hex-mono" id="creationData_attestationObject"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_attestationObject" data-copy-label="Attestation Object" title="Copy Attestation Object">
                                         <i class="material-icons">content_copy</i>
@@ -614,10 +617,13 @@
                             </div>
                         </dd>
 
+                        <dt>PRF Enabled</dt>
+                        <dd><span id="creationData_prfEnabled" class="mono"></span></dd>
+
                         <dt>PRF First</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_PRF_First"></pre>
+                                <pre class="mono hex-mono" id="creationData_PRF_First"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
                                         <i class="material-icons">content_copy</i>
@@ -629,7 +635,7 @@
                         <dt>PRF Second</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="creationData_PRF_Second"></pre>
+                                <pre class="mono hex-mono" id="creationData_PRF_Second"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
                                         <i class="material-icons">content_copy</i>
@@ -661,12 +667,12 @@
                 <div class="reg-data-body">
                     <dl class="reg-data-list">
                         <dt>Attachment</dt>
-                        <dd><span id="authenticationData_authenticatorAttachment"></span></dd>
+                        <dd><span id="authenticationData_authenticatorAttachment" class="mono"></span></dd>
 
                         <dt>User Handle</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_userHandleHex"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_userHandleHex"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_userHandleHex" data-copy-label="User Handle" title="Copy User Handle">
                                         <i class="material-icons">content_copy</i>
@@ -678,7 +684,7 @@
                         <dt>Client Data JSON</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_clientDataJSON"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_clientDataJSON"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
                                         <i class="material-icons">content_copy</i>
@@ -690,7 +696,7 @@
                         <dt>Authenticator Data</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_authenticatorDataHex"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_authenticatorDataHex"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
                                         <i class="material-icons">content_copy</i>
@@ -706,7 +712,7 @@
                         </dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_extensionData"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_extensionData"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
                                         <i class="material-icons">content_copy</i>
@@ -718,7 +724,7 @@
                         <dt>Signature</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_signatureHex"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_signatureHex"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_signatureHex" data-copy-label="Signature" title="Copy Signature">
                                         <i class="material-icons">content_copy</i>
@@ -730,7 +736,7 @@
                         <dt>PRF First</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_PRF_First"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_PRF_First"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
                                         <i class="material-icons">content_copy</i>
@@ -742,7 +748,7 @@
                         <dt>PRF Second</dt>
                         <dd>
                             <div class="mono-block">
-                                <pre class="mono" id="authenticationData_PRF_Second"></pre>
+                                <pre class="mono hex-mono" id="authenticationData_PRF_Second"></pre>
                                 <div class="mono-actions">
                                     <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
                                         <i class="material-icons">content_copy</i>

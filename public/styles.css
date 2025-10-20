@@ -497,9 +497,9 @@ a {
 .reg-data { margin-top: 8px; padding: 8px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; }
 .reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 .reg-data-controls { margin-left: auto; display:flex; gap:8px; align-items:center; }
-.reg-data-list { margin:0; padding:0; display:grid; grid-template-columns: 160px 1fr; gap:6px 12px; align-items:start; }
-.reg-data-list dt { font-weight:600; color:#333; }
-.reg-data-list dd { margin:0; color:#555; display:flex; align-items:flex-start; gap:8px; overflow-wrap:anywhere; word-break:normal; }
+.reg-data-list { margin:0; padding:0; display:block; }
+.reg-data-list dt { font-weight:600; color:#333; margin: 12px 0 4px 0; }
+.reg-data-list dd { margin:0 0 12px 0; color:#555; display:block; align-items:baseline; gap:8px; overflow-wrap:anywhere; word-break:normal; }
 .reg-data-list dd::before { content: ""; }
 .reg-data-list dd .credential-id { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
 
@@ -562,14 +562,16 @@ a {
   .mdl-cell.mdl-cell--4-col, .mdl-grid > .mdl-cell { width: 100% !important; box-sizing: border-box; }
   /* Increase card spacing for readability */
   .mdl-card { margin-bottom: 14px; }
-  /* Stack labels above values for reg-data lists */
-  .reg-data-list { grid-template-columns: 1fr; gap: 6px 6px; }
-  .reg-data-list dt { grid-column: 1; font-size: 0.95em; }
-  .reg-data-list dd { grid-column: 1; display:block; margin:0 0 8px 0; color:#555; }
+  /* Stack labels above values for reg-data lists (single-column everywhere) */
+  .reg-data-list { display: block; }
+  .reg-data-list dt { font-size: 0.95em; }
+  .reg-data-list dd { display:block; margin:0 0 8px 0; color:#555; }
   .reg-data-list dd .credential-id { word-break: break-word; }
   /* Ensure header buttons in reg-data-header wrap nicely */
   .reg-data-header { flex-wrap: wrap; gap:6px; }
 }
+
+/* Keep reg-data-list stacked at all widths: label above value */
 
 /* Additional narrow-screen tweaks for credential cards */
 @media (max-width: 760px) {
@@ -897,6 +899,35 @@ a {
 /* Collapsible public key block */
 .public-key-block .public-key-hex { display: block; }
 .public-key-block.collapsed .public-key-hex { display: none; }
+
+/* Hex displays: avoid breaking inside colon-separated byte pairs. Allow horizontal scroll instead. */
+.hex-mono {
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Plaintext pre blocks (e.g., Client Data JSON) should wrap instead of producing horizontal scrollbars */
+.hex-plain-wrap {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  overflow-x: hidden !important;
+}
+
+/* Stronger rule for hex displays inside registration dialogs to avoid accidental wrapping
+   when .mono or .reg-data-list rules try to apply pre-wrap. This ensures the computed
+   bytes-per-row can render without being reflowed onto multiple visual lines. */
+.mdl-dialog__content .hex-mono,
+.reg-data-list dd .hex-mono {
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* HexDebug styles removed. */
 /* Keep toggle inline with the small label text */
 .public-key-toggle, .cert-copy-publickey { display: inline-flex; margin-left: 8px; vertical-align: middle; align-items: center; gap: 6px; line-height: 20px; }
 .public-key-toggle { padding: 6px 8px; font-weight: 500; }
