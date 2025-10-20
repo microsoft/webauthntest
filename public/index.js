@@ -1264,7 +1264,12 @@ try {
         html += '         </div>';
         html += '         <div class="reg-data-body">';
         html += '         <dl class="reg-data-list">';
-        html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
+    // Render Credential ID as a mono block (formatted hex with copy button) to match other hex displays
+    var credIdSpanId = 'credentialId_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
+    html += '             <dt>Credential ID</dt><dd>';
+    html += '<div class="mono-block"><pre class="mono" id="' + credIdSpanId + '">' + escapeHtml(credential.idHex || '') + '</pre>';
+    html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
+    html += '</div></dd>';
         html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
         html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
         html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
@@ -1307,6 +1312,18 @@ try {
 
 
         $("#credentialsContainer").append(html);
+        try {
+            // Setup copy button visibility and raw value for the credential id mono-block we just added
+            var spanEl = document.getElementById(credIdSpanId);
+            if (spanEl) {
+                // store raw normalized hex on the element
+                try { spanEl.setAttribute('data-raw', normalizeHexForRaw(credential.idHex || '')); } catch (e) {}
+                // wire up buttons that reference this span id
+                updateCopyButtonVisibility(credIdSpanId);
+                var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + credIdSpanId + '"]');
+                Array.from(btns).forEach(b => { try { b.setAttribute('data-copy-raw', normalizeHexForRaw(credential.idHex || '')); } catch (e) {} });
+            }
+        } catch (e) { /* non-fatal */ }
 
         // Wire up collapse/expand toggle for the registration details just added
         try {
@@ -2327,6 +2344,38 @@ try {
         var lower = s.toLowerCase();
         if (!s || lower === 'no extension data' || lower === 'none') return '';
         return s;
+    }
+
+    /**
+     * Normalize a hex-like string to an uppercase contiguous hex string (no 0x, no spaces).
+     * Returns empty string for sentinel values or non-hex input.
+     */
+    function normalizeHexForRaw(h) {
+        if (h === undefined || h === null) return '';
+        var rawTrim = String(h || '').toString().trim();
+        var lower = rawTrim.toLowerCase();
+        if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+        var s = rawTrim.replace(/\s+/g, '');
+        s = s.replace(/^0x/i, '');
+        if (!/^[0-9a-fA-F]*$/.test(s)) return rawTrim;
+        return s.toUpperCase();
+    }
+
+    /**
+     * Format a hex string into colon-separated byte pairs and break into lines of perRow pairs.
+     * Example: "AABBCCDDEEFF" -> "AA:BB:CC:DD\nEE:FF" when perRow=4
+     */
+    function hexToColonLines(hex, perRow) {
+        if (!hex && hex !== '') return '';
+        var rawTrim = String(hex || '').toString().trim();
+        var lower = rawTrim.toLowerCase();
+        if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+        var s = rawTrim.replace(/\s+/g, '');
+        s = s.replace(/^0x/i, '');
+        var pairs = s.match(/.{1,2}/g) || [];
+        var lines = [];
+        for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
+        return lines.join('\n');
     }
 
     /**
