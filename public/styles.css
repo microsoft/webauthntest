@@ -33,6 +33,11 @@ html, body {
   padding: 0;
 }
 
+:root {
+  /* configurable max-height for mono blocks inside dialogs/cards; viewport-relative by default */
+  --mono-max-height: 60vh;
+}
+
 .cloak {
   visibility: hidden;
 }
@@ -100,14 +105,43 @@ body .mdl-layout__tab-bar .mdl-layout__tab.is-active::after {
   height: 4px;
 }
 
-body #signOutButton { position:absolute; right:40px; top:30px; z-index:999; color:white; }
-body #createButton { position:absolute; right:250px; top:36px; z-index:999; }
-body #getButton { position:absolute; right:180px; top:36px; z-index:999; }
-body #moreButton { position:absolute; right:110px; top:36px; z-index:999; }
-body #cborButton { position:absolute; right:40px; top:36px; z-index:999; }
+/* Header control layout: title sits to the left, a group of FABs on the right. Use flex for responsiveness. */
+body #signOutButton { position:absolute; right:16px; top:30px; z-index:999; color:white; }
+
+/* New responsive FAB group placed in the header tab bar */
+.fab-group {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  position: absolute;
+  right: 16px;
+  top: 28px;
+  z-index: 999;
+}
+
+/* Reduce FAB size on small screens to avoid wrapping */
+.fab-group .mdl-button--fab { width: 56px; height: 56px; min-width: 56px; }
+
+/* If the window is very narrow, collapse the group by scaling down */
+@media (max-width: 760px) {
+  .fab-group { gap: 8px; right: 8px; }
+  .fab-group .mdl-button--fab { width: 48px; height: 48px; min-width: 48px; }
+}
+
+/* Overflow menu used on narrow screens */
+.fab-overflow { position: absolute; right: 8px; top: 26px; z-index: 1000; display: none; }
+
+@media (max-width: 560px) {
+  /* On very small screens, hide the large FABs and show overflow */
+  .fab-group { display: none; }
+  .fab-overflow { display: block; }
+}
+
+/* (header small controls removed) */
+
+/* Back button fallback (used in CBOR page) still absolute when present */
 body #cborBackButton { position:absolute; right:40px; top:36px; z-index:999; color:white; }
 body #cborBackButton .material-icons { color:inherit; }
-/* Removed flex fab-group and cborButton styles (reverted) */
 
 p {
   font-size: 14px;
@@ -214,8 +248,13 @@ dialog {
 
 /* Narrow screens remain single column automatically; no horizontal scroll due to width clamp */
 
-#creationDataDialog {
-  min-width: 60%;
+/* Dialog sizing: keep key dialogs responsive and similar widths */
+/* Use a clamp-based width so these dialogs expand on wider screens but remain usable on small viewports. */
+#creationDataDialog,
+#authenticationDataDialog {
+  width: clamp(480px, 60vw, 1100px);
+  max-width: 95vw;
+  min-width: 420px;
 }
 
 @keyframes highlightedKeyframes {
@@ -359,6 +398,53 @@ a {
   text-decoration: underline;
 }
 
+/* Mono block wrapper: positions a small copy button top-right of pre blocks */
+.mono-block {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+  width: 100%;
+}
+.mono-block .copy-to-clipboard {
+  min-width: 36px;
+  height: 36px;
+  padding: 6px;
+}
+.mono-block pre.mono {
+  max-height: var(--mono-max-height);
+  overflow: auto;
+  padding: 12px;
+  box-sizing: border-box;
+  min-width: 0; /* allow shrink in constrained containers */
+  width: 100%;
+}
+
+/* Ensure mono-block inside reg-data-list dd participates properly in dd's layout */
+.reg-data-list dd > .mono-block { flex: 1 1 auto; min-width: 0; display: grid; }
+
+/* Header-style bar placed above the mono pre */
+.mono-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0;
+  /* Reserve space so the mono-block width doesn't change when the button is hidden */
+  width: 44px; /* matches typical action button tappable area */
+  min-width: 44px;
+}
+.mono-actions .mdl-button {
+  min-width: 36px;
+  height: 36px;
+  padding: 6px;
+}
+
+@media (max-width: 640px) {
+  .mono-block { grid-template-columns: 1fr; }
+  /* On narrow screens collapse to a single column and let actions flow naturally */
+  .mono-actions { margin-left: 0; margin-top: 8px; justify-content: flex-start; width: auto; min-width: 0; }
+}
+
 /* Algorithm priority list */
 .alg-list { list-style: none; margin: 0 0 8px 0; padding: 0; }
 .alg-list li { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee; }
@@ -407,19 +493,102 @@ a {
 .aaguid-copy-id { padding: 6px 8px !important; min-width: 0 !important; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent !important; color: #1a73e8 !important; border: none !important; }
 .aaguid-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
 
-/* Registration data block in credential cards */
+/* Registration summary block in credential cards */
 .reg-data { margin-top: 8px; padding: 8px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; }
 .reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.reg-data-controls { margin-left: auto; display:flex; gap:8px; align-items:center; }
 .reg-data-list { margin:0; padding:0; display:grid; grid-template-columns: 160px 1fr; gap:6px 12px; align-items:start; }
 .reg-data-list dt { font-weight:600; color:#333; }
-.reg-data-list dd { margin:0; color:#555; display:flex; align-items:center; gap:8px; overflow-wrap:anywhere; word-break:break-all; }
+.reg-data-list dd { margin:0; color:#555; display:flex; align-items:flex-start; gap:8px; overflow-wrap:anywhere; word-break:normal; }
 .reg-data-list dd::before { content: ""; }
 .reg-data-list dd .credential-id { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
+
+.reg-data-body { display:block; }
+.reg-data-body.collapsed { display:none; }
+
+.reg-data-toggle { padding:6px; min-width:0; height:36px; display:inline-flex; align-items:center; justify-content:center; }
 
 /* Transport chips for credential transports */
 /* Transport chips for credential transports (non-interactive decorative chips) */
 /* Small spacing helper for MDL chips inside reg-data */
 .reg-data .mdl-chip { margin-right: 6px; margin-bottom: 4px; }
+
+/* DECODE button placement inside reg-data/dialog content: ensure button sits below its related value */
+.decode-action { margin-top: 6px; }
+.decode-action .mdl-button { padding: 6px 8px !important; min-width: 0 !important; height: 36px; }
+
+/* Ensure decode-action sits on its own row inside the registration data dd (which is a flex container) */
+.reg-data-list dd > span { flex: 1 1 auto; min-width: 0; display: block; }
+.reg-data-list dd > .mono { flex: 1 1 auto; min-width: 0; display: block; }
+.reg-data-list dd .decode-action { flex: 0 0 100%; display:flex; gap:8px; justify-content:flex-start; margin-top:6px; }
+
+/* Monospace block used for long hex/CBOR/JSON values inside dialogs/cards */
+.mono {
+  /* Use the same mono font stack and size as certificate public key blocks to avoid wrapping */
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  margin: 0; /* reset pre default margins inside dd */
+  padding: 0; /* keep inline with reg-data spacing */
+  /* Limit height so huge hex/CBOR blobs don't expand the dialog; allow internal scrolling.
+    Use the configurable --mono-max-height (viewport-relative) with a pixel fallback. */
+  max-height: var(--mono-max-height, 260px);
+  overflow-y: auto;
+  padding: 8px 6px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 4px;
+}
+
+/* Stronger enforcement: ensure mono blocks render horizontally and span available width */
+.reg-data-list dd > .mono {
+  width: 100% !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  line-height: 1.25 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Left-column placement for DECODE action: sit under dt label in the left column */
+.decode-action-left { margin-top:6px; }
+.decode-action-left .mdl-button { padding: 4px 6px !important; min-width: 0 !important; height: 28px; font-size: 12px; }
+
+/* Responsive adjustments for credential cards and registration summary on narrow screens */
+@media (max-width: 760px) {
+  /* Make credential cards take full width and stack vertically */
+  .mdl-cell.mdl-cell--4-col, .mdl-grid > .mdl-cell { width: 100% !important; box-sizing: border-box; }
+  /* Increase card spacing for readability */
+  .mdl-card { margin-bottom: 14px; }
+  /* Stack labels above values for reg-data lists */
+  .reg-data-list { grid-template-columns: 1fr; gap: 6px 6px; }
+  .reg-data-list dt { grid-column: 1; font-size: 0.95em; }
+  .reg-data-list dd { grid-column: 1; display:block; margin:0 0 8px 0; color:#555; }
+  .reg-data-list dd .credential-id { word-break: break-word; }
+  /* Ensure header buttons in reg-data-header wrap nicely */
+  .reg-data-header { flex-wrap: wrap; gap:6px; }
+}
+
+/* Additional narrow-screen tweaks for credential cards */
+@media (max-width: 760px) {
+  /* Slightly smaller titles to avoid overflow */
+  .mdl-card__title-text { font-size: 18px; line-height: 22px; }
+
+  /* Make action buttons wrap instead of overflowing */
+  .mdl-card__actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .mdl-card__actions .mdl-button { margin-bottom:6px; }
+
+  /* Give reg-data a bit more breathing room for touch */
+  .reg-data { padding: 12px; }
+
+  /* Ensure long hex/ID text breaks properly */
+  .reg-data-list dd, .reg-data-list dt { word-break: break-word; overflow-wrap: anywhere; }
+
+  /* Make credential-id text smaller to fit when necessary */
+  .reg-data-list dd .credential-id { font-size: 14px; }
+}
 
 /* Certificate dialog action buttons under each cert */
 .cert-actions { display:flex; gap:8px; margin-top:8px; }
@@ -450,9 +619,10 @@ a {
   background: rgba(26,115,232,0.06) !important;
 }
 
-/* Icon-only copy button next to fingerprint */
-/* Copy fingerprint icon style: match per-cert action buttons */
-#certsDialog .cert-copy-fingerprint {
+/* Icon-only copy buttons next to fingerprint/serial */
+/* Match per-cert action buttons */
+#certsDialog .cert-copy-fingerprint,
+#certsDialog .cert-copy-serial {
   padding: 6px 8px !important;
   min-width: 0 !important;
   height: 36px;
@@ -463,7 +633,58 @@ a {
   color: #1a73e8 !important;
   border: none !important;
 }
-#certsDialog .cert-copy-fingerprint .material-icons { font-size:18px !important; color: inherit !important; }
+#certsDialog .cert-copy-fingerprint .material-icons,
+#certsDialog .cert-copy-serial .material-icons { font-size:18px !important; color: inherit !important; }
+
+/* Public key copy button: same style as other copy icons */
+#certsDialog .cert-copy-publickey {
+  padding: 6px 8px !important;
+  min-width: 0 !important;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  color: #1a73e8 !important;
+  border: none !important;
+}
+#certsDialog .cert-copy-publickey .material-icons { font-size:18px !important; color: inherit !important; }
+
+/* Responsive adjustments: allow per-cert action buttons to wrap and
+   use a compact icon-first layout on narrow screens so label text doesn't
+   overflow or get truncated. This keeps icons visible and tappable.
+*/
+@media (max-width: 520px) {
+  /* Let the action buttons wrap to multiple lines */
+  .cert-actions {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Make each button a bit more compact and allow it to shrink */
+  #certsDialog .cert-actions .mdl-button {
+    padding: 6px 6px !important;
+    font-size: 13px !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+
+  /* When space is very narrow, show an icon-first style where label can wrap
+     onto the next line; ensure icons remain left-aligned and visible. */
+  @media (max-width: 380px) {
+    #certsDialog .cert-actions .mdl-button {
+      display: inline-flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 6px 6px !important;
+    }
+    /* If necessary, hide the text on ultra-narrow screens but keep title accessible
+       via title attribute (handled in JS if desired). We prefer to keep text when possible,
+       so only reduce visibility using a subtle technique: shrink text and allow wrapping. */
+    #certsDialog .cert-actions .mdl-button { white-space: normal !important; }
+  }
+}
 
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
@@ -519,29 +740,89 @@ a {
 #certsDialog #certsDownloadChain { order: 0 !important; }
 #certsDialog #certsDialog_x { order: 1 !important; }
 
-/* Strong positioning: pin Download Chain to the left and Close to the right
-   inside the dialog footer so layout is deterministic across environments. */
-#certsDialog .cert-dialog-actions { position: relative !important; }
-#certsDialog #certsDownloadChain {
-  position: absolute !important;
-  left: 16px !important;
+/* Use explicit left/right flex containers so Download Chain stays left and
+   Close stays right in a deterministic way that survives runtime DOM
+   changes from MDL. The right container uses margin-left:auto to push it
+   to the far right. */
+#certsDialog .cert-dialog-actions {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  /* prefer single-row layout; allow wrapping only when necessary */
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
 }
-#certsDialog #certsDialog_x {
-  position: absolute !important;
-  right: 16px !important;
-  margin-left: 0 !important; /* clear any inline margin-left */
+
+#certsDialog .cert-actions-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#certsDialog .cert-actions-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto !important; /* keep Close on the right */
 }
 
 /* Responsive fallback: on narrow viewports, revert to normal flow so buttons
    wrap and maintain accessibility on small screens. */
 @media (max-width: 520px) {
-  #certsDialog .cert-dialog-actions { position: static !important; }
-  #certsDialog #certsDownloadChain,
-  #certsDialog #certsDialog_x {
+  /* Keep footer actions as a flex container and preserve left/right
+     alignment. Use margin-left:auto on the Close button to push it to the right.
+     This avoids position:absolute issues while keeping the layout stable. */
+  #certsDialog .cert-dialog-actions {
     position: static !important;
-    margin-left: 0 !important;
-    display: inline-block !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
   }
+
+  #certsDialog #certsDownloadChain {
+    position: static !important;
+    order: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* On narrow screens, allow wrapping but keep the left group before the
+     right group. Prefer to keep them on one row if space permits; when they
+     wrap, the right group is right-aligned on its own row. */
+  #certsDialog .cert-dialog-actions { flex-wrap: wrap !important; }
+
+  #certsDialog .cert-actions-left {
+    order: 0 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  #certsDialog .cert-actions-right {
+    order: 1 !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+    margin-left: auto !important; /* keep Close on the right */
+    justify-content: flex-end !important;
+  }
+}
+
+/* Strong enforcement for wide screens: ensure left then right ordering and
+   single-row layout. This overrides MDL dialog defaults that sometimes
+   reposition children. */
+@media (min-width: 900px) {
+  #certsDialog .cert-dialog-actions {
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+  }
+  #certsDialog .cert-actions-left { order: 0 !important; }
+  #certsDialog .cert-actions-right { order: 1 !important; margin-left: auto !important; }
 }
 
 /* Improve cert card visuals */
@@ -554,6 +835,75 @@ a {
 .cert-card small { color: #555; display:block; }
 .cert-actions .material-icons { color: #666; }
 .cert-actions button.mdl-button { background: transparent; }
+
+/* Force wrapping for long certificate fields so text doesn't overflow the card */
+#certsDialog .cert-card,
+#certsDialog .cert-card * {
+  box-sizing: border-box;
+}
+
+#certsDialog .cert-card small,
+#certsDialog .cert-card .fingerprint,
+#certsDialog .cert-card .key-usage,
+#certsDialog .cert-card .ext-key-usage,
+#certsDialog .cert-card .subject-alt-name,
+#certsDialog .cert-card dt,
+#certsDialog .cert-card dd {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+
+/* Ensure inline icon buttons (copy icon) don't force the fingerprint to stay on one line */
+#certsDialog .cert-copy-fingerprint {
+  display: inline-flex !important;
+  vertical-align: middle !important;
+}
+
+/* Make the fingerprint label area allow wrapping while keeping the icon on its own line if space is tight */
+#certsDialog .fingerprint-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#certsDialog .fingerprint-text { flex: 1 1 auto; }
+#certsDialog .fingerprint-icon { flex: 0 0 auto; }
+
+/* Visual block for public key hex */
+.public-key-block {
+  margin-top: 8px;
+}
+.public-key-block .public-key-hex {
+  display: block;
+  width: 100%;
+  /* match the card look: subtle border, transparent background */
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 8px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  color: #555; /* match .cert-card small color */
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-height: 220px;
+  overflow: auto;
+}
+.public-key-block .public-key-hex::selection { background: rgba(26,115,232,0.12); }
+
+/* Collapsible public key block */
+.public-key-block .public-key-hex { display: block; }
+.public-key-block.collapsed .public-key-hex { display: none; }
+/* Keep toggle inline with the small label text */
+.public-key-toggle, .cert-copy-publickey { display: inline-flex; margin-left: 8px; vertical-align: middle; align-items: center; gap: 6px; line-height: 20px; }
+.public-key-toggle { padding: 6px 8px; font-weight: 500; }
+
+/* Match visual style of other action buttons: remove heavy background and use link-like appearance */
+.public-key-toggle.mdl-js-button { background: transparent !important; color: #1a73e8 !important; text-transform: none !important; font-weight: 500 !important; }
+.public-key-toggle .material-icons { font-size: 18px; }
 
 /* Right-align dialog actions at bottom-right */
 .mdl-dialog__actions.cert-dialog-actions { display:flex; justify-content:space-between; padding:12px 24px 18px 24px; }

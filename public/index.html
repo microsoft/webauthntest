@@ -531,56 +531,115 @@
                 <i class="material-icons">close</i>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Credential Creation Data</h3>
+        <h3 class="mdl-dialog__title">Registration Details</h3>
         <div class="mdl-dialog__content">
-            <p>
-                <b>Require Resident Key</b>
-                <br>
-                <span id="creationData_residentKey"></span>
-            </p>
-            <p>
-                <b>ClientDataJSON</b>
-                <br>
-                <span id="creationData_clientDataJSON"></span>
-            </p>
-            <p>
-                <b>AuthenticatorData</b>
-                <br>
-                <span id="creationData_authenticatorDataHex"></span>
-            </p>
-            <p>
-                <b>Extensions</b>
-                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
-                <br>
-                <span id="creationData_extensionData"></span>
-            </p>
-            <p>
-                <b>Public Key Type (Algorithm)</b>
-                <br>
-                <span id="creationData_publicKeyType"></span>
-            </p>
-            <p>
-                <b>Public Key (CBOR)</b>
-                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
-                <br>
-                <span id="creationData_publicKeyCbor"></span>
-            </p>
-            <p>
-                <b>Attestation Object</b>
-                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
-                <br>
-                <span id="creationData_attestationObject"></span>
-            </p>
-            <p>
-                <b>PRF First</b>
-                <br>
-                <span id="creationData_PRF_First"></span>
-            </p>
-            <p>
-                <b>PRF Second</b>
-                <br>
-                <span id="creationData_PRF_Second"></span>
-            </p>
+            <div class="reg-data">
+                <div class="reg-data-body">
+                    <dl class="reg-data-list">
+                        <dt>Require Resident Key</dt>
+                        <dd><span id="creationData_residentKey"></span></dd>
+
+                        <dt>Public Key Type</dt>
+                        <dd><span id="creationData_publicKeyType"></span></dd>
+
+                        <dt>Public Key (CBOR)
+                            <div class="decode-action-left">
+                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_publicKeyCbor"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_publicKeyCbor" data-copy-label="Public Key (CBOR)" title="Copy Public Key (CBOR)">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Client Data JSON</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_clientDataJSON"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Authenticator Data</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_authenticatorDataHex"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Extensions
+                            <div class="decode-action-left">
+                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_extensionData"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Attestation Object
+                            <div class="decode-action-left">
+                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_attestationObject"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_attestationObject" data-copy-label="Attestation Object" title="Copy Attestation Object">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>PRF First</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_PRF_First"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>PRF Second</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="creationData_PRF_Second"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
         </div>
 
         <div class="mdl-dialog__actions">
@@ -596,49 +655,104 @@
                 <i class="material-icons">close</i>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Authentication Data</h3>
+        <h3 class="mdl-dialog__title">Authentication Details</h3>
         <div class="mdl-dialog__content">
-            <p>
-                <b>User Handle</b>
-                <br>
-                <span id="authenticationData_userHandleHex"></span>
-            </p>
-            <p>
-                <b>Authenticator Attachment</b>
-                <br>
-                <span id="authenticationData_authenticatorAttachment"></span>
-            </p>
-            <p>
-                <b>ClientDataJSON</b>
-                <br>
-                <span id="authenticationData_clientDataJSON"></span>
-            </p>
-            <p>
-                <b>AuthenticatorData</b>
-                <br>
-                <span id="authenticationData_authenticatorDataHex"></span>
-            </p>
-            <p>
-                <b>Extensions</b>
-                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
-                <br>
-                <span id="authenticationData_extensionData"></span>
-            </p>
-            <p>
-                <b>Signature</b>
-                <br>
-                <span id="authenticationData_signatureHex"></span>
-            </p>
-            <p>
-                <b>PRF First</b>
-                <br>
-                <span id="authenticationData_PRF_First"></span>
-            </p>
-            <p>
-                <b>PRF Second</b>
-                <br>
-                <span id="authenticationData_PRF_Second"></span>
-            </p>
+            <div class="reg-data">
+                <div class="reg-data-body">
+                    <dl class="reg-data-list">
+                        <dt>Attachment</dt>
+                        <dd><span id="authenticationData_authenticatorAttachment"></span></dd>
+
+                        <dt>User Handle</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_userHandleHex"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_userHandleHex" data-copy-label="User Handle" title="Copy User Handle">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Client Data JSON</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_clientDataJSON"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Authenticator Data</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_authenticatorDataHex"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Extensions
+                            <div class="decode-action-left">
+                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_extensionData"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Signature</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_signatureHex"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_signatureHex" data-copy-label="Signature" title="Copy Signature">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>PRF First</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_PRF_First"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>PRF Second</dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono" id="authenticationData_PRF_Second"></pre>
+                                <div class="mono-actions">
+                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <i class="material-icons">content_copy</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
         </div>
 
         <div class="mdl-dialog__actions">
@@ -753,18 +867,33 @@
             </div>
             <div class="mdl-layout__tab-bar mdl-js-ripple-effect mdl-color--primary-dark">
                 <a href="#credentials" class="mdl-layout__tab is-active">Credentials</a>
-                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="createButton">
-                    <i class="material-icons" role="presentation">add</i>
+                <div class="fab-group" aria-hidden="false">
+                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="createButton" title="Create">
+                        <i class="material-icons" role="presentation">add</i>
+                    </button>
+                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="getButton" title="Get">
+                        <i class="material-icons" role="presentation">lock_open</i>
+                    </button>
+                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="moreButton" title="More">
+                        <i class="material-icons" role="presentation">more_horiz</i>
+                    </button>
+                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="cborButton" title="Open CBOR Playground">
+                        <i class="material-icons" role="presentation">code</i>
+                    </button>
+            </div>
+            <!-- Overflow menu for narrow screens (MDL menu for consistent styling) -->
+            <div class="fab-overflow" id="fabOverflow">
+                <button id="fabOverflowToggle" class="mdl-button mdl-js-button mdl-button--icon" title="More actions">
+                    <i class="material-icons">more_vert</i>
                 </button>
-                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="getButton">
-                    <i class="material-icons" role="presentation">lock_open</i>
-                </button>
-                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="moreButton">
-                    <i class="material-icons" role="presentation">more_horiz</i>
-                </button>
-                <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="cborButton" title="Open CBOR Playground">
-                    <i class="material-icons" role="presentation">code</i>
-                </button>
+                <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" for="fabOverflowToggle" id="fabOverflowMenu">
+                    <li class="mdl-menu__item" data-target="#createButton">Create</li>
+                    <li class="mdl-menu__item" data-target="#getButton">Get</li>
+                    <li class="mdl-menu__item" data-target="#moreButton">More</li>
+                    <li class="mdl-menu__item" data-target="#cborButton">CBOR</li>
+                    <!-- AAGUID menu item removed temporarily -->
+                </ul>
+            </div>
             </div>
         </header>
         <main class="mdl-layout__content">

@@ -172,6 +172,18 @@ try {
             }
         });
 
+        // AAGUID button may be removed; only attach handler if element exists
+        const aaguidBtn = document.getElementById('aaguidButton');
+        if (aaguidBtn) {
+            aaguidBtn.addEventListener('click', () => {
+                try {
+                    window.open("./aaguid.html", "_blank");
+                } catch (e) {
+                    window.location.href = "./aaguid.html";
+                }
+            });
+        }
+
         $('#createDialog_createButton').click(() => {
             var id;
 
@@ -200,6 +212,22 @@ try {
         $('#createDialog_cancelButton').click(() => {
             createDialog.close();
         });
+
+        // MDL overflow menu forwarding: when a menu item is clicked, trigger the corresponding button
+        try{
+            const mdlMenuItems = document.querySelectorAll('#fabOverflowMenu .mdl-menu__item');
+            Array.from(mdlMenuItems).forEach(item => {
+                item.addEventListener('click', (e)=>{
+                    const target = item.getAttribute('data-target');
+                    if(target){
+                        const t = document.querySelector(target);
+                        if(t) t.click();
+                    }
+                });
+            });
+        }catch(e){ console.warn('MDL overflow init failed', e); }
+
+        
 
         $('#getDialog_getButton').click(() => {
             var id;
@@ -1227,19 +1255,20 @@ try {
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
         html += ' <div class="mdl-card__supporting-text mdl-card--expand">';
-    // Identity fields moved into registration details list below
-    // AAGUID will be shown inside the registration details list for consistent styling
-        // Render registration data as a compact key/value list for readability
         html += '     <div class="reg-data">';
-        html += '         <div class="reg-data-header"><b>Credential Registration Data</b> ';
-    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
+        html += '         <div class="reg-data-header"><b>Registration Summary</b> ';
+        html += '         <span class="reg-data-controls">';
+        html += '           <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
+        html += '           <button class="mdl-button mdl-js-button mdl-js-ripple-effect reg-data-toggle" title="Collapse" data-target-cred="' + credential.idHex + '" aria-expanded="true"><i class="material-icons">expand_less</i></button>';
+        html += '         </span>';
         html += '         </div>';
+        html += '         <div class="reg-data-body">';
         html += '         <dl class="reg-data-list">';
-    html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
-    html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
-    html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
-    html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
-    html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
+        html += '             <dt>Credential ID</dt><dd><span class="credential-id">' + escapeHtml(credential.idHex || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-text="' + escapeHtml(credential.idHex || '') + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></dd>';
+        html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
+        html += '             <dt>RP ID</dt><dd>' + escapeHtml(credential.metadata.rpId || '') + '</dd>';
+        html += '             <dt>Key Type</dt><dd>' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</dd>';
+        html += '             <dt>Attestation Type</dt><dd>' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</dd>';
         html += '             <dt>Attachment</dt><dd>' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</dd>';
         html += '             <dt>PRF Enabled</dt><dd>' + escapeHtml(String(credential.creationData.prfEnabled || '')) + '</dd>';
         html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</dd>';
@@ -1252,12 +1281,14 @@ try {
             html += '</dd>';
         }
         html += '         </dl>';
-        html += '     </div>';
-        // Last Authentication Data (nicer UI)
-        html += '     <div class="reg-data">';
-        html += '         <div class="reg-data-header"><b>Last Authentication Data</b> ';
-    html += '         <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
         html += '         </div>';
+        html += '     </div>';
+            html += '     <div class="reg-data">';
+    html += '         <div class="reg-data-header"><b>Authentication Summary</b> ';
+    html += '         <span class="reg-data-controls">';
+    html += '           <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
+    html += '         </span>';
+    html += '         </div>';
         html += '         <dl class="reg-data-list">';
         html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</dd>';
         html += '         </dl>';
@@ -1270,12 +1301,78 @@ try {
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
             + credential.id
             + '">Update Transports</a>';
-    html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
+        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
         html += ' </div>';
         html += '</div>';
 
 
         $("#credentialsContainer").append(html);
+
+        // Wire up collapse/expand toggle for the registration details just added
+        try {
+            const card = document.getElementById('credential-' + credential.idHex);
+            if (card) {
+                const toggle = card.querySelector('.reg-data-toggle');
+                const body = card.querySelector('.reg-data-body');
+                if (toggle && body) {
+                    // Apply persisted collapsed state (if any)
+                    try {
+                        const storageKey = 'webauthn_regdata_collapsed';
+                        const raw = localStorage.getItem(storageKey);
+                        const map = raw ? JSON.parse(raw) : {};
+                        const credKey = credential.idHex;
+                        let applied = false;
+                        if (map && map[credKey]) {
+                            body.style.display = 'none';
+                            toggle.setAttribute('aria-expanded', 'false');
+                            const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                            toggle.title = 'Expand';
+                            applied = true;
+                        }
+                        // If no per-card preference, apply global default if set
+                        if (!applied) {
+                            try {
+                                const defaultRaw = localStorage.getItem('webauthn_regdata_defaultCollapsed');
+                                const def = defaultRaw === 'true';
+                                if (def) {
+                                    body.style.display = 'none';
+                                    toggle.setAttribute('aria-expanded', 'false');
+                                    const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                                    toggle.title = 'Expand';
+                                }
+                            } catch (e) { }
+                        }
+                    } catch (e) { /* ignore storage errors */ }
+
+                    toggle.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+                        const storageKey = 'webauthn_regdata_collapsed';
+                        try {
+                            const raw = localStorage.getItem(storageKey);
+                            const map = raw ? JSON.parse(raw) : {};
+                            const credKey = credential.idHex;
+                            if (expanded) {
+                                // collapse
+                                body.style.display = 'none';
+                                toggle.setAttribute('aria-expanded', 'false');
+                                toggle.title = 'Expand';
+                                const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                                map[credKey] = true;
+                            } else {
+                                // expand
+                                body.style.display = '';
+                                toggle.setAttribute('aria-expanded', 'true');
+                                toggle.title = 'Collapse';
+                                const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_less';
+                                if (map[credKey]) delete map[credKey];
+                            }
+                            try { localStorage.setItem(storageKey, JSON.stringify(map)); } catch (e) { /* ignore quota/errors */ }
+                        } catch (e) { console.warn('localStorage handling failed', e); }
+                    });
+                }
+            }
+        } catch (e) { console.warn('toggle wiring failed', e); }
 
         // After inserting into DOM, probe the attestationObject for x5c presence and show the button if found
         try {
@@ -1331,12 +1428,45 @@ try {
             publicKeyType += "(" + credential.creationData.publicKeyAlgorithm +") ";
         }
 
-    $("#creationData_attestationObject").text(credential.creationData.attestationObject);
-        $("#creationData_clientDataJSON").text(credential.creationData.clientDataJSON);
-        $("#creationData_authenticatorDataHex").text(credential.creationData.authenticatorDataHex);
-    $("#creationData_publicKeyType").text(publicKeyType);
-    $("#creationData_publicKeyCbor").text(credential.creationData.publicKeyHex);
-        $("#creationData_extensionData").text(credential.creationData.extensionDataHex);
+    // Format long hex blobs into colon-separated byte pairs (multi-line) for readability,
+    // similar to how public keys are rendered in the Certificates view.
+    (function renderHexBlobs() {
+        try {
+            var dlg = document.getElementById('creationDataDialog');
+            var dlgWidth = (dlg && dlg.getBoundingClientRect) ? (dlg.getBoundingClientRect().width || window.innerWidth) : window.innerWidth;
+            var bytesPerRow = (dlgWidth >= 900) ? 32 : 16;
+
+            function hexToColonLines(hex, perRow) {
+                if (!hex && hex !== '') return '';
+                var rawTrim = String(hex || '').toString().trim();
+                var lower = rawTrim.toLowerCase();
+                if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                var s = rawTrim.replace(/\s+/g, '');
+                s = s.replace(/^0x/i, '');
+                var pairs = s.match(/.{1,2}/g) || [];
+                var lines = [];
+                for (var i = 0; i < pairs.length; i += perRow) {
+                    lines.push(pairs.slice(i, i + perRow).join(':'));
+                }
+                return lines.join('\n');
+            }
+
+            $("#creationData_attestationObject").text(sanitizeForDisplay(hexToColonLines(credential.creationData.attestationObject, bytesPerRow)));
+            $("#creationData_clientDataJSON").text(sanitizeForDisplay(credential.creationData.clientDataJSON));
+            $("#creationData_authenticatorDataHex").text(sanitizeForDisplay(hexToColonLines(credential.creationData.authenticatorDataHex, bytesPerRow)));
+            $("#creationData_publicKeyType").text(sanitizeForDisplay(publicKeyType));
+            $("#creationData_publicKeyCbor").text(sanitizeForDisplay(hexToColonLines(credential.creationData.publicKeyHex, bytesPerRow)));
+            $("#creationData_extensionData").text(sanitizeForDisplay(hexToColonLines(credential.creationData.extensionDataHex, bytesPerRow)));
+        } catch (e) {
+            // fallback to original raw values if formatting fails
+            $("#creationData_attestationObject").text(sanitizeForDisplay(credential.creationData.attestationObject));
+            $("#creationData_clientDataJSON").text(sanitizeForDisplay(credential.creationData.clientDataJSON));
+            $("#creationData_authenticatorDataHex").text(sanitizeForDisplay(credential.creationData.authenticatorDataHex));
+            $("#creationData_publicKeyType").text(sanitizeForDisplay(publicKeyType));
+            $("#creationData_publicKeyCbor").text(sanitizeForDisplay(credential.creationData.publicKeyHex));
+            $("#creationData_extensionData").text(sanitizeForDisplay(credential.creationData.extensionDataHex));
+        }
+    })();
         // Hide DECODE button if there's no extension data
         try {
             var creationExtText = (credential.creationData.extensionDataHex || '').toString().trim();
@@ -1346,9 +1476,46 @@ try {
                 else btn.style.display = 'inline-block';
             }
         } catch (e) { /* non-fatal */ }
-        $("#creationData_residentKey").text(credential.metadata.residentKey);
-        $("#creationData_PRF_First").text(credential.creationData.prfFirst);
-        $("#creationData_PRF_Second").text(credential.creationData.prfSecond);
+    $("#creationData_residentKey").text(sanitizeForDisplay(credential.metadata.residentKey));
+    $("#creationData_PRF_First").text(sanitizeForDisplay(credential.creationData.prfFirst));
+    $("#creationData_PRF_Second").text(sanitizeForDisplay(credential.creationData.prfSecond));
+
+        // Show/hide copy buttons depending on whether the corresponding field has content
+        try {
+            ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* non-fatal */ }
+
+        // Ensure copy buttons copy the original raw (unformatted) hex when applicable
+        try {
+            // Map span id -> raw value
+            function normalizeHex(h) {
+                if (h === undefined || h === null) return '';
+                var rawTrim = String(h || '').toString().trim();
+                var lower = rawTrim.toLowerCase();
+                if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                var s = rawTrim.replace(/\s+/g, '');
+                s = s.replace(/^0x/i, '');
+                // If non-hex characters present, just return original trimmed string
+                if (!/^[0-9a-fA-F]*$/.test(s)) return rawTrim;
+                return s.toUpperCase();
+            }
+
+            const rawMap = {
+                'creationData_authenticatorDataHex': normalizeHex(credential.creationData.authenticatorDataHex || ''),
+                'creationData_extensionData': normalizeHex(credential.creationData.extensionDataHex || ''),
+                'creationData_publicKeyCbor': normalizeHex(credential.creationData.publicKeyHex || ''),
+                'creationData_attestationObject': normalizeHex(credential.creationData.attestationObject || '')
+            };
+            Object.keys(rawMap).forEach(spanId => {
+                const btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
+                Array.from(btns).forEach(b => {
+                    try { b.setAttribute('data-copy-raw', rawMap[spanId]); } catch (e) { /* ignore */ }
+                });
+                // Also store the raw value on the target element so other code can access it if needed
+                const el = document.getElementById(spanId);
+                if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
+            });
+        } catch (e) { /* ignore */ }
 
         // Note: Certificate viewing is handled per-credential on the main page
 
@@ -1366,7 +1533,10 @@ try {
             if(!targetSpan) return;
             var el = document.getElementById(targetSpan);
             if(!el) { toast('CBOR input not available'); return; }
-            var raw = el.textContent || el.innerText || '';
+            // Prefer raw unformatted value stored on the element (data-raw)
+            var raw = '';
+            try { raw = el.getAttribute && el.getAttribute('data-raw'); } catch (e) { raw = null; }
+            if (!raw) raw = el.textContent || el.innerText || '';
             if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
             // Encode the raw value as URI component; cbor.html will detect hex/base64
             var u = './cbor.html?input=' + encodeURIComponent(raw.trim());
@@ -1378,11 +1548,32 @@ try {
     });
 
     // Generic copy-to-clipboard handler (delegated)
+    // Supports two modes:
+    // - data-copy-text (existing): copies literal text stored on the button
+    // - data-copy-span (new): treats the value as an element id and copies that element's textContent
     $(document).on('click', '.copy-to-clipboard', async function(e){
         e.preventDefault();
         try {
-            var text = this.getAttribute('data-copy-text') || '';
+            var text = '';
             var label = this.getAttribute('data-copy-label') || 'Value';
+            // Prefer explicit raw attribute when available (unformatted hex)
+            var explicitRaw = this.getAttribute('data-copy-raw');
+            if (explicitRaw) text = explicitRaw;
+            var spanId = this.getAttribute('data-copy-span');
+            if (spanId) {
+                var el = document.getElementById(spanId);
+                if (el) {
+                    // Prefer textContent for pre/span elements
+                    // If the element stores a raw unformatted value in data-raw prefer it
+                    var elRaw = el.getAttribute && el.getAttribute('data-raw');
+                    if (!text && elRaw) text = elRaw;
+                    if (!text) text = (el.textContent !== undefined) ? el.textContent : (el.innerText || '');
+                }
+            }
+            if (!text) {
+                // fallback to data-copy-text attribute
+                text = this.getAttribute('data-copy-text') || '';
+            }
             if(!text) return toast('No ' + label + ' to copy');
             try {
                 await navigator.clipboard.writeText(text);
@@ -1406,6 +1597,8 @@ try {
             }
         } catch (err) { console.error(err); toast('Copy failed'); }
     });
+
+    // (copied-badge helper removed)
 
     /**
      * Recursively searches a decoded CBOR value for x5c key and returns the first found array of byte strings
@@ -1486,6 +1679,13 @@ try {
                     fingerprintSHA256 = h; // plain, no colons
                     fingerprintSHA256Colon = h.match(/.{1,2}/g).join(':');
                 } catch (e) { /* ignore digest errors */ }
+
+                // Extract subjectPublicKey raw bytes (hex) when available
+                let publicKeyHex = null;
+                try {
+                    const spkVal = cert.subjectPublicKeyInfo && cert.subjectPublicKeyInfo.subjectPublicKey && cert.subjectPublicKeyInfo.subjectPublicKey.valueBlock && cert.subjectPublicKeyInfo.subjectPublicKey.valueBlock.valueHex;
+                    if (spkVal) publicKeyHex = pvtsutils.Convert.ToHex(spkVal).toUpperCase();
+                } catch (e) { /* ignore */ }
 
                 // Determine public key algorithm and size
                 let publicKey = { algorithm: cert.subjectPublicKeyInfo.algorithm.algorithmId || null, size: null };
@@ -1662,6 +1862,7 @@ try {
                     pem: convertToPEM(ab),
                     fingerprintSHA256,
                     fingerprintSHA256Colon,
+                    publicKeyHex,
                     publicKey,
                     extensions
                 };
@@ -1715,12 +1916,20 @@ try {
             html += '<div><b>Certificate ' + (idx+1) + '</b></div>';
             html += '<div><small><b>Subject:</b> ' + escapeHtml(formatName(c.subject || [])) + '</small></div>';
             html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
-            html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + '</small></div>';
+            html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + ' <button class="mdl-button cert-copy-serial" data-idx="' + idx + '" title="Copy serial"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
             html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
             if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
                 const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
-                html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</small></div>';
+                // Build inline Public Key line: label, summary, copy button and toggle
+                let copyBtn = c.publicKeyHex ? '<button class="mdl-button cert-copy-publickey" data-idx="' + idx + '" title="Copy public key (hex)"><i class="material-icons" aria-hidden="true">content_copy</i></button>' : '';
+                // Use same base classes as other inline MDL buttons so styling is consistent
+                let toggleBtn = c.publicKeyHex ? '<button class="mdl-button mdl-js-button mdl-js-ripple-effect public-key-toggle" aria-expanded="false" title="Show public key"><i class="material-icons" aria-hidden="true">expand_more</i>&nbsp;Show</button>' : '';
+                html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + copyBtn + toggleBtn + '</small></div>';
+                // Public key block (collapsed by default) contains only the code element
+                if (c.publicKeyHex) {
+                    html += '<div class="public-key-block collapsed"><code class="public-key-hex" data-public-key-raw="' + escapeHtml(c.publicKeyHex) + '"></code></div>';
+                }
             }
             // Extensions
             if (c.extensions) {
@@ -1773,10 +1982,14 @@ try {
 
     html += '</div>'; // end content
     // dialog actions/footer: Download Chain on left, Close on right
-    // Render buttons as direct siblings and push Close to the right using margin-left:auto
+    // Wrap buttons in left/right containers so CSS ordering is deterministic
     html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar">';
+    html += '<div class="cert-actions-left">';
     html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
+    html += '</div>';
+    html += '<div class="cert-actions-right">';
     html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x">Close</button>';
+    html += '</div>';
     html += '</div>';
     dlg.innerHTML = html;
 
@@ -1810,6 +2023,23 @@ try {
 
         // Upgrade MDL components inside dialog before wiring handlers
         try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch (e) { /* ignore */ }
+
+        // Safety: MDL may re-order or re-insert DOM nodes during upgrade. Ensure
+        // our footer left/right containers are in the expected order so Close
+        // stays on the right. This is idempotent and harmless if nodes already
+        // in place.
+        try {
+            const footer = dlg.querySelector('.cert-dialog-actions');
+            if (footer) {
+                const left = footer.querySelector('.cert-actions-left');
+                const right = footer.querySelector('.cert-actions-right');
+                if (left && right) {
+                    // append left then right to enforce visual order
+                    footer.appendChild(left);
+                    footer.appendChild(right);
+                }
+            }
+        } catch (e) { /* ignore */ }
 
         // Attach per-cert button handlers
         dlg.querySelectorAll('.cert-download-pem').forEach(btn => {
@@ -1892,6 +2122,125 @@ try {
             });
         });
 
+        // Copy serial handlers
+        dlg.querySelectorAll('.cert-copy-serial').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert || !cert.serialNumber) return;
+                try {
+                    await navigator.clipboard.writeText(cert.serialNumber);
+                    toast('Serial copied to clipboard');
+                } catch (err) {
+                    // fallback
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.serialNumber;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('Serial copied to clipboard (fallback)');
+                    } catch (err2) {
+                        toast('Copy failed');
+                    }
+                }
+            });
+        });
+
+        // Copy public key (hex) handlers
+        dlg.querySelectorAll('.cert-copy-publickey').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert || !cert.publicKeyHex) return;
+                try {
+                    await navigator.clipboard.writeText(cert.publicKeyHex);
+                    toast('Public key (hex) copied to clipboard');
+                } catch (err) {
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = cert.publicKeyHex;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        toast('Public key (hex) copied to clipboard (fallback)');
+                    } catch (err2) { toast('Copy failed'); }
+                }
+            });
+        });
+
+        // Render public key blocks responsively: 16-byte rows on narrow screens,
+        // 32-byte rows on wider screens. We use the raw hex kept in a data attribute.
+        const pkRender = () => {
+            const blocks = dlg.querySelectorAll('.public-key-hex');
+            const width = dlg.getBoundingClientRect().width || window.innerWidth;
+            const bytesPerRow = (width >= 900) ? 32 : 16; // 32 pairs vs 16 pairs
+            blocks.forEach(el => {
+                const raw = el.getAttribute('data-public-key-raw') || '';
+                const pairs = (raw.match(/.{1,2}/g) || []);
+                const lines = [];
+                for (let i = 0; i < pairs.length; i += bytesPerRow) {
+                    lines.push(pairs.slice(i, i + bytesPerRow).join(':'));
+                }
+                el.textContent = lines.join('\n');
+            });
+        };
+
+        // Debounced resize handler
+        let pkResizeTimer = null;
+        const onPkResize = () => {
+            clearTimeout(pkResizeTimer);
+            pkResizeTimer = setTimeout(pkRender, 120);
+        };
+        // Initial render
+        try { pkRender(); } catch (e) { /* ignore */ }
+        window.addEventListener('resize', onPkResize);
+
+        // Wire up public key toggle buttons (collapsed by default). The toggle
+        // is rendered inline inside the small label div and the actual
+        // .public-key-block is the following sibling div, so we locate it
+        // dynamically.
+        dlg.querySelectorAll('.public-key-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // parent div that wraps the <small> containing the toggle
+                const parentDiv = btn.closest('div');
+                let block = parentDiv ? parentDiv.nextElementSibling : null;
+                // fallback: look for a .public-key-block inside the same cert-card
+                if (!block || !block.classList || !block.classList.contains('public-key-block')) {
+                    const card = btn.closest('.cert-card');
+                    if (card) block = card.querySelector('.public-key-block');
+                }
+                if (!block) return;
+                const expanded = btn.getAttribute('aria-expanded') === 'true';
+                if (expanded) {
+                    // collapse
+                    block.classList.add('collapsed');
+                    btn.setAttribute('aria-expanded', 'false');
+                    // update button content to 'Show'
+                    btn.innerHTML = '<i class="material-icons" aria-hidden="true">expand_more</i>&nbsp;Show';
+                } else {
+                    // expand
+                    block.classList.remove('collapsed');
+                    btn.setAttribute('aria-expanded', 'true');
+                    btn.innerHTML = '<i class="material-icons" aria-hidden="true">expand_less</i>&nbsp;Hide';
+                    // Render after expansion
+                    try { pkRender(); } catch (e) { /* ignore */ }
+                }
+            });
+        });
+
+        // Cleanup when dialog closes
+        const cleanupPk = () => {
+            window.removeEventListener('resize', onPkResize);
+            clearTimeout(pkResizeTimer);
+        };
+
         if (!dlg.showModal) dialogPolyfill.registerDialog(dlg);
         dlg.showModal();
         // Move keyboard focus to Close button for accessibility
@@ -1900,7 +2249,12 @@ try {
                 closeBtn.setAttribute('tabindex', '0');
                 closeBtn.focus();
             }
-        } catch (e) { /* ignore focus errors */ }
+        } catch (e) { }
+
+        // Ensure we cleanup when the dialog is closed
+        try {
+            dlg.addEventListener('close', cleanupPk, { once: true });
+        } catch (e) { /* ignore */ }
     }
 
     function escapeHtml(str) {
@@ -1908,30 +2262,128 @@ try {
     }
 
     /**
-     * UI: Displays a modal with authentication data for a credential
+     * Helper: sanitize displayed values by omitting sentinel strings
+     * such as 'none' or 'No extension data'. Returns an empty string
+     * when the input is a sentinel or empty; otherwise returns the
+     * trimmed string.
+     * @param {any} v
+     */
+    function sanitizeForDisplay(v) {
+        if (v === undefined || v === null) return '';
+        var s = String(v).toString().trim();
+        var lower = s.toLowerCase();
+        if (!s || lower === 'no extension data' || lower === 'none') return '';
+        return s;
+    }
+
+    /**
+     * Show or hide copy button(s) that reference a span id via data-copy-span
+     * @param {string} spanId id of the element whose text determines visibility
+     */
+    function updateCopyButtonVisibility(spanId) {
+        try {
+            var el = document.getElementById(spanId);
+            var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
+            var raw = el ? (el.textContent || el.innerText || '') : '';
+            var text = raw ? raw.toString().trim() : '';
+            var lower = text.toLowerCase();
+            // Treat explicit 'no extension data' and 'none' as empty values
+            var visible = !!text && lower !== 'no extension data' && lower !== 'none';
+            Array.from(btns).forEach(b => { b.style.display = visible ? '' : 'none'; });
+        } catch (e) { /* ignore */ }
+    }
+
+    /**
+     * UI: Displays a modal with authentication Summary for a credential
      * @param {string} id id of credental to display 
      */
     function showAuthenticationData(id) {
         var credential = credentials.find(c => c.id === id);
 
-        $("#authenticationData_userHandleHex").text(credential.authenticationData.userHandleHex);
-        $("#authenticationData_authenticatorDataHex").text(credential.authenticationData.authenticatorDataHex);
-        $("#authenticationData_extensionData").text(credential.authenticationData.extensionDataHex);
+        // Render hex blobs nicely (colon-separated pairs, multi-line) similar to certificates view
+        (function renderAuthHex() {
+            try {
+                var dlg = document.getElementById('authenticationDataDialog');
+                var dlgWidth = (dlg && dlg.getBoundingClientRect) ? (dlg.getBoundingClientRect().width || window.innerWidth) : window.innerWidth;
+                var bytesPerRow = (dlgWidth >= 900) ? 32 : 16;
+
+                function hexToColonLines(hex, perRow) {
+                    if (!hex && hex !== '') return '';
+                    var rawTrim = String(hex || '').toString().trim();
+                    var lower = rawTrim.toLowerCase();
+                    // Treat explicit sentinel strings as empty (do not format)
+                    if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                    var s = rawTrim.replace(/\s+/g, '');
+                    s = s.replace(/^0x/i, '');
+                    var pairs = s.match(/.{1,2}/g) || [];
+                    var lines = [];
+                    for (var i = 0; i < pairs.length; i += perRow) lines.push(pairs.slice(i, i + perRow).join(':'));
+                    return lines.join('\n');
+                }
+
+                $("#authenticationData_userHandleHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.userHandleHex, bytesPerRow)));
+                $("#authenticationData_authenticatorDataHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.authenticatorDataHex, bytesPerRow)));
+                $("#authenticationData_extensionData").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.extensionDataHex, bytesPerRow)));
+                // Also format signature and PRF values as colon-separated hex for readability
+                $("#authenticationData_signatureHex").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.signatureHex, bytesPerRow)));
+                $("#authenticationData_PRF_First").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.prfFirst, bytesPerRow)));
+                $("#authenticationData_PRF_Second").text(sanitizeForDisplay(hexToColonLines(credential.authenticationData.prfSecond, bytesPerRow)));
+            } catch (e) {
+                $("#authenticationData_userHandleHex").text(sanitizeForDisplay(credential.authenticationData.userHandleHex));
+                $("#authenticationData_authenticatorDataHex").text(sanitizeForDisplay(credential.authenticationData.authenticatorDataHex));
+                $("#authenticationData_extensionData").text(sanitizeForDisplay(credential.authenticationData.extensionDataHex));
+                $("#authenticationData_signatureHex").text(sanitizeForDisplay(credential.authenticationData.signatureHex));
+                $("#authenticationData_PRF_First").text(sanitizeForDisplay(credential.authenticationData.prfFirst));
+                $("#authenticationData_PRF_Second").text(sanitizeForDisplay(credential.authenticationData.prfSecond));
+            }
+        })();
         // Hide DECODE button if there's no extension data
         try {
             var authExtText = (credential.authenticationData.extensionDataHex || '').toString().trim();
+            var authExtLower = authExtText.toLowerCase();
             var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]');
             if (btn2) {
-                if (!authExtText || authExtText === 'No extension data') btn2.style.display = 'none';
+                if (!authExtText || authExtLower === 'no extension data' || authExtLower === 'none') btn2.style.display = 'none';
                 else btn2.style.display = 'inline-block';
             }
         } catch (e) { /* non-fatal */ }
-        $("#authenticationData_clientDataJSON").text(credential.authenticationData.clientDataJSON);
-        $("#authenticationData_signatureHex").text(credential.authenticationData.signatureHex);
-        $("#authenticationData_authenticatorAttachment").text(credential.authenticationData.authenticatorAttachment);
-        $("#authenticationData_PRF_First").text(credential.authenticationData.prfFirst);
-        $("#authenticationData_PRF_Second").text(credential.authenticationData.prfSecond);
+    $("#authenticationData_clientDataJSON").text(sanitizeForDisplay(credential.authenticationData.clientDataJSON));
+    $("#authenticationData_authenticatorAttachment").text(sanitizeForDisplay(credential.authenticationData.authenticatorAttachment));
+        var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
+        // Show/hide copy buttons depending on whether the corresponding field has content
+        try {
+            ['authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* non-fatal */ }
 
+        // Ensure copy buttons copy the original raw (unformatted) hex when applicable
+        try {
+            function normalizeHex(h) {
+                if (h === undefined || h === null) return '';
+                var rawTrim = String(h || '').toString().trim();
+                var lower = rawTrim.toLowerCase();
+                if (!rawTrim || lower === 'no extension data' || lower === 'none') return '';
+                var s = rawTrim.replace(/\s+/g, '');
+                s = s.replace(/^0x/i, '');
+                if (!/^[0-9a-fA-F]*$/.test(s)) return rawTrim;
+                return s.toUpperCase();
+            }
+            const rawMap = {
+                'authenticationData_userHandleHex': normalizeHex(credential.authenticationData.userHandleHex || ''),
+                'authenticationData_authenticatorDataHex': normalizeHex(credential.authenticationData.authenticatorDataHex || ''),
+                'authenticationData_extensionData': normalizeHex(credential.authenticationData.extensionDataHex || ''),
+                'authenticationData_signatureHex': normalizeHex(credential.authenticationData.signatureHex || ''),
+                'authenticationData_PRF_First': normalizeHex(credential.authenticationData.prfFirst || ''),
+                'authenticationData_PRF_Second': normalizeHex(credential.authenticationData.prfSecond || '')
+            };
+            Object.keys(rawMap).forEach(spanId => {
+                const btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
+                Array.from(btns).forEach(b => {
+                    try { b.setAttribute('data-copy-raw', rawMap[spanId]); } catch (e) { /* ignore */ }
+                });
+                const el = document.getElementById(spanId);
+                if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
+            });
+        } catch (e) { /* ignore */ }
 
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         authenticationDataDialog.showModal();
