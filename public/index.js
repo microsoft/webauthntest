@@ -1612,7 +1612,9 @@ try {
                 'creationData_authenticatorDataHex': normalizeHex(credential.creationData.authenticatorDataHex || ''),
                 'creationData_extensionData': normalizeHex(credential.creationData.extensionDataHex || ''),
                 'creationData_publicKeyCbor': normalizeHex(credential.creationData.publicKeyHex || ''),
-                'creationData_attestationObject': normalizeHex(credential.creationData.attestationObject || '')
+                'creationData_attestationObject': normalizeHex(credential.creationData.attestationObject || ''),
+                // ClientDataJSON is typically JSON text rather than raw hex; store the sanitized text so copy buttons can use it
+                'creationData_clientDataJSON': (credential.creationData.clientDataJSON || '').toString().trim()
             };
             Object.keys(rawMap).forEach(spanId => {
                 const btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
@@ -1623,6 +1625,10 @@ try {
                 const el = document.getElementById(spanId);
                 if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
             });
+            // Re-evaluate copy button visibility now that we've set data-copy-raw / data-raw for the fields
+            try {
+                ['creationData_clientDataJSON'].forEach(id => updateCopyButtonVisibility(id));
+            } catch (e) { /* ignore */ }
         } catch (e) { /* ignore */ }
 
         // Note: Certificate viewing is handled per-credential on the main page
