@@ -1477,9 +1477,15 @@ try {
                     function apply() {
                         try {
                             if (isPlainText) {
+                                // Ensure plaintext pre blocks wrap
+                                try { el.classList.add('hex-plain-wrap'); } catch(e) {}
+                                try { el.classList.remove('hex-mono'); } catch(e) {}
                                 // use raw text without hex formatting
                                 el.textContent = sanitizeForDisplay(hexValue || '');
                                 return;
+                            } else {
+                                try { el.classList.remove('hex-plain-wrap'); } catch(e) {}
+                                try { el.classList.add('hex-mono'); } catch(e) {}
                             }
                             var per = computeBytesPerRowForElement(el);
                             var formatted = sanitizeForDisplay(hexToColonLines(hexValue, per));
@@ -2504,8 +2510,15 @@ try {
             function apply() {
                 try {
                     if (isPlainText) {
+                        // Ensure plaintext pre blocks wrap
+                        try { el.classList.add('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.remove('hex-mono'); } catch (e) {}
                         el.textContent = sanitizeForDisplay(hexValue || '');
                         return;
+                    } else {
+                        // Ensure hex non-wrapping class present
+                        try { el.classList.remove('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.add('hex-mono'); } catch (e) {}
                     }
                     var per = computeBytesPerRowForElement(el);
                     el.textContent = sanitizeForDisplay(hexToColonLinesLocal(hexValue, per));
@@ -2545,7 +2558,15 @@ try {
 
             function apply() {
                 try {
-                    if (isPlainText) { el.textContent = sanitizeForDisplay(hexValue || ''); return; }
+                    if (isPlainText) {
+                        try { el.classList.add('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.remove('hex-mono'); } catch (e) {}
+                        el.textContent = sanitizeForDisplay(hexValue || '');
+                        return;
+                    } else {
+                        try { el.classList.remove('hex-plain-wrap'); } catch (e) {}
+                        try { el.classList.add('hex-mono'); } catch (e) {}
+                    }
                     var per = computeBytesPerRowForElement(el);
                     el.textContent = sanitizeForDisplay(hexToColonLinesLocal(hexValue, per));
                 } catch (e) { el.textContent = sanitizeForDisplay(hexValue || ''); }

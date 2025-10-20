@@ -908,6 +908,14 @@ a {
   overflow-wrap: normal !important;
 }
 
+/* Plaintext pre blocks (e.g., Client Data JSON) should wrap instead of producing horizontal scrollbars */
+.hex-plain-wrap {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  overflow-x: hidden !important;
+}
+
 /* Stronger rule for hex displays inside registration dialogs to avoid accidental wrapping
    when .mono or .reg-data-list rules try to apply pre-wrap. This ensures the computed
    bytes-per-row can render without being reflowed onto multiple visual lines. */
