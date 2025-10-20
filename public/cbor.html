@@ -215,10 +215,59 @@
         });
     inputEl.addEventListener('paste', ()=>{ setTimeout(render, 0); });
 
-    // If caller passed ?input=... then populate and auto-decode
+    // If caller requested postMessage handshake (?pm=1), participate in handshake.
+    // Otherwise if caller passed ?key=... (sessionStorage key) or ?input=... then populate and auto-decode
     (function(){
         try {
             const params = new URLSearchParams(window.location.search);
+            const pm = params.get('pm');
+            const nonceParam = params.get('nonce');
+            if(pm && window.opener){
+                // Ask opener for payload: send a 'cbor-ready' message including the nonce.
+                try {
+                    // Send ready message to opener with nonce (if provided)
+                    window.opener.postMessage({ type: 'cbor-ready', nonce: nonceParam || null }, window.location.origin);
+                } catch(e) { console.warn('Unable to post cbor-ready to opener', e); }
+                // Listen for payload
+                function onMsg(ev){
+                    try {
+                        if(ev.origin !== window.location.origin) return;
+                        // allow messages from opener only
+                        if(ev.source !== window.opener) return;
+                        const d = ev.data || {};
+                        // verify nonce matches (if provided) to avoid hijacking
+                        if(d && d.type === 'cbor-payload' && typeof d.payload === 'string'){
+                            if(nonceParam && d.nonce !== nonceParam){ console.warn('Received cbor-payload with mismatched nonce'); return; }
+                            inputEl.value = d.payload;
+                            fmtEl.textContent = detectFormat(inputEl.value) || '';
+                            // Auto-run decode after short delay to allow UI to settle
+                            setTimeout(render, 50);
+                            // cleanup
+                            try { window.removeEventListener('message', onMsg); } catch(e){}
+                        }
+                    } catch(e){ console.warn('Error handling incoming cbor-payload', e); }
+                }
+                window.addEventListener('message', onMsg);
+                // If opener doesn't respond, we fall back to key/input handling below when appropriate
+            }
+
+            const key = params.get('key');
+            if(key) {
+                try {
+                    const stored = sessionStorage.getItem(key);
+                    if(stored) {
+                        inputEl.value = stored;
+                        // remove stored payload to avoid leaking large data across sessions
+                        try { sessionStorage.removeItem(key); } catch(e) { /* ignore */ }
+                        fmtEl.textContent = detectFormat(inputEl.value) || '';
+                        setTimeout(render, 50);
+                        return;
+                    }
+                } catch(e) {
+                    // If sessionStorage read fails, we'll fall back to input param below
+                    console.warn('Failed to read sessionStorage key for CBOR payload', e);
+                }
+            }
             const inp = params.get('input');
             if(inp) {
                 // decodeURIComponent was used by index.js, but accept raw too

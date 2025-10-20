@@ -1534,13 +1534,66 @@ try {
             var el = document.getElementById(targetSpan);
             if(!el) { toast('CBOR input not available'); return; }
             // Prefer raw unformatted value stored on the element (data-raw)
-            var raw = '';
+            var raw = null;
             try { raw = el.getAttribute && el.getAttribute('data-raw'); } catch (e) { raw = null; }
             if (!raw) raw = el.textContent || el.innerText || '';
             if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
-            // Encode the raw value as URI component; cbor.html will detect hex/base64
-            var u = './cbor.html?input=' + encodeURIComponent(raw.trim());
-            window.open(u, '_blank');
+            raw = raw.trim();
+            // Try postMessage handshake first. Open cbor.html with a pm flag and a nonce so the child posts a 'cbor-ready' message back including the nonce.
+            try {
+                var nonce = Math.random().toString(36).slice(2,12);
+                var child = window.open('./cbor.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
+                if(!child) throw new Error('Popup blocked');
+                var handshakeDone = false;
+                var replyListener = function(ev){
+                    try {
+                        // only accept messages from same origin and from the opened window
+                        if(ev.origin !== window.location.origin) return;
+                        if(ev.source !== child) return;
+                        var d = ev.data || {};
+                        // require nonce match to avoid message hijacking
+                        if(d && d.type === 'cbor-ready' && d.nonce === nonce){
+                            // Child is ready and nonce matches; send payload along with nonce
+                            try { child.postMessage({ type: 'cbor-payload', nonce: nonce, payload: raw }, window.location.origin); } catch(e) { console.warn('postMessage failed', e); }
+                            handshakeDone = true;
+                            window.removeEventListener('message', replyListener);
+                        }
+                    } catch(e) { console.warn('handshake listener error', e); }
+                };
+                window.addEventListener('message', replyListener);
+                // Wait up to 10000ms for handshake; if not completed, fallback to sessionStorage/key method
+                setTimeout(function(){
+                    if(handshakeDone) return;
+                    try { window.removeEventListener('message', replyListener); } catch(e){}
+                    // Try sessionStorage fallback: store payload and open playground with key
+                    try {
+                        var key = 'cbor_payload_' + Math.random().toString(36).slice(2,10);
+                        sessionStorage.setItem(key, raw);
+                        // If possible, try to navigate the already opened child to the key URL; otherwise open a new tab
+                        try {
+                            if(child && !child.closed) child.location.href = './cbor.html?key=' + encodeURIComponent(key);
+                            else window.open('./cbor.html?key=' + encodeURIComponent(key), '_blank');
+                        } catch(navErr){ window.open('./cbor.html?key=' + encodeURIComponent(key), '_blank'); }
+                    } catch(storageErr){
+                        // Last resort: fall back to query param (may fail for large payloads)
+                        try { window.open('./cbor.html?input=' + encodeURIComponent(raw), '_blank'); } catch(e){ console.error('All transfer methods failed', e); toast('Failed to open CBOR playground'); }
+                    }
+                }, 1500);
+                return;
+            } catch(pmErr){
+                // Popup blocked or other error; fall back to sessionStorage-based approach
+                console.warn('postMessage/open failed, falling back', pmErr);
+                try {
+                    var key2 = 'cbor_payload_' + Math.random().toString(36).slice(2,10);
+                    sessionStorage.setItem(key2, raw);
+                    window.open('./cbor.html?key=' + encodeURIComponent(key2), '_blank');
+                    return;
+                } catch(storageErr2){
+                    console.warn('sessionStorage fallback failed, falling back to query param', storageErr2);
+                    try { window.open('./cbor.html?input=' + encodeURIComponent(raw), '_blank'); } catch(e){ console.error('All transfer methods failed', e); toast('Failed to open CBOR playground'); }
+                    return;
+                }
+            }
         } catch (err) {
             console.error('Failed to open CBOR playground', err);
             toast('Failed to open CBOR playground');
