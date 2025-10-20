@@ -1313,7 +1313,7 @@ try {
     html += '         </span>';
     html += '         </div>';
         html += '         <dl class="reg-data-list">';
-        html += '             <dt>Authenticator Data</dt><dd>' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</dd>';
+    html += '             <dt>Authenticator Data</dt><dd><span class="mono">' + escapeHtml(credential.authenticationData.authenticatorDataSummary || '') + '</span></dd>';
         html += '         </dl>';
         html += '     </div>';
         html += ' </div>';
