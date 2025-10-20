@@ -55,10 +55,28 @@ try {
             dialogPolyfill.registerDialog(creationDataDialog);
         }
 
+        // Cleanup observers/listeners when creation dialog closes
+        try {
+            creationDataDialog.addEventListener('close', function cleanupCreationDialog() {
+                try {
+                    cleanupHexObserversForElements(['creationData_publicKeyCbor','creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second']);
+                } catch (e) { /* non-fatal */ }
+            });
+        } catch (e) { /* ignore */ }
+
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         if (!authenticationDataDialog.showModal) {
             dialogPolyfill.registerDialog(authenticationDataDialog);
         }
+
+        // Cleanup observers/listeners when authentication dialog closes
+        try {
+            authenticationDataDialog.addEventListener('close', function cleanupAuthenticationDialog() {
+                try {
+                    cleanupHexObserversForElements(['authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second']);
+                } catch (e) { /* non-fatal */ }
+            });
+        } catch (e) { /* ignore */ }
 
         var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
         if (updateTransportsDialog && !updateTransportsDialog.showModal) {
@@ -1497,7 +1515,7 @@ try {
                     // newly attached callback uses the current `apply` closure and current value.
                     try {
                         if (typeof ResizeObserver !== 'undefined') {
-                            try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
+                        try { if (el.id) cleanupHexObserversForElements([el.id]); else { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } } catch (e) {}
                             var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                             ro.observe(el);
                             if (el.parentElement) ro.observe(el.parentElement);
@@ -2379,6 +2397,29 @@ try {
     }
 
     /**
+     * Helper: disconnect any stored ResizeObserver and remove resize listener
+     * for the provided element ids. Used to centralize cleanup logic.
+     * @param {Array<string>} spanIds
+     */
+    function cleanupHexObserversForElements(spanIds) {
+        try {
+            if (!Array.isArray(spanIds)) return;
+            spanIds.forEach(function(spanId) {
+                try {
+            var el = document.getElementById(spanId);
+            if (!el) return;
+            try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
+            try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch (e) {}
+            // Also clear any data-raw attribute on the element used for copy
+            try { if (el.removeAttribute) el.removeAttribute('data-raw'); } catch (e) {}
+                    // Clear textual content to avoid leftovers
+                    try { el.textContent = ''; } catch (e) { try { el.innerText = ''; } catch (e) {} }
+                } catch (e) { /* ignore per-element */ }
+            });
+        } catch (e) { /* non-fatal */ }
+    }
+
+    /**
      * Normalize a hex-like string to an uppercase contiguous hex string (no 0x, no spaces).
      * Returns empty string for sentinel values or non-hex input.
      */
@@ -2533,9 +2574,11 @@ try {
             apply();
             try {
                 if (typeof ResizeObserver !== 'undefined') {
-                    // If a previous observer exists for this element, disconnect it so the
-                    // new observer's callback (which closes over the current `apply`) is used.
-                    try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
+                    // Ensure any previous observer/listener is cleaned up before attaching a new one.
+                    try {
+                        if (el.id) cleanupHexObserversForElements([el.id]);
+                        else { try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {} }
+                    } catch (e) {}
                     var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                     ro.observe(el);
                     if (el.parentElement) ro.observe(el.parentElement);
@@ -2588,7 +2631,7 @@ try {
             apply();
             try {
                 if (typeof ResizeObserver !== 'undefined') {
-                    try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch (e) {}
+                    try { if (el.id) cleanupHexObserversForElements([el.id]); else { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } } catch (e) {}
                     var ro = new ResizeObserver(debounce(function () { apply(); }, 120));
                     ro.observe(el);
                     if (el.parentElement) ro.observe(el.parentElement);
