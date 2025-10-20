@@ -1284,12 +1284,13 @@ try {
         html += '         <dl class="reg-data-list">';
     // Render Credential ID as a mono block (formatted hex with copy button) to match other hex displays
     var credIdSpanId = 'credentialId_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
+    var aaguidSpanId = 'aaguid_' + (credential.idHex || '').replace(/[^0-9a-zA-Z_-]/g, '');
     // Render a placeholder pre for the credential id; we'll format it after insertion based on element width
     html += '             <dt>Credential ID</dt><dd>';
     html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
     html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
     html += '</div></dd>';
-        html += '             <dt>AAGUID</dt><dd><span class="credential-id">' + escapeHtml(credential.creationData.aaguid || '') + '</span> <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-text="' + escapeHtml(credential.creationData.aaguid || '') + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></dd>';
+        html += '             <dt>AAGUID</dt><dd><div class="mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></div></div></dd>';
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
@@ -1345,7 +1346,25 @@ try {
                 updateCopyButtonVisibility(credIdSpanId);
                 var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + credIdSpanId + '"]');
                 Array.from(btns).forEach(b => { try { b.setAttribute('data-copy-raw', rawNormalized); } catch (e) {} });
+                // Re-evaluate visibility after buttons have data-copy-raw set
+                try { updateCopyButtonVisibility(credIdSpanId); } catch (e) {}
             }
+            // Wire up AAGUID mono-block similar to credential id
+            try {
+                var aaguidEl = document.getElementById(aaguidSpanId);
+                if (aaguidEl) {
+                    var aaguidRaw = normalizeHexForRaw(credential.creationData.aaguid || '');
+                    try { aaguidEl.setAttribute('data-raw', aaguidRaw); } catch (e) {}
+                    // Render AAGUID as contiguous hex (no colon separators). Treat as plain text
+                    // so the responsive helper does not insert colon-separated formatting.
+                    try { attachResponsiveHex(aaguidSpanId, credential.creationData.aaguid, true); } catch (e) { /* ignore */ }
+                    updateCopyButtonVisibility(aaguidSpanId);
+                    var aBtns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + aaguidSpanId + '"]');
+                    Array.from(aBtns).forEach(b => { try { b.setAttribute('data-copy-raw', aaguidRaw); } catch (e) {} });
+                    // Ensure visibility is recalculated after data-copy-raw is wired
+                    try { updateCopyButtonVisibility(aaguidSpanId); } catch (e) {}
+                }
+            } catch (e) { /* non-fatal */ }
         } catch (e) { /* non-fatal */ }
 
         // Wire up collapse/expand toggle for the registration details just added
@@ -1491,6 +1510,11 @@ try {
                 try {
                     var el = document.getElementById(elementId);
                     if (!el) return;
+                    // Store an unformatted raw value on the element for copy helpers
+                    try {
+                        var rawForCopyLocal = normalizeHexForRaw(hexValue || '');
+                        if (rawForCopyLocal && el.setAttribute) el.setAttribute('data-raw', rawForCopyLocal);
+                    } catch (e) {}
                     function apply() {
                         try {
                             if (isPlainText) {
@@ -1607,6 +1631,10 @@ try {
         creationDataDialog.showModal();
         // Ensure newly-added MDL icon buttons are upgraded
         try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
+        // After any MDL upgrade, re-evaluate copy button visibility to be safe
+        try {
+            ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* ignore */ }
     }
 
     // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
@@ -2542,6 +2570,11 @@ try {
         try {
             var el = document.getElementById(elementId);
             if (!el) return;
+            // Store an unformatted raw value on the element for copy helpers
+            try {
+                var rawForCopy = normalizeHexForRaw(hexValue || '');
+                if (rawForCopy && el.setAttribute) el.setAttribute('data-raw', rawForCopy);
+            } catch (e) {}
             function hexToColonLinesLocal(hex, perRow) {
                 if (!hex && hex !== '') return '';
                 var rawTrim = String(hex || '').toString().trim();
@@ -2601,6 +2634,11 @@ try {
     function attachResponsiveHexForElement(el, hexValue, isPlainText) {
         try {
             if (!el) return;
+            // Store an unformatted raw value on the element for copy helpers
+            try {
+                var rawForCopyEl = normalizeHexForRaw(hexValue || '');
+                if (rawForCopyEl && el.setAttribute) el.setAttribute('data-raw', rawForCopyEl);
+            } catch (e) {}
             function hexToColonLinesLocal(hex, perRow) {
                 if (!hex && hex !== '') return '';
                 var rawTrim = String(hex || '').toString().trim();
@@ -2658,7 +2696,18 @@ try {
         try {
             var el = document.getElementById(spanId);
             var btns = document.querySelectorAll('.copy-to-clipboard[data-copy-span="' + spanId + '"]');
-            var raw = el ? (el.textContent || el.innerText || '') : '';
+            // Prefer an explicit unformatted value stored on the element (data-raw)
+            var raw = '';
+            try { if (el && el.getAttribute) raw = el.getAttribute('data-raw') || ''; } catch (e) { raw = ''; }
+            // Fallback to button-level data-copy-raw (some flows set that directly)
+            if (!raw) {
+                try {
+                    var found = Array.from(btns).map(b => b.getAttribute('data-copy-raw') || '').find(v => v && v.toString().trim());
+                    if (found) raw = found;
+                } catch (e) { /* ignore */ }
+            }
+            // Final fallback to visible textContent/innerText
+            if (!raw) raw = el ? (el.textContent || el.innerText || '') : '';
             var text = raw ? raw.toString().trim() : '';
             var lower = text.toLowerCase();
             // Treat explicit 'no extension data' and 'none' as empty values
@@ -2768,11 +2817,17 @@ try {
                 });
                 const el = document.getElementById(spanId);
                 if (el && el.setAttribute) el.setAttribute('data-raw', rawMap[spanId]);
+                // Ensure visibility is recalculated after wiring the raw values
+                try { updateCopyButtonVisibility(spanId); } catch (e) {}
             });
         } catch (e) { /* ignore */ }
 
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
         authenticationDataDialog.showModal();
+        // After MDL upgrades/showModal, re-evaluate copy button visibility
+        try {
+            ['authenticationData_userHandleHex','authenticationData_clientDataJSON','authenticationData_authenticatorDataHex','authenticationData_extensionData','authenticationData_signatureHex','authenticationData_PRF_First','authenticationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
+        } catch (e) { /* ignore */ }
     }
 
     /**
