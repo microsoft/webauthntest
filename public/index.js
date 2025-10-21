@@ -1746,15 +1746,39 @@ try {
                                 var existing = document.getElementById(labelId);
                                 var displayGuid = formatted || (aaguidRaw || '');
                                 var labelText = name + ' (' + displayGuid + ')';
-                                if (existing) {
-                                    existing.textContent = labelText;
-                                } else {
-                                    var span = document.createElement('div');
-                                    span.id = labelId;
-                                    span.className = 'aaguid-name';
-                                    span.textContent = labelText;
-                                    container.parentNode.insertBefore(span, container);
-                                }
+                                // Replace visible AAGUID display with the fetched name while keeping the pre element
+                                // (which holds data-raw) in the DOM so copy buttons still work.
+                                try {
+                                    // Hide the underlying pre element that contains the hex
+                                    try { aaguidEl.style.display = 'none'; } catch (e) { /* ignore */ }
+
+                                    var labelText = name + ' (' + (displayGuid || '') + ')';
+                                    try {
+                                        var newPre;
+                                        if (existing && existing.tagName && existing.tagName.toLowerCase() === 'pre') {
+                                            existing.textContent = labelText;
+                                            newPre = existing;
+                                            // ensure it has mono styling
+                                            existing.classList.add('mono');
+                                            existing.classList.add('aaguid-name');
+                                        } else {
+                                            // create a monospace pre element for consistent layout
+                                            newPre = document.createElement('pre');
+                                            newPre.id = labelId;
+                                            newPre.className = 'mono aaguid-name';
+                                            newPre.textContent = labelText;
+                                            try { newPre.title = displayGuid || ''; } catch (e) {}
+                                            // insert the pre before action buttons so it appears inline in mono-block
+                                            var actions = container.querySelector('.mono-actions');
+                                            if (actions) container.insertBefore(newPre, actions);
+                                            else container.appendChild(newPre);
+                                            // remove old existing non-pre element if present
+                                            if (existing && existing.parentNode && existing.parentNode !== container) {
+                                                try { existing.parentNode.removeChild(existing); } catch (e) { }
+                                            }
+                                        }
+                                    } catch (e) { /* non-fatal */ }
+                                } catch (e) { /* non-fatal */ }
                             } catch (e) { /* non-fatal */ }
                         })();
                     })();
