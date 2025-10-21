@@ -38,6 +38,52 @@ try {
     var conditionalAuthOperationInProgress = false;
     var ongoingAuth = null;
     var selectedTransportCredentialId = null; // credential id currently being edited for transports
+    // In-memory cache for AAGUID -> name lookups. Persisted mirror is stored in localStorage under 'aaguid_name_cache'.
+    var aaguidNameCache = {};
+
+    /**
+     * Get authenticator name for formatted GUID (dashed lowercase). Checks in-memory cache, then localStorage, then fetches from GitHub main branch.
+     * Returns Promise<string|null>
+     */
+    function getAaguidName(formattedGuid) {
+        return new Promise(async (resolve) => {
+            if (!formattedGuid) return resolve(null);
+            if (aaguidNameCache[formattedGuid]) return resolve(aaguidNameCache[formattedGuid]);
+            try {
+                var lsRaw = localStorage.getItem('aaguid_name_cache');
+                if (lsRaw) {
+                    var lsObj = JSON.parse(lsRaw);
+                    if (lsObj && lsObj[formattedGuid]) {
+                        aaguidNameCache[formattedGuid] = lsObj[formattedGuid];
+                        return resolve(lsObj[formattedGuid]);
+                    }
+                }
+            } catch (e) {
+                // ignore parse errors
+            }
+
+            var url = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/refs/heads/main/' + formattedGuid + '/name.txt';
+            try {
+                var resp = await fetch(url);
+                if (!resp || !resp.ok) return resolve(null);
+                var txt = (await resp.text()).trim();
+                if (!txt) return resolve(null);
+                // store in memory
+                aaguidNameCache[formattedGuid] = txt;
+                // persist to localStorage (merge)
+                try {
+                    var existing = {};
+                    var raw = localStorage.getItem('aaguid_name_cache');
+                    if (raw) existing = JSON.parse(raw);
+                    existing[formattedGuid] = txt;
+                    localStorage.setItem('aaguid_name_cache', JSON.stringify(existing));
+                } catch (e) { /* ignore storage errors */ }
+                return resolve(txt);
+            } catch (e) {
+                return resolve(null);
+            }
+        });
+    }
 
     $(window).on('load', async function () {
         var createDialog = document.querySelector('#createDialog');
@@ -1592,6 +1638,40 @@ try {
                     Array.from(aBtns).forEach(b => { try { b.setAttribute('data-copy-raw', aaguidRaw); } catch (e) {} });
                     // Ensure visibility is recalculated after data-copy-raw is wired
                     try { updateCopyButtonVisibility(aaguidSpanId); } catch (e) {}
+
+                    // Use cached lookup + localStorage-backed fetch helper to get an authenticator name and display it
+                    (function(){
+                        function formatGuidForUrl(hex) {
+                            if (!hex) return '';
+                            var s = hex.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                            if (s.length !== 32) return s;
+                            return s.slice(0,8) + '-' + s.slice(8,12) + '-' + s.slice(12,16) + '-' + s.slice(16,20) + '-' + s.slice(20);
+                        }
+
+                        (async function(){
+                            try {
+                                var formatted = formatGuidForUrl(aaguidRaw || credential.creationData.aaguid || '');
+                                var name = await getAaguidName(formatted);
+                                if (!name) return; // leave UI as-is
+
+                                var container = aaguidEl.closest('.mono-block');
+                                if (!container) return;
+                                var labelId = aaguidSpanId + '_name_label';
+                                var existing = document.getElementById(labelId);
+                                var displayGuid = formatted || (aaguidRaw || '');
+                                var labelText = name + ' (' + displayGuid + ')';
+                                if (existing) {
+                                    existing.textContent = labelText;
+                                } else {
+                                    var span = document.createElement('div');
+                                    span.id = labelId;
+                                    span.className = 'aaguid-name';
+                                    span.textContent = labelText;
+                                    container.parentNode.insertBefore(span, container);
+                                }
+                            } catch (e) { /* non-fatal */ }
+                        })();
+                    })();
                 }
             } catch (e) { /* non-fatal */ }
         } catch (e) { /* non-fatal */ }

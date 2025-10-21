@@ -398,6 +398,21 @@ a {
   text-decoration: underline;
 }
 
+/* Authenticator AAGUID name label inserted above mono-blocks */
+.aaguid-name {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.2;
+  margin-bottom: 6px;
+  white-space: normal; /* allow wrapping */
+}
+
+.aaguid-name::after {
+  content: '';
+  display: block;
+  height: 0;
+}
+
 /* Mono block wrapper: positions a small copy button top-right of pre blocks */
 .mono-block {
   display: grid;
