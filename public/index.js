@@ -40,6 +40,62 @@ try {
     var selectedTransportCredentialId = null; // credential id currently being edited for transports
     // In-memory cache for AAGUID -> name lookups. Persisted mirror is stored in localStorage under 'aaguid_name_cache'.
     var aaguidNameCache = {};
+    // Default TTL for cached entries: 30 days (milliseconds)
+    var DEFAULT_AAGUID_NAME_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
+    // TTL used by the cache. This may be overridden by a global or persisted setting.
+    var AAGUID_NAME_CACHE_TTL = (function loadInitialTtl() {
+        try {
+            // Priority: explicit global (window.AAGUID_NAME_CACHE_TTL_MS) -> persisted localStorage value -> default
+            if (typeof window !== 'undefined' && typeof window.AAGUID_NAME_CACHE_TTL_MS === 'number' && isFinite(window.AAGUID_NAME_CACHE_TTL_MS) && window.AAGUID_NAME_CACHE_TTL_MS > 0) {
+                return Math.max(0, Math.floor(window.AAGUID_NAME_CACHE_TTL_MS));
+            }
+            var persisted = null;
+            try {
+                persisted = localStorage.getItem('aaguid_name_cache_ttl');
+            } catch (e) { persisted = null; }
+            if (persisted) {
+                var parsed = parseInt(persisted, 10);
+                if (!isNaN(parsed) && parsed > 0) return parsed;
+            }
+        } catch (e) {
+            // ignore and fall back to default
+        }
+        return DEFAULT_AAGUID_NAME_CACHE_TTL;
+    })();
+
+    /**
+     * Get the current TTL (ms) used for AAGUID name cache entries.
+     * @returns {number}
+     */
+    function getAaguidNameCacheTTL() {
+        return AAGUID_NAME_CACHE_TTL;
+    }
+
+    /**
+     * Set the TTL (ms) used for AAGUID name cache entries. Optionally persist to localStorage.
+     * Exposed on window as setAaguidNameCacheTTL(ms, persist=false)
+     * @param {number} ms milliseconds TTL; must be a finite non-negative integer
+     * @param {boolean} [persist=false] whether to persist this setting to localStorage
+     */
+    function setAaguidNameCacheTTL(ms, persist) {
+        try {
+            if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) throw new Error('Invalid TTL');
+            AAGUID_NAME_CACHE_TTL = Math.floor(ms);
+            if (persist) {
+                try { localStorage.setItem('aaguid_name_cache_ttl', String(AAGUID_NAME_CACHE_TTL)); } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            console.warn('setAaguidNameCacheTTL failed:', e && e.message ? e.message : e);
+        }
+    }
+
+    // Expose the getter/setter on the window so callers (tests or UI) can change TTL at runtime
+    try {
+        if (typeof window !== 'undefined') {
+            window.getAaguidNameCacheTTL = getAaguidNameCacheTTL;
+            window.setAaguidNameCacheTTL = setAaguidNameCacheTTL;
+        }
+    } catch (e) { /* ignore */ }
 
     /**
      * Get authenticator name for formatted GUID (dashed lowercase). Checks in-memory cache, then localStorage, then fetches from GitHub main branch.
@@ -48,36 +104,66 @@ try {
     function getAaguidName(formattedGuid) {
         return new Promise(async (resolve) => {
             if (!formattedGuid) return resolve(null);
-            if (aaguidNameCache[formattedGuid]) return resolve(aaguidNameCache[formattedGuid]);
+
+            // Check in-memory cache first (stored as {name, ts})
+            try {
+                var mem = aaguidNameCache[formattedGuid];
+                if (mem && mem.name && mem.ts) {
+                    if ((Date.now() - mem.ts) < AAGUID_NAME_CACHE_TTL) {
+                        return resolve(mem.name);
+                    } else {
+                        // expired in-memory; drop it
+                        delete aaguidNameCache[formattedGuid];
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            // Check localStorage (structure: { guid: { name: string, ts: number }, ... })
             try {
                 var lsRaw = localStorage.getItem('aaguid_name_cache');
                 if (lsRaw) {
                     var lsObj = JSON.parse(lsRaw);
                     if (lsObj && lsObj[formattedGuid]) {
-                        aaguidNameCache[formattedGuid] = lsObj[formattedGuid];
-                        return resolve(lsObj[formattedGuid]);
+                        var entry = lsObj[formattedGuid];
+                        if (entry && entry.name && entry.ts) {
+                            if ((Date.now() - entry.ts) < AAGUID_NAME_CACHE_TTL) {
+                                // warm in-memory and return
+                                aaguidNameCache[formattedGuid] = { name: entry.name, ts: entry.ts };
+                                return resolve(entry.name);
+                            } else {
+                                // expired - remove from localStorage and continue to fetch
+                                try {
+                                    delete lsObj[formattedGuid];
+                                    localStorage.setItem('aaguid_name_cache', JSON.stringify(lsObj));
+                                } catch (e) { /* ignore storage errors */ }
+                            }
+                        }
                     }
                 }
             } catch (e) {
-                // ignore parse errors
+                // ignore parse/storage errors and continue to fetch
             }
 
+            // Not cached or expired: fetch fresh value
             var url = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/refs/heads/main/' + formattedGuid + '/name.txt';
             try {
                 var resp = await fetch(url);
                 if (!resp || !resp.ok) return resolve(null);
                 var txt = (await resp.text()).trim();
                 if (!txt) return resolve(null);
-                // store in memory
-                aaguidNameCache[formattedGuid] = txt;
-                // persist to localStorage (merge)
+
+                var entry = { name: txt, ts: Date.now() };
+                // store in-memory
+                aaguidNameCache[formattedGuid] = entry;
+                // merge into localStorage
                 try {
                     var existing = {};
                     var raw = localStorage.getItem('aaguid_name_cache');
                     if (raw) existing = JSON.parse(raw);
-                    existing[formattedGuid] = txt;
+                    existing[formattedGuid] = entry;
                     localStorage.setItem('aaguid_name_cache', JSON.stringify(existing));
                 } catch (e) { /* ignore storage errors */ }
+
                 return resolve(txt);
             } catch (e) {
                 return resolve(null);
