@@ -106,16 +106,39 @@ try {
                     try {
                         const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                         if (!el) return;
-                        console.log('DBG_EVENT', evtName, {
+
+                        // helper to serialize touchlist
+                        function serializeTouchList(tl) {
+                            if (!tl) return undefined;
+                            try {
+                                return Array.from(tl).map(t => ({ identifier: t.identifier, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+                            } catch (err) { return undefined; }
+                        }
+
+                        const payload = {
                             targetTag: el.tagName,
                             id: el.id,
                             classes: el.className,
                             href: el.getAttribute && el.getAttribute('href'),
                             type: el.type,
                             timestamp: new Date().toISOString(),
+                            eventType: evtName,
+                            isTrusted: e.isTrusted,
+                            cancelable: e.cancelable,
+                            defaultPrevented: e.defaultPrevented,
+                            eventPhase: e.eventPhase,
+                            detail: e.detail,
+                            button: e.button,
+                            pointerType: e.pointerType,
+                            pointerId: e.pointerId,
+                            pressure: e.pressure,
                             touches: e.touches ? e.touches.length : undefined,
-                            defaultPrevented: e.defaultPrevented
-                        });
+                            changedTouches: serializeTouchList(e.changedTouches),
+                            inlineOnclick: !!(el.getAttribute && el.getAttribute('onclick')),
+                            hasListeners: undefined // placeholder for future enhancement
+                        };
+
+                        console.log('DBG_EVENT', evtName, payload);
                     } catch (err) { console.error('DBG listener error', err); }
                 }, { capture: true, passive: false });
             });
