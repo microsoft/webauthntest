@@ -24,6 +24,47 @@ try {
     console.warn('PKIJS engine init failed:', e);
 }
 
+// Immediate iOS-level capture logging (register as early as possible so we don't miss
+// click/touchcancel events that may happen before window load or before other handlers)
+(function(){
+    function isiOS() {
+        try {
+            return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        } catch (e) { return false; }
+    }
+    if (!isiOS()) return;
+    try {
+        // Global capture click
+        document.addEventListener('click', (e) => {
+            try {
+                console.log('EARLY_GLOBAL_CAPTURE_CLICK', {
+                    targetTag: e.target && e.target.tagName,
+                    id: e.target && e.target.id,
+                    classes: e.target && e.target.className,
+                    timestamp: new Date().toISOString(),
+                    isTrusted: e.isTrusted,
+                    cancelable: e.cancelable,
+                    defaultPrevented: e.defaultPrevented,
+                    detail: e.detail,
+                    button: e.button
+                });
+            } catch (err) { /* ignore */ }
+        }, { capture: true });
+
+        // Early touchcancel
+        document.addEventListener('touchcancel', (e) => {
+            try {
+                console.log('EARLY_CAPTURE_TOUCHCANCEL', {
+                    targetTag: e.target && e.target.tagName,
+                    id: e.target && e.target.id,
+                    timestamp: new Date().toISOString(),
+                    changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
+                });
+            } catch (err) { /* ignore */ }
+        }, { capture: true });
+    } catch (e) { /* non-fatal */ }
+})();
+
 (function () {
     /**
      * @typedef {import('./types').EncodedAttestationResponse} EncodedAttestationResponse
@@ -160,7 +201,6 @@ try {
                         el.classList.remove('mdl-js-ripple-effect');
                         // Tag element so we can restore later if desired
                         el.setAttribute('data-ripple-removed-for-ios', '1');
-                        console.info('Removed MDL ripple class for iOS on', el);
                     } catch (e) { /* ignore per-element failure */ }
                 });
             } catch (e) { /* non-fatal */ }
@@ -256,6 +296,33 @@ try {
                         defaultPrevented: e.defaultPrevented,
                         detail: e.detail,
                         button: e.button
+                    });
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            // Early touchstart/touchend logs (selector-filtered) to capture the touch lifecycle
+            document.addEventListener('touchstart', (e) => {
+                try {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    console.log('EARLY_CAPTURE_TOUCHSTART', {
+                        id: el.id,
+                        classes: el.className,
+                        timestamp: new Date().toISOString(),
+                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
+                    });
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            document.addEventListener('touchend', (e) => {
+                try {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    console.log('EARLY_CAPTURE_TOUCHEND', {
+                        id: el.id,
+                        classes: el.className,
+                        timestamp: new Date().toISOString(),
+                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
                     });
                 } catch (err) { /* ignore */ }
             }, { capture: true });
