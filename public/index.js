@@ -150,6 +150,21 @@ try {
                 });
             } catch (e) { /* non-fatal */ }
 
+            // On iOS, MDL's ripple effect can sometimes interfere with first-tap activation.
+            // As a non-destructive test, remove the ripple class from interactive elements so
+            // the platform's native click behavior is clearer. This can be reverted if it
+            // changes UI appearance undesirably.
+            try {
+                Array.from(document.querySelectorAll(selector + '.mdl-js-ripple-effect')).forEach(el => {
+                    try {
+                        el.classList.remove('mdl-js-ripple-effect');
+                        // Tag element so we can restore later if desired
+                        el.setAttribute('data-ripple-removed-for-ios', '1');
+                        console.info('Removed MDL ripple class for iOS on', el);
+                    } catch (e) { /* ignore per-element failure */ }
+                });
+            } catch (e) { /* non-fatal */ }
+
             // Lightweight touch->click shim for iOS: synthesize a click on quick taps and ignore the
             // following native click to avoid requiring a double-tap. This is only enabled on iOS
             // and intended as a minimal, low-risk workaround while debugging.
