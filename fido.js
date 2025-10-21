@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const cbor = require('cbor');
 // Using raw random challenges instead of JWT
 const url = require('url');
-const { stringify: uuidStringify } = require('uuid');
 const storage = require('./storage.js');
 const fidoAttestation = require('./fidoAttestation.js');
 const {sha256, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
@@ -366,6 +365,18 @@ const validateClientData = async (clientData, uid, type) => {
     }
 };
 
+const byteToHex = [];
+
+for (let i = 0; i < 256; ++i) {
+  byteToHex.push((i + 0x100).toString(16).slice(1));
+}
+
+function unsafeStringify(arr, offset = 0) {
+  // Note: Be careful editing this code!  It's been tuned for performance
+  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
+  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
+}
+
 
 /**
  * Parses authData buffer and returns an authenticator data object
@@ -389,7 +400,8 @@ function parseAuthenticatorData(authData) {
 
         if (flags & 64) {
             //has attestation data
-            const aaguid = uuidStringify(authData.subarray(37, 53)).toUpperCase();
+            const aaguidBuffer = authData.subarray(37, 53);
+            const aaguid = unsafeStringify(aaguidBuffer).toUpperCase();
             const credentialIdLength = (authData[53] << 8) | authData[54];
             const credentialId = authData.subarray(55, 55 + credentialIdLength);
             const publicKeyBuffer = authData.subarray(55 + credentialIdLength, authData.length);
@@ -426,6 +438,7 @@ function parseAuthenticatorData(authData) {
 
         return authenticatorData;
     } catch (e) {
+        console.error(`[fido] ${e.message}`);
         throw new Error("Authenticator Data could not be parsed")
     }
 }
