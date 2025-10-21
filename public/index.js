@@ -327,6 +327,47 @@ try {
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
+            // Fallback: if no native click arrives shortly after touchend, synthesize one.
+            // This is conservative: it does not suppress native clicks. It only helps devices
+            // that do not synthesize a native click for the gesture.
+            (function(){
+                const SYNTHETIC_CLICK_DELAY = 300; // ms
+                const lastNativeClick = new WeakMap(); // el -> timestamp
+                const pendingTimer = new WeakMap(); // el -> timer id
+
+                // Record native clicks when they arrive (capture phase)
+                document.addEventListener('click', (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+                        lastNativeClick.set(el, Date.now());
+                    } catch (err) { }
+                }, { capture: true });
+
+                document.addEventListener('touchend', (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+
+                        // Clear any previous pending timer for this element
+                        try { const prev = pendingTimer.get(el); if (prev) clearTimeout(prev); } catch (err) {}
+
+                        const t = setTimeout(() => {
+                            try {
+                                const last = lastNativeClick.get(el) || 0;
+                                // If a native click arrived since touchend, don't synthesize
+                                if (Date.now() - last < SYNTHETIC_CLICK_DELAY) return;
+                                // Synthesize a trusted-like click (isTrusted will be false for synthetic)
+                                el.click();
+                                console.debug('SYNTHETIC_CLICK fired for', el.id || el);
+                            } catch (err) { /* ignore */ }
+                        }, SYNTHETIC_CLICK_DELAY);
+
+                        pendingTimer.set(el, t);
+                    } catch (err) { /* ignore */ }
+                }, { capture: true });
+            })();
+
             // Global unfiltered capture logger — logs every click at capture phase so we can
             // detect if clicks are reaching document even when the selector-filtered logger doesn't.
             document.addEventListener('click', (e) => {
