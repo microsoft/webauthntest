@@ -24,20 +24,6 @@ try {
     console.warn('PKIJS engine init failed:', e);
 }
 
-// Immediate iOS-level capture logging (register as early as possible so we don't miss
-// click/touchcancel events that may happen before window load or before other handlers)
-(function(){
-    function isiOS() {
-        try {
-            return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        } catch (e) { return false; }
-    }
-    if (!isiOS()) return;
-    try {
-        // No-op: early listeners removed for production
-    } catch (e) { /* non-fatal */ }
-})();
-
 (function () {
     /**
      * @typedef {import('./types').EncodedAttestationResponse} EncodedAttestationResponse
@@ -110,9 +96,6 @@ try {
                 } catch (e) { return false; }
             }
             if (!isiOS()) return;
-            try {
-                console.info('iOS touch debugging enabled', { userAgent: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints });
-            } catch (e) { /* ignore */ }
 
             const selector = 'button,a,input[type="button"],input[type="submit"],.mdl-button';
             ['touchstart','touchend','pointerdown','pointerup','mousedown','mouseup','click'].forEach(evtName => {
@@ -129,31 +112,8 @@ try {
                             } catch (err) { return undefined; }
                         }
 
-                        const payload = {
-                            targetTag: el.tagName,
-                            id: el.id,
-                            classes: el.className,
-                            href: el.getAttribute && el.getAttribute('href'),
-                            type: el.type,
-                            timestamp: new Date().toISOString(),
-                            eventType: evtName,
-                            isTrusted: e.isTrusted,
-                            cancelable: e.cancelable,
-                            defaultPrevented: e.defaultPrevented,
-                            eventPhase: e.eventPhase,
-                            detail: e.detail,
-                            button: e.button,
-                            pointerType: e.pointerType,
-                            pointerId: e.pointerId,
-                            pressure: e.pressure,
-                            touches: e.touches ? e.touches.length : undefined,
-                            changedTouches: serializeTouchList(e.changedTouches),
-                            inlineOnclick: !!(el.getAttribute && el.getAttribute('onclick')),
-                            hasListeners: undefined // placeholder for future enhancement
-                        };
-
-                        console.log('DBG_EVENT', evtName, payload);
-                    } catch (err) { console.error('DBG listener error', err); }
+                        // debug event logging removed
+                    } catch (err) { /* ignore */ }
                 }, { capture: true, passive: false });
             });
 
@@ -191,8 +151,7 @@ try {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    // Minimal capture log
-                    console.log('CAPTURE_CLICK', { id: el.id, timestamp: new Date().toISOString(), isTrusted: e.isTrusted });
+                    // capture logging removed
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
@@ -202,7 +161,7 @@ try {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    console.log('TOUCHSTART', { id: el.id, timestamp: new Date().toISOString() });
+                    // touchstart logging removed
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
@@ -210,7 +169,7 @@ try {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    console.log('TOUCHEND', { id: el.id, timestamp: new Date().toISOString() });
+                    // touchend logging removed
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
@@ -256,34 +215,12 @@ try {
 
             // Global unfiltered capture logger — logs every click at capture phase so we can
             // detect if clicks are reaching document even when the selector-filtered logger doesn't.
-            document.addEventListener('click', (e) => {
-                try {
-                    console.log('GLOBAL_CAPTURE_CLICK', {
-                        targetTag: e.target && e.target.tagName,
-                        id: e.target && e.target.id,
-                        classes: e.target && e.target.className,
-                        timestamp: new Date().toISOString(),
-                        isTrusted: e.isTrusted,
-                        cancelable: e.cancelable,
-                        defaultPrevented: e.defaultPrevented,
-                        detail: e.detail,
-                        button: e.button
-                    });
-                } catch (err) { /* ignore */ }
-            }, { capture: true });
+                // global capture click logging removed
 
             // Also log touchcancel events which can indicate the browser aborted the gesture
             // before producing a click.
-            document.addEventListener('touchcancel', (e) => {
-                try {
-                    console.log('CAPTURE_TOUCHCANCEL', {
-                        targetTag: e.target && e.target.tagName,
-                        id: e.target && e.target.id,
-                        timestamp: new Date().toISOString(),
-                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
-                    });
-                } catch (err) { /* ignore */ }
-            }, { capture: true });
+            // touchcancel logging removed
+            document.addEventListener('touchcancel', (e) => { /* no-op */ }, { capture: true });
         })();
 
         if (!Cookies.get("uid")) {
