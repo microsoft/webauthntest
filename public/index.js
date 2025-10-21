@@ -241,6 +241,8 @@ try {
             }
 
             // Capture-phase click logger so we can see native click arrival before any handlers run.
+            // First a selector-filtered logger (existing), then a global unfiltered logger so we
+            // can't miss any click at document level.
             document.addEventListener('click', (e) => {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
@@ -254,6 +256,37 @@ try {
                         defaultPrevented: e.defaultPrevented,
                         detail: e.detail,
                         button: e.button
+                    });
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            // Global unfiltered capture logger — logs every click at capture phase so we can
+            // detect if clicks are reaching document even when the selector-filtered logger doesn't.
+            document.addEventListener('click', (e) => {
+                try {
+                    console.log('GLOBAL_CAPTURE_CLICK', {
+                        targetTag: e.target && e.target.tagName,
+                        id: e.target && e.target.id,
+                        classes: e.target && e.target.className,
+                        timestamp: new Date().toISOString(),
+                        isTrusted: e.isTrusted,
+                        cancelable: e.cancelable,
+                        defaultPrevented: e.defaultPrevented,
+                        detail: e.detail,
+                        button: e.button
+                    });
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            // Also log touchcancel events which can indicate the browser aborted the gesture
+            // before producing a click.
+            document.addEventListener('touchcancel', (e) => {
+                try {
+                    console.log('CAPTURE_TOUCHCANCEL', {
+                        targetTag: e.target && e.target.tagName,
+                        id: e.target && e.target.id,
+                        timestamp: new Date().toISOString(),
+                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
                     });
                 } catch (err) { /* ignore */ }
             }, { capture: true });
