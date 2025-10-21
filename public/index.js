@@ -1710,6 +1710,7 @@ try {
                 // Re-evaluate visibility after buttons have data-copy-raw set
                 try { updateCopyButtonVisibility(credIdSpanId); } catch (e) {}
             }
+
             // Wire up AAGUID mono-block similar to credential id
             try {
                 var aaguidEl = document.getElementById(aaguidSpanId);
