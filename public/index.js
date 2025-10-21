@@ -34,34 +34,7 @@ try {
     }
     if (!isiOS()) return;
     try {
-        // Global capture click
-        document.addEventListener('click', (e) => {
-            try {
-                console.log('EARLY_GLOBAL_CAPTURE_CLICK', {
-                    targetTag: e.target && e.target.tagName,
-                    id: e.target && e.target.id,
-                    classes: e.target && e.target.className,
-                    timestamp: new Date().toISOString(),
-                    isTrusted: e.isTrusted,
-                    cancelable: e.cancelable,
-                    defaultPrevented: e.defaultPrevented,
-                    detail: e.detail,
-                    button: e.button
-                });
-            } catch (err) { /* ignore */ }
-        }, { capture: true });
-
-        // Early touchcancel
-        document.addEventListener('touchcancel', (e) => {
-            try {
-                console.log('EARLY_CAPTURE_TOUCHCANCEL', {
-                    targetTag: e.target && e.target.tagName,
-                    id: e.target && e.target.id,
-                    timestamp: new Date().toISOString(),
-                    changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
-                });
-            } catch (err) { /* ignore */ }
-        }, { capture: true });
+        // No-op: early listeners removed for production
     } catch (e) { /* non-fatal */ }
 })();
 
@@ -196,10 +169,11 @@ try {
             // the platform's native click behavior is clearer. This can be reverted if it
             // changes UI appearance undesirably.
             try {
+                // Permanently disable MDL ripple on iOS for interactive elements to avoid
+                // first-tap activation issues seen on some Safari versions.
                 Array.from(document.querySelectorAll(selector + '.mdl-js-ripple-effect')).forEach(el => {
                     try {
                         el.classList.remove('mdl-js-ripple-effect');
-                        // Tag element so we can restore later if desired
                         el.setAttribute('data-ripple-removed-for-ios', '1');
                     } catch (e) { /* ignore per-element failure */ }
                 });
@@ -207,110 +181,28 @@ try {
 
             // Touch->click shim control. Set to false to disable synthesis + suppression so we can
             // observe native behavior during debugging on iOS.
-            const ENABLE_TOUCH_SHIM = false;
-            if (ENABLE_TOUCH_SHIM) {
-                (function(){
-                    const MOVE_THRESHOLD = 10; // px
-                    const MAX_TAP_DURATION = 700; // ms
-                    const IGNORE_CLICK_WINDOW = 750; // ms
-                    const touchState = new WeakMap();
-
-                    function onTouchStart(e) {
-                        if (!e.touches || e.touches.length !== 1) return;
-                        const t = e.touches[0];
-                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
-                        if (!el) return;
-                        touchState.set(el, {
-                            startX: t.clientX,
-                            startY: t.clientY,
-                            startTime: Date.now(),
-                            moved: false
-                        });
-                    }
-
-                    function onTouchMove(e) {
-                        const t = e.touches && e.touches[0];
-                        if (!t) return;
-                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
-                        if (!el) return;
-                        const st = touchState.get(el);
-                        if (!st) return;
-                        if (Math.abs(t.clientX - st.startX) > MOVE_THRESHOLD || Math.abs(t.clientY - st.startY) > MOVE_THRESHOLD) {
-                            st.moved = true;
-                        }
-                    }
-
-                    function onTouchEnd(e) {
-                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
-                        if (!el) return;
-                        const st = touchState.get(el);
-                        touchState.delete(el);
-                        if (!st) return;
-                        const dur = Date.now() - st.startTime;
-                        if (st.moved) return;
-                        if (dur > MAX_TAP_DURATION) return;
-                        try {
-                            // Synthesize click and mark element so we can ignore the next native click
-                            el.__lastSyntheticClick = Date.now();
-                            // Use setTimeout to run after touchend processing completes
-                            setTimeout(() => {
-                                try { el.click(); } catch (err) { /* non-fatal */ }
-                            }, 0);
-                        } catch (err) { /* ignore */ }
-                    }
-
-                    function onClick(e) {
-                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
-                        if (!el) return;
-                        const last = el.__lastSyntheticClick || 0;
-                        if (Date.now() - last < IGNORE_CLICK_WINDOW) {
-                            // This is the native click that follows our synthetic click; prevent double activation
-                            e.stopImmediatePropagation();
-                            e.preventDefault();
-                            try { console.debug('Suppressed native click following synthetic click for', el); } catch (err) {}
-                        }
-                    }
-
-                    document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-                    document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true });
-                    document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
-                    document.addEventListener('click', onClick, { capture: true });
-                })();
-            } else {
-                console.info('Touch shim disabled for iOS debug - native clicks will not be suppressed');
-            }
+            // Remove the debug shim code; we now use the conservative synthetic-click fallback below.
 
             // Capture-phase click logger so we can see native click arrival before any handlers run.
             // First a selector-filtered logger (existing), then a global unfiltered logger so we
             // can't miss any click at document level.
+            // Keep a selector-filtered capture logger for debugging (minimal output)
             document.addEventListener('click', (e) => {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    console.log('CAPTURE_CLICK', {
-                        id: el.id,
-                        classes: el.className,
-                        timestamp: new Date().toISOString(),
-                        isTrusted: e.isTrusted,
-                        cancelable: e.cancelable,
-                        defaultPrevented: e.defaultPrevented,
-                        detail: e.detail,
-                        button: e.button
-                    });
+                    // Minimal capture log
+                    console.log('CAPTURE_CLICK', { id: el.id, timestamp: new Date().toISOString(), isTrusted: e.isTrusted });
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
             // Early touchstart/touchend logs (selector-filtered) to capture the touch lifecycle
+            // Keep touchstart/touchend logs minimal
             document.addEventListener('touchstart', (e) => {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    console.log('EARLY_CAPTURE_TOUCHSTART', {
-                        id: el.id,
-                        classes: el.className,
-                        timestamp: new Date().toISOString(),
-                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
-                    });
+                    console.log('TOUCHSTART', { id: el.id, timestamp: new Date().toISOString() });
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
@@ -318,12 +210,7 @@ try {
                 try {
                     const el = e.target && e.target.closest ? e.target.closest(selector) : null;
                     if (!el) return;
-                    console.log('EARLY_CAPTURE_TOUCHEND', {
-                        id: el.id,
-                        classes: el.className,
-                        timestamp: new Date().toISOString(),
-                        changedTouches: e.changedTouches ? Array.from(e.changedTouches).map(t => ({id: t.identifier, x: t.clientX, y: t.clientY})) : undefined
-                    });
+                    console.log('TOUCHEND', { id: el.id, timestamp: new Date().toISOString() });
                 } catch (err) { /* ignore */ }
             }, { capture: true });
 
@@ -357,9 +244,8 @@ try {
                                 const last = lastNativeClick.get(el) || 0;
                                 // If a native click arrived since touchend, don't synthesize
                                 if (Date.now() - last < SYNTHETIC_CLICK_DELAY) return;
-                                // Synthesize a trusted-like click (isTrusted will be false for synthetic)
+                                // Synthesize a click
                                 el.click();
-                                console.debug('SYNTHETIC_CLICK fired for', el.id || el);
                             } catch (err) { /* ignore */ }
                         }, SYNTHETIC_CLICK_DELAY);
 
