@@ -38,6 +38,138 @@ try {
     var conditionalAuthOperationInProgress = false;
     var ongoingAuth = null;
     var selectedTransportCredentialId = null; // credential id currently being edited for transports
+    // In-memory cache for AAGUID -> name lookups. Persisted mirror is stored in localStorage under 'aaguid_name_cache'.
+    var aaguidNameCache = {};
+    // Default TTL for cached entries: 30 days (milliseconds)
+    var DEFAULT_AAGUID_NAME_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
+    // TTL used by the cache. This may be overridden by a global or persisted setting.
+    var AAGUID_NAME_CACHE_TTL = (function loadInitialTtl() {
+        try {
+            // Priority: explicit global (window.AAGUID_NAME_CACHE_TTL_MS) -> persisted localStorage value -> default
+            if (typeof window !== 'undefined' && typeof window.AAGUID_NAME_CACHE_TTL_MS === 'number' && isFinite(window.AAGUID_NAME_CACHE_TTL_MS) && window.AAGUID_NAME_CACHE_TTL_MS > 0) {
+                return Math.max(0, Math.floor(window.AAGUID_NAME_CACHE_TTL_MS));
+            }
+            var persisted = null;
+            try {
+                persisted = localStorage.getItem('aaguid_name_cache_ttl');
+            } catch (e) { persisted = null; }
+            if (persisted) {
+                var parsed = parseInt(persisted, 10);
+                if (!isNaN(parsed) && parsed > 0) return parsed;
+            }
+        } catch (e) {
+            // ignore and fall back to default
+        }
+        return DEFAULT_AAGUID_NAME_CACHE_TTL;
+    })();
+
+    /**
+     * Get the current TTL (ms) used for AAGUID name cache entries.
+     * @returns {number}
+     */
+    function getAaguidNameCacheTTL() {
+        return AAGUID_NAME_CACHE_TTL;
+    }
+
+    /**
+     * Set the TTL (ms) used for AAGUID name cache entries. Optionally persist to localStorage.
+     * Exposed on window as setAaguidNameCacheTTL(ms, persist=false)
+     * @param {number} ms milliseconds TTL; must be a finite non-negative integer
+     * @param {boolean} [persist=false] whether to persist this setting to localStorage
+     */
+    function setAaguidNameCacheTTL(ms, persist) {
+        try {
+            if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) throw new Error('Invalid TTL');
+            AAGUID_NAME_CACHE_TTL = Math.floor(ms);
+            if (persist) {
+                try { localStorage.setItem('aaguid_name_cache_ttl', String(AAGUID_NAME_CACHE_TTL)); } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            console.warn('setAaguidNameCacheTTL failed:', e && e.message ? e.message : e);
+        }
+    }
+
+    // Expose the getter/setter on the window so callers (tests or UI) can change TTL at runtime
+    try {
+        if (typeof window !== 'undefined') {
+            window.getAaguidNameCacheTTL = getAaguidNameCacheTTL;
+            window.setAaguidNameCacheTTL = setAaguidNameCacheTTL;
+        }
+    } catch (e) { /* ignore */ }
+
+    /**
+     * Get authenticator name for formatted GUID (dashed lowercase). Checks in-memory cache, then localStorage, then fetches from GitHub main branch.
+     * Returns Promise<string|null>
+     */
+    function getAaguidName(formattedGuid) {
+        return new Promise(async (resolve) => {
+            if (!formattedGuid) return resolve(null);
+
+            // Check in-memory cache first (stored as {name, ts})
+            try {
+                var mem = aaguidNameCache[formattedGuid];
+                if (mem && mem.name && mem.ts) {
+                    if ((Date.now() - mem.ts) < AAGUID_NAME_CACHE_TTL) {
+                        return resolve(mem.name);
+                    } else {
+                        // expired in-memory; drop it
+                        delete aaguidNameCache[formattedGuid];
+                    }
+                }
+            } catch (e) { /* ignore */ }
+
+            // Check localStorage (structure: { guid: { name: string, ts: number }, ... })
+            try {
+                var lsRaw = localStorage.getItem('aaguid_name_cache');
+                if (lsRaw) {
+                    var lsObj = JSON.parse(lsRaw);
+                    if (lsObj && lsObj[formattedGuid]) {
+                        var entry = lsObj[formattedGuid];
+                        if (entry && entry.name && entry.ts) {
+                            if ((Date.now() - entry.ts) < AAGUID_NAME_CACHE_TTL) {
+                                // warm in-memory and return
+                                aaguidNameCache[formattedGuid] = { name: entry.name, ts: entry.ts };
+                                return resolve(entry.name);
+                            } else {
+                                // expired - remove from localStorage and continue to fetch
+                                try {
+                                    delete lsObj[formattedGuid];
+                                    localStorage.setItem('aaguid_name_cache', JSON.stringify(lsObj));
+                                } catch (e) { /* ignore storage errors */ }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore parse/storage errors and continue to fetch
+            }
+
+            // Not cached or expired: fetch fresh value
+            var url = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/refs/heads/main/' + formattedGuid + '/name.txt';
+            try {
+                var resp = await fetch(url);
+                if (!resp || !resp.ok) return resolve(null);
+                var txt = (await resp.text()).trim();
+                if (!txt) return resolve(null);
+
+                var entry = { name: txt, ts: Date.now() };
+                // store in-memory
+                aaguidNameCache[formattedGuid] = entry;
+                // merge into localStorage
+                try {
+                    var existing = {};
+                    var raw = localStorage.getItem('aaguid_name_cache');
+                    if (raw) existing = JSON.parse(raw);
+                    existing[formattedGuid] = entry;
+                    localStorage.setItem('aaguid_name_cache', JSON.stringify(existing));
+                } catch (e) { /* ignore storage errors */ }
+
+                return resolve(txt);
+            } catch (e) {
+                return resolve(null);
+            }
+        });
+    }
 
     $(window).on('load', async function () {
         var createDialog = document.querySelector('#createDialog');
@@ -1578,6 +1710,7 @@ try {
                 // Re-evaluate visibility after buttons have data-copy-raw set
                 try { updateCopyButtonVisibility(credIdSpanId); } catch (e) {}
             }
+
             // Wire up AAGUID mono-block similar to credential id
             try {
                 var aaguidEl = document.getElementById(aaguidSpanId);
@@ -1592,6 +1725,66 @@ try {
                     Array.from(aBtns).forEach(b => { try { b.setAttribute('data-copy-raw', aaguidRaw); } catch (e) {} });
                     // Ensure visibility is recalculated after data-copy-raw is wired
                     try { updateCopyButtonVisibility(aaguidSpanId); } catch (e) {}
+
+                    // Use cached lookup + localStorage-backed fetch helper to get an authenticator name and display it
+                    (function(){
+                        function formatGuidForUrl(hex) {
+                            if (!hex) return '';
+                            var s = hex.replace(/[^0-9a-fA-F]/g, '').toLowerCase();
+                            if (s.length !== 32) return s;
+                            return s.slice(0,8) + '-' + s.slice(8,12) + '-' + s.slice(12,16) + '-' + s.slice(16,20) + '-' + s.slice(20);
+                        }
+
+                        (async function(){
+                            try {
+                                var formatted = formatGuidForUrl(aaguidRaw || credential.creationData.aaguid || '');
+                                var name = await getAaguidName(formatted);
+                                if (!name) return; // leave UI as-is
+
+                                var container = aaguidEl.closest('.mono-block');
+                                if (!container) return;
+                                var labelId = aaguidSpanId + '_name_label';
+                                var existing = document.getElementById(labelId);
+                                // Prefer the raw value used by the copy button (data-raw) so displayed hex matches copied value
+                                var copyRaw = aaguidEl && aaguidEl.getAttribute ? (aaguidEl.getAttribute('data-raw') || aaguidRaw) : aaguidRaw;
+                                var displayHex = (copyRaw || '').toUpperCase();
+                                var labelText = name + ' (' + displayHex + ')';
+                                // Replace visible AAGUID display with the fetched name while keeping the pre element
+                                // (which holds data-raw) in the DOM so copy buttons still work.
+                                try {
+                                    // Hide the underlying pre element that contains the hex
+                                    try { aaguidEl.style.display = 'none'; } catch (e) { /* ignore */ }
+
+                                    var labelText = name + ' (' + (displayHex || '') + ')';
+                                    try {
+                                        var newPre;
+                                        if (existing && existing.tagName && existing.tagName.toLowerCase() === 'pre') {
+                                            existing.textContent = labelText;
+                                            newPre = existing;
+                                            // ensure it has mono styling
+                                            existing.classList.add('mono');
+                                            existing.classList.add('aaguid-name');
+                                        } else {
+                                            // create a monospace pre element for consistent layout
+                                            newPre = document.createElement('pre');
+                                            newPre.id = labelId;
+                                            newPre.className = 'mono aaguid-name';
+                                            newPre.textContent = labelText;
+                                            try { newPre.title = displayHex || ''; } catch (e) {}
+                                            // insert the pre before action buttons so it appears inline in mono-block
+                                            var actions = container.querySelector('.mono-actions');
+                                            if (actions) container.insertBefore(newPre, actions);
+                                            else container.appendChild(newPre);
+                                            // remove old existing non-pre element if present
+                                            if (existing && existing.parentNode && existing.parentNode !== container) {
+                                                try { existing.parentNode.removeChild(existing); } catch (e) { }
+                                            }
+                                        }
+                                    } catch (e) { /* non-fatal */ }
+                                } catch (e) { /* non-fatal */ }
+                            } catch (e) { /* non-fatal */ }
+                        })();
+                    })();
                 }
             } catch (e) { /* non-fatal */ }
         } catch (e) { /* non-fatal */ }
