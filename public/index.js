@@ -88,6 +88,139 @@ try {
             dialogPolyfill.registerDialog(moreDialog);
         }
 
+        // iOS touch debugging helpers
+        (function(){
+            function isiOS() {
+                try {
+                    return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                } catch (e) { return false; }
+            }
+            if (!isiOS()) return;
+
+            const selector = 'button,a,input[type="button"],input[type="submit"],.mdl-button';
+            ['touchstart','touchend','pointerdown','pointerup','mousedown','mouseup','click'].forEach(evtName => {
+                document.addEventListener(evtName, (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+
+                        // helper to serialize touchlist
+                        function serializeTouchList(tl) {
+                            if (!tl) return undefined;
+                            try {
+                                return Array.from(tl).map(t => ({ identifier: t.identifier, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+                            } catch (err) { return undefined; }
+                        }
+                    } catch (err) { /* ignore */ }
+                }, { capture: true, passive: false });
+            });
+
+            // Apply touch-action to interactive elements to reduce delay/gesture ambiguity
+            try {
+                Array.from(document.querySelectorAll(selector)).forEach(el => {
+                    try { if (!el.style.touchAction) el.style.touchAction = 'manipulation'; } catch (e) {}
+                });
+            } catch (e) { /* non-fatal */ }
+
+            // On iOS, MDL's ripple effect can sometimes interfere with first-tap activation.
+            // As a non-destructive test, remove the ripple class from interactive elements so
+            // the platform's native click behavior is clearer. This can be reverted if it
+            // changes UI appearance undesirably.
+            try {
+                // Permanently disable MDL ripple on iOS for interactive elements to avoid
+                // first-tap activation issues seen on some Safari versions.
+                Array.from(document.querySelectorAll(selector + '.mdl-js-ripple-effect')).forEach(el => {
+                    try {
+                        el.classList.remove('mdl-js-ripple-effect');
+                        el.setAttribute('data-ripple-removed-for-ios', '1');
+                    } catch (e) { /* ignore per-element failure */ }
+                });
+            } catch (e) { /* non-fatal */ }
+
+            // Touch->click shim control. Set to false to disable synthesis + suppression so we can
+            // observe native behavior during debugging on iOS.
+            // Remove the debug shim code; we now use the conservative synthetic-click fallback below.
+
+            // Capture-phase click logger so we can see native click arrival before any handlers run.
+            // First a selector-filtered logger (existing), then a global unfiltered logger so we
+            // can't miss any click at document level.
+            // Keep a selector-filtered capture logger for debugging (minimal output)
+            document.addEventListener('click', (e) => {
+                try {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    // capture logging removed
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            // Early touchstart/touchend logs (selector-filtered) to capture the touch lifecycle
+            // Keep touchstart/touchend logs minimal
+            document.addEventListener('touchstart', (e) => {
+                try {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    // touchstart logging removed
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            document.addEventListener('touchend', (e) => {
+                try {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    // touchend logging removed
+                } catch (err) { /* ignore */ }
+            }, { capture: true });
+
+            // Fallback: if no native click arrives shortly after touchend, synthesize one.
+            // This is conservative: it does not suppress native clicks. It only helps devices
+            // that do not synthesize a native click for the gesture.
+            (function(){
+                const SYNTHETIC_CLICK_DELAY = 300; // ms
+                const lastNativeClick = new WeakMap(); // el -> timestamp
+                const pendingTimer = new WeakMap(); // el -> timer id
+
+                // Record native clicks when they arrive (capture phase)
+                document.addEventListener('click', (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+                        lastNativeClick.set(el, Date.now());
+                    } catch (err) { }
+                }, { capture: true });
+
+                document.addEventListener('touchend', (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+
+                        // Clear any previous pending timer for this element
+                        try { const prev = pendingTimer.get(el); if (prev) clearTimeout(prev); } catch (err) {}
+
+                        const t = setTimeout(() => {
+                            try {
+                                const last = lastNativeClick.get(el) || 0;
+                                // If a native click arrived since touchend, don't synthesize
+                                if (Date.now() - last < SYNTHETIC_CLICK_DELAY) return;
+                                // Synthesize a click
+                                el.click();
+                            } catch (err) { /* ignore */ }
+                        }, SYNTHETIC_CLICK_DELAY);
+
+                        pendingTimer.set(el, t);
+                    } catch (err) { /* ignore */ }
+                }, { capture: true });
+            })();
+
+            // Global unfiltered capture logger — logs every click at capture phase so we can
+            // detect if clicks are reaching document even when the selector-filtered logger doesn't.
+                // global capture click logging removed
+
+            // Also log touchcancel events which can indicate the browser aborted the gesture
+            // before producing a click.
+            // touchcancel logging removed
+            document.addEventListener('touchcancel', (e) => { /* no-op */ }, { capture: true });
+        })();
+
         if (!Cookies.get("uid")) {
             //user is signed out
             Cookies.remove('uid');
