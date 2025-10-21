@@ -88,6 +88,117 @@ try {
             dialogPolyfill.registerDialog(moreDialog);
         }
 
+        // iOS touch debugging helpers
+        (function(){
+            function isiOS() {
+                try {
+                    return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                } catch (e) { return false; }
+            }
+            if (!isiOS()) return;
+            try {
+                console.info('iOS touch debugging enabled', { userAgent: navigator.userAgent, platform: navigator.platform, maxTouchPoints: navigator.maxTouchPoints });
+            } catch (e) { /* ignore */ }
+
+            const selector = 'button,a,input[type="button"],input[type="submit"],.mdl-button';
+            ['touchstart','touchend','pointerdown','pointerup','mousedown','mouseup','click'].forEach(evtName => {
+                document.addEventListener(evtName, (e) => {
+                    try {
+                        const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                        if (!el) return;
+                        console.log('DBG_EVENT', evtName, {
+                            targetTag: el.tagName,
+                            id: el.id,
+                            classes: el.className,
+                            href: el.getAttribute && el.getAttribute('href'),
+                            type: el.type,
+                            timestamp: new Date().toISOString(),
+                            touches: e.touches ? e.touches.length : undefined,
+                            defaultPrevented: e.defaultPrevented
+                        });
+                    } catch (err) { console.error('DBG listener error', err); }
+                }, { capture: true, passive: false });
+            });
+
+            // Apply touch-action to interactive elements to reduce delay/gesture ambiguity
+            try {
+                Array.from(document.querySelectorAll(selector)).forEach(el => {
+                    try { if (!el.style.touchAction) el.style.touchAction = 'manipulation'; } catch (e) {}
+                });
+            } catch (e) { /* non-fatal */ }
+
+            // Lightweight touch->click shim for iOS: synthesize a click on quick taps and ignore the
+            // following native click to avoid requiring a double-tap. This is only enabled on iOS
+            // and intended as a minimal, low-risk workaround while debugging.
+            (function(){
+                const MOVE_THRESHOLD = 10; // px
+                const MAX_TAP_DURATION = 700; // ms
+                const IGNORE_CLICK_WINDOW = 750; // ms
+                const touchState = new WeakMap();
+
+                function onTouchStart(e) {
+                    if (!e.touches || e.touches.length !== 1) return;
+                    const t = e.touches[0];
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    touchState.set(el, {
+                        startX: t.clientX,
+                        startY: t.clientY,
+                        startTime: Date.now(),
+                        moved: false
+                    });
+                }
+
+                function onTouchMove(e) {
+                    const t = e.touches && e.touches[0];
+                    if (!t) return;
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    const st = touchState.get(el);
+                    if (!st) return;
+                    if (Math.abs(t.clientX - st.startX) > MOVE_THRESHOLD || Math.abs(t.clientY - st.startY) > MOVE_THRESHOLD) {
+                        st.moved = true;
+                    }
+                }
+
+                function onTouchEnd(e) {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    const st = touchState.get(el);
+                    touchState.delete(el);
+                    if (!st) return;
+                    const dur = Date.now() - st.startTime;
+                    if (st.moved) return;
+                    if (dur > MAX_TAP_DURATION) return;
+                    try {
+                        // Synthesize click and mark element so we can ignore the next native click
+                        el.__lastSyntheticClick = Date.now();
+                        // Use setTimeout to run after touchend processing completes
+                        setTimeout(() => {
+                            try { el.click(); } catch (err) { /* non-fatal */ }
+                        }, 0);
+                    } catch (err) { /* ignore */ }
+                }
+
+                function onClick(e) {
+                    const el = e.target && e.target.closest ? e.target.closest(selector) : null;
+                    if (!el) return;
+                    const last = el.__lastSyntheticClick || 0;
+                    if (Date.now() - last < IGNORE_CLICK_WINDOW) {
+                        // This is the native click that follows our synthetic click; prevent double activation
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                        try { console.debug('Suppressed native click following synthetic click for', el); } catch (err) {}
+                    }
+                }
+
+                document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+                document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true });
+                document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+                document.addEventListener('click', onClick, { capture: true });
+            })();
+        })();
+
         if (!Cookies.get("uid")) {
             //user is signed out
             Cookies.remove('uid');
