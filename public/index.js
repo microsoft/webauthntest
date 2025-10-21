@@ -1744,15 +1744,17 @@ try {
                                 if (!container) return;
                                 var labelId = aaguidSpanId + '_name_label';
                                 var existing = document.getElementById(labelId);
-                                var displayGuid = formatted || (aaguidRaw || '');
-                                var labelText = name + ' (' + displayGuid + ')';
+                                // Prefer the raw value used by the copy button (data-raw) so displayed hex matches copied value
+                                var copyRaw = aaguidEl && aaguidEl.getAttribute ? (aaguidEl.getAttribute('data-raw') || aaguidRaw) : aaguidRaw;
+                                var displayHex = (copyRaw || '').toUpperCase();
+                                var labelText = name + ' (' + displayHex + ')';
                                 // Replace visible AAGUID display with the fetched name while keeping the pre element
                                 // (which holds data-raw) in the DOM so copy buttons still work.
                                 try {
                                     // Hide the underlying pre element that contains the hex
                                     try { aaguidEl.style.display = 'none'; } catch (e) { /* ignore */ }
 
-                                    var labelText = name + ' (' + (displayGuid || '') + ')';
+                                    var labelText = name + ' (' + (displayHex || '') + ')';
                                     try {
                                         var newPre;
                                         if (existing && existing.tagName && existing.tagName.toLowerCase() === 'pre') {
@@ -1767,7 +1769,7 @@ try {
                                             newPre.id = labelId;
                                             newPre.className = 'mono aaguid-name';
                                             newPre.textContent = labelText;
-                                            try { newPre.title = displayGuid || ''; } catch (e) {}
+                                            try { newPre.title = displayHex || ''; } catch (e) {}
                                             // insert the pre before action buttons so it appears inline in mono-block
                                             var actions = container.querySelector('.mono-actions');
                                             if (actions) container.insertBefore(newPre, actions);
