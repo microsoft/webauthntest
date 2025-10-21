@@ -111,8 +111,6 @@ try {
                                 return Array.from(tl).map(t => ({ identifier: t.identifier, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
                             } catch (err) { return undefined; }
                         }
-
-                        // debug event logging removed
                     } catch (err) { /* ignore */ }
                 }, { capture: true, passive: false });
             });
