@@ -449,6 +449,13 @@ try {
             //user is signed out
             // Remove cookie using the same path used when setting it so it is actually cleared
             Cookies.remove('uid', { path: '/' });
+            // Clear AAGUID caches (in-memory + persisted localStorage mirror)
+            try {
+                aaguidNameCache = {};
+                aaguidIconCache = {};
+                try { localStorage.removeItem('aaguid_name_cache'); } catch (e) { }
+                try { localStorage.removeItem('aaguid_icon_cache'); } catch (e) { }
+            } catch (e) { /* ignore */ }
             window.location.href = "./login.html";
         }
 
@@ -461,6 +468,13 @@ try {
         $('#signOutButton').click(() => {
             // Ensure the persistent cookie is removed by specifying the path
             Cookies.remove('uid', { path: '/' });
+            // Clear AAGUID caches (in-memory + persisted localStorage mirror)
+            try {
+                aaguidNameCache = {};
+                aaguidIconCache = {};
+                try { localStorage.removeItem('aaguid_name_cache'); } catch (e) { }
+                try { localStorage.removeItem('aaguid_icon_cache'); } catch (e) { }
+            } catch (e) { /* ignore */ }
             window.location.href = "./login.html";
         });
 
