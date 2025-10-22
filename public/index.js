@@ -1658,7 +1658,10 @@ try {
     function renderCredential(credential) {
         var html = '';
 
-    html += '<div class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col" id="credential-' + credential.idHex + '">';
+    // Apply a disabled class when credential.enabled === false (treat missing enabled as true)
+    var isEnabled = (typeof credential.enabled === 'undefined') ? true : !!credential.enabled;
+    var cardClass = 'mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col' + (isEnabled ? '' : ' cred-disabled');
+    html += '<div class="' + cardClass + '" id="credential-' + credential.idHex + '">';
         html += ' <div class="mdl-card__title">';
         html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
         html += ' </div>';
