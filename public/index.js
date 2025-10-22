@@ -40,6 +40,8 @@ try {
     var selectedTransportCredentialId = null; // credential id currently being edited for transports
     // In-memory cache for AAGUID -> name lookups. Persisted mirror is stored in localStorage under 'aaguid_name_cache'.
     var aaguidNameCache = {};
+    // In-memory cache for AAGUID -> icon lookups. Persisted mirror is stored in localStorage under 'aaguid_icon_cache'.
+    var aaguidIconCache = {};
     // Default TTL for cached entries: 30 days (milliseconds)
     var DEFAULT_AAGUID_NAME_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
     // TTL used by the cache. This may be overridden by a global or persisted setting.
@@ -168,6 +170,96 @@ try {
             } catch (e) {
                 return resolve(null);
             }
+        });
+    }
+
+    /**
+     * Get authenticator icon for formatted GUID (dashed lowercase). Checks in-memory cache, then localStorage, then fetches from GitHub main branch.
+     * Tries icon_dark.txt / icon_light.txt based on prefers-color-scheme and falls back to icon.txt
+     * Returns Promise<string|null> where string is a data URL or remote URL usable as img.src
+     */
+    function getAaguidIcon(formattedGuid) {
+        return new Promise(async (resolve) => {
+            if (!formattedGuid) return resolve(null);
+
+            try {
+                var mem = aaguidIconCache[formattedGuid];
+                if (mem && mem.icon && mem.ts) {
+                    if ((Date.now() - mem.ts) < AAGUID_NAME_CACHE_TTL) {
+                        return resolve(mem.icon);
+                    } else {
+                        delete aaguidIconCache[formattedGuid];
+                    }
+                }
+            } catch (e) { }
+
+            try {
+                var lsRaw = localStorage.getItem('aaguid_icon_cache');
+                if (lsRaw) {
+                    var lsObj = JSON.parse(lsRaw);
+                    if (lsObj && lsObj[formattedGuid]) {
+                        var entry = lsObj[formattedGuid];
+                        if (entry && entry.icon && entry.ts) {
+                            if ((Date.now() - entry.ts) < AAGUID_NAME_CACHE_TTL) {
+                                aaguidIconCache[formattedGuid] = { icon: entry.icon, ts: entry.ts };
+                                return resolve(entry.icon);
+                            } else {
+                                try { delete lsObj[formattedGuid]; localStorage.setItem('aaguid_icon_cache', JSON.stringify(lsObj)); } catch (e) { }
+                            }
+                        }
+                    }
+                }
+            } catch (e) { }
+
+            // Determine preference based on user theme
+            var prefersDark = false;
+            try { prefersDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); } catch (e) { prefersDark = false; }
+            var tryFiles = prefersDark ? ['icon_dark.txt','icon.txt','icon_light.txt'] : ['icon_light.txt','icon.txt','icon_dark.txt'];
+
+            var base = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/refs/heads/main/' + formattedGuid + '/';
+            try {
+                for (var i = 0; i < tryFiles.length; i++) {
+                    try {
+                        var url = base + tryFiles[i];
+                        var resp = await fetch(url);
+                        if (!resp || !resp.ok) continue;
+                        var txt = (await resp.text()).trim();
+                        if (!txt) continue;
+
+                        var dataUrl = null;
+                        // If already a data URL, use as-is
+                        if (/^data:/i.test(txt)) {
+                            dataUrl = txt;
+                        } else if (/^<svg[\s>]/i.test(txt) || /<svg[\s>]/i.test(txt)) {
+                            try { dataUrl = 'data:image/svg+xml;base64,' + btoa(txt); } catch (e) { dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(txt); }
+                        } else if (/^[A-Za-z0-9+/=\s]+$/.test(txt) && txt.length > 100) {
+                            // likely base64 binary (png/svg). Prefer png
+                            dataUrl = 'data:image/png;base64,' + txt.replace(/\s+/g, '');
+                        } else if (/^https?:\/\//i.test(txt)) {
+                            dataUrl = txt;
+                        } else {
+                            // fallback: treat as utf8 svg content
+                            try { dataUrl = 'data:image/svg+xml;base64,' + btoa(txt); } catch (e) { dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(txt); }
+                        }
+
+                        if (!dataUrl) continue;
+
+                        var entry = { icon: dataUrl, ts: Date.now() };
+                        aaguidIconCache[formattedGuid] = entry;
+                        try {
+                            var existing = {};
+                            var raw = localStorage.getItem('aaguid_icon_cache');
+                            if (raw) existing = JSON.parse(raw);
+                            existing[formattedGuid] = entry;
+                            localStorage.setItem('aaguid_icon_cache', JSON.stringify(existing));
+                        } catch (e) { }
+
+                        return resolve(dataUrl);
+                    } catch (e) { /* try next */ }
+                }
+            } catch (e) { }
+
+            return resolve(null);
         });
     }
 
@@ -1683,7 +1775,9 @@ try {
     html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
     html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
     html += '</div></dd>';
-        html += '             <dt>AAGUID</dt><dd><div class="mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></div></div></dd>';
+    // Add a small img container to the mono-block for AAGUID icon (left side). The img is placed before the pre element.
+    // Arrange as: text | icon | actions so AAGUID text is left-aligned and icon sits to its right
+    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></div></div></dd>';
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
@@ -1793,9 +1887,25 @@ try {
                                 var labelText = name + ' (' + displayHex + ')';
                                 // Replace visible AAGUID display with the fetched name while keeping the pre element
                                 // (which holds data-raw) in the DOM so copy buttons still work.
-                                try {
+                                    try {
                                     // Hide the underlying pre element that contains the hex
                                     try { aaguidEl.style.display = 'none'; } catch (e) { /* ignore */ }
+
+                                        // Attempt to fetch & show icon for this aaguid. Non-blocking.
+                                        (async function(){
+                                            try {
+                                                var formattedForIcon = formatted; // same formatted GUID used for name
+                                                var icon = await getAaguidIcon(formattedForIcon);
+                                                var imgEl = document.getElementById(aaguidSpanId + '_icon');
+                                                if (imgEl) {
+                                                    if (icon) {
+                                                        try { imgEl.src = icon; imgEl.style.display = ''; } catch (e) { imgEl.style.display = 'none'; }
+                                                    } else {
+                                                        try { imgEl.style.display = 'none'; } catch (e) { }
+                                                    }
+                                                }
+                                            } catch (e) { /* ignore */ }
+                                        })();
 
                                     var labelText = name + ' (' + (displayHex || '') + ')';
                                     try {

@@ -451,6 +451,19 @@ a {
   height: 0;
 }
 
+/* AAGUID mono-block layout: three columns — icon | text | actions
+   Make icon and actions columns fixed-width so the copy icon lines up with other entries. */
+.aaguid-mono-block {
+  display: grid;
+  grid-template-columns: 1fr 44px 44px; /* text (fluid) | icon (44px) | actions (44px) */
+  gap: 8px; /* match .mono-block default */
+  align-items: center;
+}
+.aaguid-mono-block { width: 100%; grid-auto-flow: column; }
+.aaguid-icon-wrap { width: 44px; display: flex; align-items: center; justify-content: center; }
+.aaguid-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+/* Keep the pre styling (background/padding) so the rounded rectangle appears around the AAGUID text */
+
 /* Mono block wrapper: positions a small copy button top-right of pre blocks */
 .mono-block {
   display: grid;
@@ -472,6 +485,22 @@ a {
   min-width: 0; /* allow shrink in constrained containers */
   width: 100%;
 }
+
+/* Ensure AAGUID mono-block uses a three-column grid even though .mono-block sets a different template.
+   Specific selector (.mono-block.aaguid-mono-block) ensures this rule wins. */
+.mono-block.aaguid-mono-block {
+  grid-template-columns: 1fr 44px 44px !important;
+  display: grid;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Force column placement so order is guaranteed regardless of DOM or inherited styles */
+.aaguid-mono-block > pre.mono { grid-column: 1 / 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; writing-mode: horizontal-tb; }
+.aaguid-mono-block > .aaguid-icon-wrap { grid-column: 2 / 3; }
+.aaguid-mono-block > .mono-actions { grid-column: 3 / 4; }
+/* allow the text column to shrink inside the grid instead of forcing wrapping */
+.aaguid-mono-block > pre.mono { min-width: 0; }
 
 /* Ensure mono-block inside reg-data-list dd participates properly in dd's layout */
 .reg-data-list dd > .mono-block { flex: 1 1 auto; min-width: 0; display: grid; }
@@ -496,6 +525,28 @@ a {
   .mono-block { grid-template-columns: 1fr; }
   /* On narrow screens collapse to a single column and let actions flow naturally */
   .mono-actions { margin-left: 0; margin-top: 8px; justify-content: flex-start; width: auto; min-width: 0; }
+}
+
+/* AAGUID responsive: on narrow screens show text on first row, icon+copy on second row */
+@media (max-width: 640px) {
+  .mono-block.aaguid-mono-block {
+    display: grid !important;
+    grid-template-columns: 1fr 44px !important; /* text | icon+action */
+    grid-template-rows: auto auto !important;
+    grid-template-areas: 
+      "text text"
+      "icon actions";
+    gap: 8px;
+    width: 100%;
+  }
+  .aaguid-mono-block > pre.mono {
+    grid-area: text;
+    white-space: normal; /* allow wrapping on narrow screens */
+    overflow: visible;
+    min-width: 0;
+  }
+  .aaguid-mono-block > .aaguid-icon-wrap { grid-area: icon; justify-content: flex-start; }
+  .aaguid-mono-block > .mono-actions { grid-area: actions; justify-content: center; }
 }
 
 /* Algorithm priority list */
