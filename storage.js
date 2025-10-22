@@ -11,6 +11,8 @@ storage.Credentials = mongoose.model('Credential', new mongoose.Schema({
     id: {type: String, index: true},
     idHex: String,
     transports: [{type: String}],
+    // enabled flag for credential state; if missing on older records, treat as enabled
+    enabled: { type: Boolean, default: true },
     metadata: {
         rpId: String,
         userName: String,

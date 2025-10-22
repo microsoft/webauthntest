@@ -87,6 +87,22 @@ app.patch('/credentials/transports', async (req, res) => {
     }
 });
 
+// Updates the enabled state for a credential
+app.patch('/credentials/enabled', async (req, res) => {
+    try {
+        const uid = getUser(req);
+        const { id, enabled } = req.body;
+        if (!id) throw new Error('id is required');
+        if (typeof id !== 'string') throw new Error('id must be a string');
+        if (typeof enabled !== 'boolean') throw new Error('enabled must be boolean');
+        const updated = await require('./storage').Credentials.findOneAndUpdate({ uid, id }, { enabled: enabled }, { new: true });
+        if (!updated) throw new Error('Credential not found');
+        res.json({ result: { id: updated.id, enabled: updated.enabled } });
+    } catch (e) {
+        res.json({ error: e.message });
+    }
+});
+
 app.get('/challenge', async (req, res) => {
     try {
         const uid = getUser(req);
