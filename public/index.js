@@ -966,11 +966,13 @@ try {
             // Existing real credentials only if user checked the checkbox
             var realCreds = [];
             if ($('#create_excludeCredentials').is(":checked")) {
-                realCreds = credentials.map(cred => ({
-                    type: 'public-key',
-                    id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
-                    transports: cred.transports // never overwritten now
-                }));
+                // Only include credentials which are enabled (treat missing enabled as true)
+                realCreds = credentials.filter(cred => typeof cred.enabled === 'undefined' ? true : !!cred.enabled)
+                    .map(cred => ({
+                        type: 'public-key',
+                        id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                        transports: cred.transports // never overwritten now
+                    }));
             }
 
             var mid = null;
@@ -1236,11 +1238,13 @@ try {
 
                 var realCreds = [];
                 if ($('#get_allowCredentials').is(':checked')) {
-                    realCreds = credentials.map(cred => ({
-                        type: 'public-key',
-                        id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
-                        transports: cred.transports // do not overwrite
-                    }));
+                    // Only include credentials which are enabled (treat missing enabled as true)
+                    realCreds = credentials.filter(cred => typeof cred.enabled === 'undefined' ? true : !!cred.enabled)
+                        .map(cred => ({
+                            type: 'public-key',
+                            id: Uint8Array.from(atob(cred.id), c => c.charCodeAt(0)),
+                            transports: cred.transports // do not overwrite
+                        }));
                 }
 
                 var allowCredentials = [];
@@ -1441,6 +1445,11 @@ try {
         const credential = credentials.find(c => c.id === id);
         if (!credential) return Promise.reject('Credential not found');
 
+        // Respect enabled state: do not attempt to authenticate disabled credentials
+        if (typeof credential.enabled !== 'undefined' && !credential.enabled) {
+            return Promise.reject('Credential is disabled');
+        }
+
         // Build allowCredentials array with only this credential and include transports if present
         const allowCred = {
             type: 'public-key',
@@ -1560,6 +1569,29 @@ try {
         $("a.updateTransportsButton").click(e => {
             var id = $(e.currentTarget).attr("data-value");
             showUpdateTransports(id);
+        });
+        // Toggle enabled/disabled state for a credential
+        $("a.toggleEnabledButton").click(async e => {
+            e.preventDefault();
+            const el = e.currentTarget;
+            const id = $(el).attr('data-value');
+            if (!id) return;
+            // read current state from attribute; default true
+            const cur = $(el).attr('data-enabled');
+            const currentlyEnabled = (typeof cur === 'undefined') ? true : (cur === 'true');
+            const newState = !currentlyEnabled;
+            try {
+                disableControls();
+                const result = await updateCredentialEnabled(id, newState);
+                // update local cache and re-render whole list for simplicity
+                const cred = credentials.find(c => c.id === id);
+                if (cred) cred.enabled = result.enabled;
+                await updateCredentials();
+            } catch (err) {
+                toast('Failed to update enabled state: ' + (err && err.message ? err.message : err));
+            } finally {
+                enableControls();
+            }
         });
         // Ensure MDL upgrades newly added elements so styles/ripples apply
         try {
@@ -1686,6 +1718,13 @@ try {
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticateCredentialButton" data-value="'
             + credential.id
             + '">Authenticate</a>';
+        // Add enable/disable button based on credential.enabled (default to enabled if missing)
+        var isEnabled = (typeof credential.enabled === 'undefined') ? true : !!credential.enabled;
+        if (isEnabled) {
+            html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect toggleEnabledButton" data-value="' + credential.id + '" data-enabled="true">Disable</a>';
+        } else {
+            html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect toggleEnabledButton" data-value="' + credential.id + '" data-enabled="false">Enable</a>';
+        }
         html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
         html += ' </div>';
         html += '</div>';
@@ -3470,6 +3509,30 @@ try {
             .then(r => {
                 if (r.error) return Promise.reject(r.error);
                 return Promise.resolve(r.result);
+            });
+    }
+
+    /**
+     * Updates credential enabled state on server
+     * @param {string} id credential id
+     * @param {boolean} enabled new enabled state
+     */
+    function updateCredentialEnabled(id, enabled) {
+        return rest_patch('/credentials/enabled', { id: id, enabled: !!enabled })
+            .then(response => {
+                // If server returns a non-2xx status, surface body as text for debugging
+                const ct = (response.headers && response.headers.get) ? (response.headers.get('content-type') || '') : '';
+                if (!response.ok) {
+                    return response.text().then(txt => Promise.reject(new Error('Server returned ' + response.status + ': ' + (txt || '[no response body]'))));
+                }
+                // If content-type is JSON, parse; otherwise return text error to avoid JSON.parse on HTML
+                if (ct.indexOf('application/json') === -1) {
+                    return response.text().then(txt => Promise.reject(new Error('Expected JSON but received: ' + (txt && txt.slice ? txt.slice(0, 200) : String(txt)))));
+                }
+                return response.json().then(r => {
+                    if (r.error) return Promise.reject(new Error(r.error));
+                    return Promise.resolve(r.result);
+                });
             });
     }
 

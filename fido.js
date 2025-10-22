@@ -155,6 +155,8 @@ fido.makeCredential = async (uid, attestation) => {
             prfSecond: "none",
         }
     };
+    // Ensure new credentials are enabled by default
+    credential.enabled = true;
 
     await storage.Credentials.create(credential);
 
