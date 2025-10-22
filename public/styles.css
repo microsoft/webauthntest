@@ -451,9 +451,15 @@ a {
   height: 0;
 }
 
-/* AAGUID icon shown to the left of mono pre blocks */
-.aaguid-mono-block { grid-template-columns: auto 1fr auto; align-items: center; gap: 0 4px; }
-.aaguid-icon-wrap { width: 36px; display: flex; align-items: center; justify-content: center; }
+/* AAGUID mono-block layout: three columns — icon | text | actions
+   Make icon and actions columns fixed-width so the copy icon lines up with other entries. */
+.aaguid-mono-block {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px; /* icon (44px) | text (fluid) | actions (44px) */
+  gap: 8px; /* match .mono-block default */
+  align-items: center;
+}
+.aaguid-icon-wrap { width: 44px; display: flex; align-items: center; justify-content: center; }
 .aaguid-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
 /* Keep the pre styling (background/padding) so the rounded rectangle appears around the AAGUID text */
 
@@ -477,6 +483,15 @@ a {
   box-sizing: border-box;
   min-width: 0; /* allow shrink in constrained containers */
   width: 100%;
+}
+
+/* Ensure AAGUID mono-block uses a three-column grid even though .mono-block sets a different template.
+   Specific selector (.mono-block.aaguid-mono-block) ensures this rule wins. */
+.mono-block.aaguid-mono-block {
+  grid-template-columns: 44px 1fr 44px !important;
+  display: grid;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Ensure mono-block inside reg-data-list dd participates properly in dd's layout */
