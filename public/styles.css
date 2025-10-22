@@ -451,6 +451,11 @@ a {
   height: 0;
 }
 
+/* AAGUID icon shown to the left of mono pre blocks */
+.aaguid-mono-block { grid-template-columns: auto 1fr auto; align-items: center; }
+.aaguid-icon-wrap { width: 40px; display: flex; align-items: center; justify-content: center; }
+.aaguid-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+
 /* Mono block wrapper: positions a small copy button top-right of pre blocks */
 .mono-block {
   display: grid;
