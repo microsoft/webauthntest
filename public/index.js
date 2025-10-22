@@ -447,7 +447,8 @@ try {
 
         if (!Cookies.get("uid")) {
             //user is signed out
-            Cookies.remove('uid');
+            // Remove cookie using the same path used when setting it so it is actually cleared
+            Cookies.remove('uid', { path: '/' });
             window.location.href = "./login.html";
         }
 
@@ -458,7 +459,8 @@ try {
         }, 100);
 
         $('#signOutButton').click(() => {
-            Cookies.remove('uid');
+            // Ensure the persistent cookie is removed by specifying the path
+            Cookies.remove('uid', { path: '/' });
             window.location.href = "./login.html";
         });
 

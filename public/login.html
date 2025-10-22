@@ -71,7 +71,10 @@
             return false;
         }
 
-        Cookies.set('uid', $('#uid').val());
+    // Persist the uid cookie for 1 year so the user stays logged in across browser restarts.
+    // Use a reasonably long expiry and a conservative SameSite/path. In production consider
+    // using secure cookies served from the server-side (HttpOnly, Secure).
+    Cookies.set('uid', $('#uid').val(), { expires: 365, path: '/', sameSite: 'Lax' });
         window.location.href = "./";
         return false;
     }
