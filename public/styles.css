@@ -7,6 +7,14 @@
   gap: 12px;
   border-top: 2px solid rgba(63,81,181,0.45); /* thicker themed indigo divider */
 }
+/*
+  NOTE: Several elements inside credential cards use a .mono class with
+  100% width. Historically the padding+border caused visual overflow where
+  the rounded mono boxes extended slightly beyond their lighter grey
+  container (.reg-data). To fix that, .mono uses box-sizing: border-box and
+  max-width:100% so padding and border are included in the width calculation
+  and inner boxes don't escape their parent boundaries.
+*/
 
 .transport-actions .mdl-button {
   min-width: 120px;
@@ -640,6 +648,11 @@ a {
     Use the configurable --mono-max-height (viewport-relative) with a pixel fallback. */
   max-height: var(--mono-max-height, 260px);
   overflow-y: auto;
+  /* Ensure the width calculation includes padding and border so a 100% width
+     mono box (used elsewhere) stays inside its parent (.reg-data) and
+     doesn't overflow the grey section boundary. */
+  box-sizing: border-box;
+  max-width: 100%;
   padding: 8px 6px;
   border: 1px solid rgba(0,0,0,0.06);
   border-radius: 4px;
