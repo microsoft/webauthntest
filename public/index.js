@@ -2940,11 +2940,28 @@ try {
         // 32-byte rows on wider screens. We use the raw hex kept in a data attribute.
         // Render public key blocks responsively using attachResponsiveHex per element
         try {
+            // Only attach responsive formatting for public key blocks that are
+            // already visible. If a block is collapsed (display:none) we avoid
+            // formatting it now because measuring a hidden element yields a
+            // zero-width measurement which causes an incorrect initial render
+            // followed by a ResizeObserver re-render when it becomes visible
+            // (this is the source of the flicker). Instead, we'll attach the
+            // formatter when the user expands the block.
             const blocks = dlg.querySelectorAll('.public-key-hex');
             blocks.forEach(el => {
-                const raw = el.getAttribute('data-public-key-raw') || '';
-                // Use attachResponsiveHex to format and attach ResizeObserver
-                try { attachResponsiveHexForElement(el, raw); } catch (e) { /* ignore */ }
+                const blockContainer = el.closest('.public-key-block');
+                const isCollapsed = blockContainer && blockContainer.classList && blockContainer.classList.contains('collapsed');
+                if (!isCollapsed) {
+                    const raw = el.getAttribute('data-public-key-raw') || '';
+                    try { attachResponsiveHexForElement(el, raw); } catch (e) { /* ignore */ }
+                } else {
+                    // Ensure hidden elements have no leftover text or observers
+                    try {
+                        if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; }
+                        if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; }
+                        el.textContent = '';
+                    } catch (e) { /* ignore */ }
+                }
             });
         } catch (e) { /* ignore */ }
 
@@ -2975,8 +2992,23 @@ try {
                     block.classList.remove('collapsed');
                     btn.setAttribute('aria-expanded', 'true');
                     btn.innerHTML = '<i class="material-icons" aria-hidden="true">expand_less</i>&nbsp;Hide';
-                    // Render after expansion
-                    try { pkRender(); } catch (e) { /* ignore */ }
+                    // After making the block visible, attach responsive formatting
+                    // once using the real measured width. Use requestAnimationFrame
+                    // to ensure the DOM has updated and layout is available.
+                    try {
+                        const codeEl = block.querySelector('.public-key-hex');
+                        if (codeEl) {
+                            const raw = codeEl.getAttribute('data-public-key-raw') || '';
+                            // Remove any previous observers/listeners/text to avoid
+                            // a stale initial render.
+                            try { if (codeEl._hexObserver) { codeEl._hexObserver.disconnect(); delete codeEl._hexObserver; } } catch (e) {}
+                            try { if (codeEl._hexResizeListener) { window.removeEventListener('resize', codeEl._hexResizeListener); delete codeEl._hexResizeListener; } } catch (e) {}
+                            codeEl.textContent = '';
+                            requestAnimationFrame(() => {
+                                try { attachResponsiveHexForElement(codeEl, raw); } catch (e) { /* ignore */ }
+                            });
+                        }
+                    } catch (e) { /* ignore */ }
                 }
             });
         });
