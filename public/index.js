@@ -2085,11 +2085,6 @@ try {
     function showCreationData(id) {
         var credential = credentials.find(c => c.id === id);
 
-        var publicKeyType = credential.creationData.publicKeySummary + " ";
-        if (credential.creationData.publicKeyAlgorithm !== undefined) {
-            publicKeyType += "(" + credential.creationData.publicKeyAlgorithm +") ";
-        }
-
     // Format long hex blobs into colon-separated byte pairs (multi-line) for readability,
     // similar to how public keys are rendered in the Certificates view.
     (function renderHexBlobs() {
@@ -2159,7 +2154,6 @@ try {
             formatTarget('creationData_attestationObject', credential.creationData.attestationObject);
             formatTarget('creationData_clientDataJSON', credential.creationData.clientDataJSON, true);
             formatTarget('creationData_authenticatorDataHex', credential.creationData.authenticatorDataHex);
-            $("#creationData_publicKeyType").text(sanitizeForDisplay(publicKeyType));
             formatTarget('creationData_publicKeyCbor', credential.creationData.publicKeyHex);
             formatTarget('creationData_extensionData', credential.creationData.extensionDataHex);
         } catch (e) {
@@ -2167,7 +2161,6 @@ try {
             $("#creationData_attestationObject").text(sanitizeForDisplay(credential.creationData.attestationObject));
             $("#creationData_clientDataJSON").text(sanitizeForDisplay(credential.creationData.clientDataJSON));
             $("#creationData_authenticatorDataHex").text(sanitizeForDisplay(credential.creationData.authenticatorDataHex));
-            $("#creationData_publicKeyType").text(sanitizeForDisplay(publicKeyType));
             $("#creationData_publicKeyCbor").text(sanitizeForDisplay(credential.creationData.publicKeyHex));
             $("#creationData_extensionData").text(sanitizeForDisplay(credential.creationData.extensionDataHex));
         }
