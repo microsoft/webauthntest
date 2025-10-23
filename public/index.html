@@ -60,7 +60,7 @@
             <hr>
 
             <span>
-                <span>Require Resident Key</span>
+                <span>Require Resident Key (L1)</span>
                 <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="false">False</option>
@@ -277,6 +277,15 @@
             <span>
                 <span>HMAC Extension</span>
                 <select name="create_hmac_create" id="create_hmac_create" class="float-right">
+                    <option value="undefined">Undefined</option>
+                    <option value="true" selected>True</option>
+                </select>
+            </span>
+            <hr>
+
+            <span>
+                <span>CredProps Extension</span>
+                <select name="create_cred_props" id="create_cred_props" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="true" selected>True</option>
                 </select>
@@ -536,7 +545,7 @@
             <div class="reg-data">
                 <div class="reg-data-body">
                     <dl class="reg-data-list">
-                        <dt>Require Resident Key</dt>
+                        <dt>Discoverable Credential</dt>
                         <dd><span id="creationData_residentKey" class="mono"></span></dd>
 
                         <dt>Public Key Type</dt>
