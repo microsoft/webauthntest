@@ -1145,6 +1145,11 @@ try {
             createCredentialOptions.extensions.hmacCreateSecret = hmacCreateSecret;
         }
 
+        if ($('#create_cred_props').val() !== "undefined") {
+            var credProps = ($('#create_cred_props').val() == "true");
+            createCredentialOptions.extensions.credProps = credProps;
+        }
+
         if ($('#create_prf').val() !== "undefined") {
             var prfEnable = ($('#create_prf').val() == "enable");
             if (prfEnable) {
@@ -1224,6 +1229,14 @@ try {
                 }
             }
 
+            var residentKey = createCredentialOptions.authenticatorSelection.requireResidentKey;
+            if (typeof clientExtensionResults.credProps !== 'undefined') {
+                if (typeof clientExtensionResults.credProps.rk !== 'undefined') {
+                    residentKey = clientExtensionResults.credProps.rk;
+                    console.log("Resident Key: ", residentKey);
+                }
+            }
+
             var credential = {
                 id: arrayBufferToBase64(attestation.rawId),
                 authenticatorAttachment: attestation.authenticatorAttachment,
@@ -1240,7 +1253,7 @@ try {
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
-                    residentKey: createCredentialOptions.authenticatorSelection.requireResidentKey
+                    residentKey: residentKey
                 },
             };
 
