@@ -269,10 +269,34 @@ try {
             dialogPolyfill.registerDialog(createDialog);
         }
 
+        // Prevent body scrolling while modal is open so the dialog's own
+        // internal scrollbar is used. Wrap showModal and restore on close.
+        try {
+            if (createDialog) {
+                const _origCreateShow = createDialog.showModal.bind(createDialog);
+                createDialog.showModal = function () {
+                    try { document.body.style.overflow = 'hidden'; } catch (e) {}
+                    return _origCreateShow();
+                };
+                createDialog.addEventListener('close', function () { try { document.body.style.overflow = ''; } catch (e) {} });
+            }
+        } catch (e) { /* non-fatal */ }
+
         var getDialog = document.querySelector('#getDialog');
         if (!getDialog.showModal) {
             dialogPolyfill.registerDialog(getDialog);
         }
+
+        try {
+            if (getDialog) {
+                const _origGetShow = getDialog.showModal.bind(getDialog);
+                getDialog.showModal = function () {
+                    try { document.body.style.overflow = 'hidden'; } catch (e) {}
+                    return _origGetShow();
+                };
+                getDialog.addEventListener('close', function () { try { document.body.style.overflow = ''; } catch (e) {} });
+            }
+        } catch (e) { /* non-fatal */ }
 
         var creationDataDialog = document.querySelector('#creationDataDialog');
         if (!creationDataDialog.showModal) {

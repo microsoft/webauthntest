@@ -178,6 +178,12 @@ select {
 
 .mdl-dialog__content {
   font-size: 16px;
+  /* Allow dialog content to flex and scroll when dialog height is constrained
+     by the viewport. Using flex on the dialog container (see .mdl-dialog)
+     plus min-height:0 here ensures overflow-y works reliably across browsers. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 dialog {
@@ -210,6 +216,11 @@ dialog {
     column-count: 2;
     column-gap: 18px;
     column-fill: balance;
+    /* Ensure the multi-column content is constrained to the dialog's
+       available height so a scrollbar appears inside the content area
+       when there are many options. 120px reserves space for title/actions. */
+    max-height: calc(100% - 120px);
+    overflow-y: auto;
   }
   #createDialog .mdl-dialog__content > span {
     display: inline-block;
@@ -245,6 +256,9 @@ dialog {
     column-count: 2;
     column-gap: 18px;
     column-fill: balance;
+    /* Match behavior for the Get dialog so its content scrolls inside the modal. */
+    max-height: calc(100% - 120px);
+    overflow-y: auto;
   }
   #getDialog .mdl-dialog__content > span {
     display: inline-block;
@@ -279,6 +293,15 @@ dialog {
 
 .mdl-dialog {
   width: 400px;
+  /* Keep the dialog from exceeding the viewport height and allow
+    its inner content area to scroll when needed. Use flexbox so
+    header/title and actions keep their intrinsic size while the
+    content area takes the remaining space and becomes scrollable. */
+  margin: 24px auto;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* clip outer overflow; inner content scrolls */
 }
 
 .mdl-dialog__title {
