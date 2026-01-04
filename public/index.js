@@ -507,8 +507,8 @@ try {
         });
 
         $('#getButton').click(async () => {
-
-            if (conditionalAuthOperationInProgress === false)
+            console.log("conditionalAuthOperationInProgress: ", conditionalAuthOperationInProgress);
+            if (!conditionalAuthOperationInProgress)
             {
                 if (window.PublicKeyCredential) {
                     try {
@@ -1489,16 +1489,25 @@ try {
             getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
         }
 
-        if(ongoingAuth != null) {
+        if(ongoingAuth !== null) {
             conditionalAuthOperationInProgress = false;
+            console.log("Cancelling ongoing authentication");
             ongoingAuth.abort('Cancel ongoing authentication')
+        }
+        else
+        {
+            console.log("No ongoing authentication to cancel");
         }
 
         ongoingAuth = new AbortController();
+        var mediationOption = conditional ? 'conditional' : 'optional';
 
+        console.log("Starting get() with options:", getAssertionOptions);
+        console.log("Conditional UI:", conditional);
+        console.log("Mediation Option:", mediationOption);
         return navigator.credentials.get({
             publicKey: getAssertionOptions,
-            mediation: conditional ? 'conditional' : 'optional',
+            mediation: mediationOption,
             signal: ongoingAuth.signal
         }).then(assertion => {
             /** @type {EncodedAssertionResponse} */
@@ -1534,8 +1543,6 @@ try {
                 }
             };
 
-            console.log("=== Get Options ===");
-            console.log(getAssertionOptions);
             console.log("=== Get response ===");
             console.log(assertion);
             console.log("=== Get Extension Results ===");
@@ -1627,7 +1634,7 @@ try {
         const getOptions = {
             challenge: challenge,
             allowCredentials: [allowCred],
-            userVerification: 'required',
+            userVerification: 'preferred',
             timeout: 600000
         };
 
