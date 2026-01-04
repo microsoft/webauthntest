@@ -370,6 +370,17 @@
         <h3 class="mdl-dialog__title">Get Credential Options</h3>
         <div class="mdl-dialog__content">
             <span>
+                <span>AutoFill Credentials <br></span>
+                <input
+                    class = "mdl-textfield__input"
+                    type = "text"
+                    id = "get_conditionalUI"
+                    name="username"
+                    autocomplete="username webauthn"
+                    label="username">
+            </span>
+            <hr>            
+            <span>
                 <span>RP ID</span>
                 <select name="get_rpId" id="get_rpId" class="float-right">
                     <option value="undefined" selected>Undefined</option>
@@ -515,18 +526,6 @@
                 </label>
             </span>
             <hr>
-            <span>
-                <span>AutoFill Credentials <br></span>
-                <input
-                    class = "mdl-textfield__input"
-                    type = "text"
-                    id = "get_conditionalUI"
-                    name="username"
-                    autocomplete="username webauthn"
-                    label="username">
-            </span>
-            <hr>
-
         </div>
         <div class="mdl-dialog__actions">
             <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="getDialog_getButton" autofocus>Get</button>
