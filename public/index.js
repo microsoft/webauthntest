@@ -1606,7 +1606,7 @@ try {
         }
 
         // Get a fresh challenge from server
-        const challenge = await getChallenge();
+        const challenge = await getChallenge(window.location.hostname);
 
         const getOptions = {
             challenge: challenge,
