@@ -191,15 +191,16 @@ dialog {
 }
 
 /* Hybrid layout: flex single column on narrow screens, masonry-style columns on wide screens to reduce vertical gaps */
-#createDialog { width: clamp(320px, 95vw, 1200px); max-width:100%; }
+#createDialog { width: clamp(320px, 90vw, 700px); max-width:100%; }
 #createDialog .mdl-dialog__content {
-  max-height: 70vh;
+  max-height: 75vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px; /* spacing for single column */
+  -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on Safari/iOS */
 }
 #createDialog .mdl-dialog__content > hr { display:none; }
 #createDialog .mdl-dialog__content > span {
@@ -209,37 +210,21 @@ dialog {
   padding:6px 12px;
   margin: 0;
   box-sizing: border-box;
-}
-@media (min-width:1000px){
-  #createDialog .mdl-dialog__content {
-    display: block; /* switch to multicol */
-    column-count: 2;
-    column-gap: 18px;
-    column-fill: balance;
-    /* Ensure the multi-column content is constrained to the dialog's
-       available height so a scrollbar appears inside the content area
-       when there are many options. 120px reserves space for title/actions. */
-    max-height: calc(100% - 120px);
-    overflow-y: auto;
-  }
-  #createDialog .mdl-dialog__content > span {
-    display: inline-block;
-    width: 100%;
-    break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
-    margin: 0 0 12px 0; /* restore bottom spacing per column item */
-  }
+  flex-shrink: 0; /* Prevent items from shrinking */
 }
 
+
 /* Hybrid layout for Get Credential dialog */
-#getDialog { width: clamp(320px, 95vw, 1200px); max-width:100%; }
+#getDialog { width: clamp(320px, 90vw, 700px); max-width:100%; }
 #getDialog .mdl-dialog__content {
-  max-height: 70vh;
+  max-height: 75vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  -webkit-overflow-scrolling: touch;
 }
 #getDialog .mdl-dialog__content > hr { display:none; }
 #getDialog .mdl-dialog__content > span {
@@ -249,24 +234,9 @@ dialog {
   padding:6px 12px;
   margin: 0;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
-@media (min-width:1000px){
-  #getDialog .mdl-dialog__content {
-    display: block;
-    column-count: 2;
-    column-gap: 18px;
-    column-fill: balance;
-    /* Match behavior for the Get dialog so its content scrolls inside the modal. */
-    max-height: calc(100% - 120px);
-    overflow-y: auto;
-  }
-  #getDialog .mdl-dialog__content > span {
-    display: inline-block;
-    width:100%;
-    break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
-    margin:0 0 12px 0;
-  }
-}
+
 
 /* Narrow screens remain single column automatically; no horizontal scroll due to width clamp */
 
