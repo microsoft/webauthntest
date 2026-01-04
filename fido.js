@@ -42,7 +42,7 @@ fido.getChallenge = (uid, clientHostname) => {
     challengeStore.set(uid, { challengeBase64: b64, expiresAt, clientHostname });
     // Debug log to help trace mismatches during development
     try {
-        console.log(`[fido] setChallenge uid=${uid} challenge=${b64}`);
+        console.log(`[fido] setChallenge uid=${uid} challenge=${b64} expiresAt=${new Date(expiresAt).toISOString()} hostname=${clientHostname}`);
     } catch (e) {
         // ignore logging errors
     }
@@ -381,7 +381,11 @@ const validateClientData = async (clientData, uid, clientHostname, type) => {
         const clientB64Url = normalizeBase64Url(clientData.challenge);
         const stored = challengeStore.get(uid);
         if (!stored) throw new Error('No challenge stored');
-        if (stored.clientHostname !== clientHostname) throw new Error('Client hostname mismatch');
+        if (stored.clientHostname !== clientHostname)
+       {
+            console.error('[fido] hostname mismatch', { uid, expected: stored.clientHostname, actual: clientHostname });
+            throw new Error('Client hostname mismatch');
+        } 
         if (Date.now() > stored.expiresAt) {
             challengeStore.delete(uid);
             throw new Error('Challenge expired');
