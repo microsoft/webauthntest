@@ -21,7 +21,8 @@ app.get('/metadata', (req, res) => {
 app.get('/credentials', async (req, res) => {
     try {
         const uid = getUser(req);
-        const credentials = await fido.getCredentials(uid);
+        const clientHostname = req.query.clientHostname;
+        const credentials = await fido.getCredentials(uid, clientHostname);
         res.json({
             result: credentials
         });
@@ -106,7 +107,8 @@ app.patch('/credentials/enabled', async (req, res) => {
 app.get('/challenge', async (req, res) => {
     try {
         const uid = getUser(req);
-        const challenge = await fido.getChallenge(uid);
+        const clientHostname = req.query.clientHostname;
+        const challenge = await fido.getChallenge(uid, clientHostname);
         res.json({
             result: challenge
         });
