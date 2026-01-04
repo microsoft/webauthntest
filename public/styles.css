@@ -191,7 +191,7 @@ dialog {
 }
 
 /* Hybrid layout: flex single column on narrow screens, masonry-style columns on wide screens to reduce vertical gaps */
-#createDialog { width: clamp(280px, 95vw, 600px); max-width:100%; }
+#createDialog { width: clamp(280px, 90vw, 480px); max-width:100%; }
 #createDialog .mdl-dialog__content {
   max-height: 75vh;
   overflow-y: auto;
@@ -215,7 +215,7 @@ dialog {
 
 
 /* Hybrid layout for Get Credential dialog */
-#getDialog { width: clamp(280px, 95vw, 600px); max-width:100%; }
+#getDialog { width: clamp(280px, 90vw, 480px); max-width:100%; }
 #getDialog .mdl-dialog__content {
   max-height: 75vh;
   overflow-y: auto;
