@@ -335,9 +335,18 @@ fido.verifyAssertion = async (uid, assertion) => {
 };
 
 fido.getCredentials = async (uid, clientHostname) => {
+
+    // Valid hostnames
+    let validHostnames = [custom_domain, env_hostname, 'localhost'].filter(Boolean);
+    // Find hostname by matching origin.hostname in validHostnames
+    let hostname = validHostnames.find(h => h === clientHostname);
+    // fail if no match
+    if (!hostname)
+        throw new Error("No valid relying party ID is configured.");
+
     const credentials = await storage.Credentials.find({
         uid: uid,
-        "metadata.rpId": clientHostname
+        "metadata.rpId": hostname
     }).lean();
 
     return credentials;
