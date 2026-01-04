@@ -199,7 +199,10 @@ dialog {
 }
 
 /* Hybrid layout: flex single column on narrow screens, masonry-style columns on wide screens to reduce vertical gaps */
-#createDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 32px); min-width: 0; }
+#createDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 40px); min-width: 0; }
+@media (max-width: 600px) {
+  #createDialog { width: calc(100vw - 40px); max-width: 360px; }
+}
 #createDialog .mdl-dialog__content {
   max-height: 75vh;
   overflow-y: auto;
@@ -223,7 +226,10 @@ dialog {
 
 
 /* Hybrid layout for Get Credential dialog */
-#getDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 32px); min-width: 0; }
+#getDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 40px); min-width: 0; }
+@media (max-width: 600px) {
+  #getDialog { width: calc(100vw - 40px); max-width: 360px; }
+}
 #getDialog .mdl-dialog__content {
   max-height: 75vh;
   overflow-y: auto;
