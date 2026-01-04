@@ -1223,13 +1223,21 @@ try {
             console.log(attestation.getClientExtensionResults());
             var RegistrationResponseJSON = null;
             var RegistrationResponseJSONString = "";
-            try {
-                RegistrationResponseJSON = attestation.toJSON();
-                RegistrationResponseJSONString = JSON.stringify(RegistrationResponseJSON);
-                console.log("=== Create response JSON (String) ===");
-                console.log(RegistrationResponseJSONString);
-            } catch (error) {
-                console.warn("attestation.toJSON() failed", error);
+            // Skip toJSON() on macOS and iOS due to platform-specific issues
+            var userAgent = navigator.userAgent;
+            var isMacOS = /Macintosh|Mac OS X/i.test(userAgent);
+            var isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+            if (!isMacOS && !isIOS) {
+                try {
+                    RegistrationResponseJSON = attestation.toJSON();
+                    RegistrationResponseJSONString = JSON.stringify(RegistrationResponseJSON);
+                    console.log("=== Create response JSON (String) ===");
+                    console.log(RegistrationResponseJSONString);
+                } catch (error) {
+                    console.warn("attestation.toJSON() failed", error);
+                }
+            } else {
+                console.log("toJSON() skipped on macOS/iOS platform");
             }
 
             var prfEnabled = false;
@@ -1534,13 +1542,21 @@ try {
             console.log(assertion.getClientExtensionResults());
             var assertionResponseJSON = null;
             var assertionResponseJSONString = "";
-            try {
-                assertionResponseJSON = assertion.toJSON();
-                assertionResponseJSONString = JSON.stringify(assertionResponseJSON);
-                console.log("=== Get response JSON (String) ===");
-                console.log(assertionResponseJSONString);
-            } catch (error) {
-                console.warn("assertion.toJSON() failed", error);
+            // Skip toJSON() on macOS and iOS due to platform-specific issues
+            var userAgent = navigator.userAgent;
+            var isMacOS = /Macintosh|Mac OS X/i.test(userAgent);
+            var isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+            if (!isMacOS && !isIOS) {
+                try {
+                    assertionResponseJSON = assertion.toJSON();
+                    assertionResponseJSONString = JSON.stringify(assertionResponseJSON);
+                    console.log("=== Get response JSON (String) ===");
+                    console.log(assertionResponseJSONString);
+                } catch (error) {
+                    console.warn("assertion.toJSON() failed", error);
+                }
+            } else {
+                console.log("toJSON() skipped on macOS/iOS platform");
             }
 
             return rest_put("/assertion", credential);
