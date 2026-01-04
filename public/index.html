@@ -60,7 +60,7 @@
             <hr>
 
             <span>
-                <span>Require Resident Key (L1)</span>
+                <span>Require Resident Key</span>
                 <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="false">False</option>
@@ -70,7 +70,7 @@
             <hr>
 
             <span>
-                <span>Resident Key (L2)</span>
+                <span>Resident Key</span>
                 <select name="create_residentKey" id="create_residentKey" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
@@ -370,17 +370,6 @@
         <h3 class="mdl-dialog__title">Get Credential Options</h3>
         <div class="mdl-dialog__content">
             <span>
-                <span>AutoFill Credentials <br></span>
-                <input
-                    class = "mdl-textfield__input"
-                    type = "text"
-                    id = "get_conditionalUI"
-                    name="username"
-                    autocomplete="username webauthn"
-                    label="username">
-            </span>
-            <hr>
-            <span>
                 <span>RP ID</span>
                 <select name="get_rpId" id="get_rpId" class="float-right">
                     <option value="undefined" selected>Undefined</option>
@@ -524,6 +513,17 @@
                     <input type="checkbox" id="get_prf_per_credential" class="mdl-checkbox__input" checked>
                     <span class="mdl-checkbox__label">Per Credential Eval</span>
                 </label>
+            </span>
+            <hr>
+            <span>
+                <span>AutoFill Credentials <br></span>
+                <input
+                    class = "mdl-textfield__input"
+                    type = "text"
+                    id = "get_conditionalUI"
+                    name="username"
+                    autocomplete="username webauthn"
+                    label="username">
             </span>
             <hr>
 
