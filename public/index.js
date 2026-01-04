@@ -486,7 +486,7 @@ try {
         $('body').removeClass("cloak");
 
         setTimeout(() => {
-            updateCredentials().catch(e => toast("ERROR: " + e));
+            updateCredentials(window.location.hostname).catch(e => toast("ERROR: " + e));
         }, 100);
 
         $('#signOutButton').click(() => {
@@ -517,11 +517,11 @@ try {
                             var id;
                             conditionalAuthOperationInProgress = true;
                             console.log("Starting Conditional Auth Operation");
-                            getChallenge().then(challenge => {
+                            getChallenge(window.location.hostname).then(challenge => {
                                 return getAssertion(challenge, true)
                             }).then(credential => {
                                 id = credential.id;
-                                return updateCredentials();
+                                return updateCredentials(window.location.hostname);
                             }).then(() => {
                                 conditionalAuthOperationInProgress = false;
                                 getDialog.close();
@@ -604,11 +604,11 @@ try {
 
             disableControls();
 
-            getChallenge().then(challenge => {
+            getChallenge(window.location.hostname).then(challenge => {
                 return createCredential(challenge)
             }).then(credential => {
                 id = credential.id;
-                return updateCredentials();
+                return updateCredentials(window.location.hostname);
             }).then(() => {
                 createDialog.close();
                 enableControls();
@@ -648,11 +648,11 @@ try {
             var id;
 
             disableControls();
-            getChallenge().then(challenge => {
+            getChallenge(window.location.hostname).then(challenge => {
                 return getAssertion(challenge, false)
             }).then(credential => {
                 id = credential.id;
-                return updateCredentials();
+                return updateCredentials(window.location.hostname);
             }).then(() => {
                 getDialog.close();
                 enableControls();
@@ -750,7 +750,7 @@ try {
                             renderCredentialList();
                         }
                         // Background refresh to ensure consistency
-                        return updateCredentials();
+                        return updateCredentials(window.location.hostname);
                 }).catch(err => {
                     toast('Failed to update transports: ' + err);
                 }).finally(() => {
@@ -890,9 +890,10 @@ try {
         updateMinimumState();
     }
 
-    function getChallenge() {
+    function getChallenge(clientHostname) {
+        const params = new URLSearchParams({ clientHostname });
         return rest_get(
-            "/challenge"
+            `/challenge?${params.toString()}`
         ).then(response => {
             return response.json();
         }).then(response => {
@@ -1278,7 +1279,7 @@ try {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
                     residentKey: residentKey
-                },
+                }
             };
 
             console.log("=== Create response parsed===");
@@ -1573,7 +1574,7 @@ try {
                 return Promise.reject(response.error);
             }
             else {
-                return updateCredentials();
+                return updateCredentials(window.location.hostname);
             }
         });
     }
@@ -1663,9 +1664,10 @@ try {
     /**
      * UI: Updates the credential list
      */
-    function updateCredentials() {
+    function updateCredentials(clientHostname) {
+        const params = new URLSearchParams({ clientHostname });
         return rest_get(
-            "/credentials"
+            `/credentials?${params.toString()}`
         ).then((response) => {
             return response.json();
         }).then((response) => {
@@ -1731,7 +1733,7 @@ try {
                 // update local cache and re-render whole list for simplicity
                 const cred = credentials.find(c => c.id === id);
                 if (cred) cred.enabled = result.enabled;
-                await updateCredentials();
+                await updateCredentials(window.location.hostname);
             } catch (err) {
                 toast('Failed to update enabled state: ' + (err && err.message ? err.message : err));
             } finally {
@@ -1781,12 +1783,12 @@ try {
                 const result = await authenticateCredentialById(id);
                 // If server returns an id, highlight it
                 if (result && result.id) {
-                    await updateCredentials();
+                    await updateCredentials(window.location.hostname);
                     highlightCredential(result.id);
                     toast('Successful assertion for credential');
                 } else {
                     // fallback: refresh list
-                    await updateCredentials();
+                    await updateCredentials(window.location.hostname);
                 }
             } catch (err) {
                 toast('ERROR: ' + (err && err.message ? err.message : err));
@@ -3496,7 +3498,7 @@ try {
         selectedTransportCredentialId = id;
         var credential = credentials.find(c => c.id === id);
         if (!credential) {
-            updateCredentials().then(() => {
+            updateCredentials(window.location.hostname).then(() => {
                 credential = credentials.find(c => c.id === id);
                 if (credential) {
                     showUpdateTransports(id);

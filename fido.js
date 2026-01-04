@@ -6,7 +6,9 @@ const storage = require('./storage.js');
 const fidoAttestation = require('./fidoAttestation.js');
 const {sha256, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
 
-const hostname = process.env.HOSTNAME || "localhost";
+const env_hostname = process.env.HOSTNAME;
+const custom_domain = process.env.CUSTOM_DOMAIN;
+
 // In-memory challenge store: map uid -> {challengeBase64, expiresAt}
 const challengeStore = new Map();
 
@@ -28,7 +30,7 @@ const fido = {};
  * Internally, this challenge is a JWT with a timeout.
  * @returns {string} challenge
  */
-fido.getChallenge = (uid) => {
+fido.getChallenge = (uid, clientHostname) => {
     // Generate 32 random bytes and store base64-encoded challenge per user with expiry
     const raw = crypto.randomBytes(32);
     // Use base64url encoding for safe transport in URLs and JSON
@@ -37,7 +39,7 @@ fido.getChallenge = (uid) => {
     while (b64.endsWith('=')) b64 = b64.slice(0, -1);
     const expiresAt = Date.now() + CHALLENGE_EXPIRY_MS;
     // Store base64url (no padding) to make it safe for URLs and JSON
-    challengeStore.set(uid, { challengeBase64: b64, expiresAt });
+    challengeStore.set(uid, { challengeBase64: b64, expiresAt, clientHostname });
     // Debug log to help trace mismatches during development
     try {
         console.log(`[fido] setChallenge uid=${uid} challenge=${b64}`);
@@ -66,15 +68,32 @@ fido.makeCredential = async (uid, attestation) => {
 
     //Step 1-2: Let C be the parsed the client data claimed as collected during
     //the credential creation
-    let C;
+    let clientData;
     try {
-        C = JSON.parse(attestation.clientDataJSON);
+        clientData = JSON.parse(attestation.clientDataJSON);
     } catch (e) {
         throw new Error("clientDataJSON could not be parsed");
     }
 
+    let origin;
+    try {
+        origin = url.parse(clientData.origin);
+    } catch (e) {
+        throw new Error("Invalid origin in collectedClientData");
+    }
+    // Valid hostnames
+    let validHostnames = [custom_domain, env_hostname, 'localhost'].filter(Boolean);
+    // Find hostname by matching origin.hostname in validHostnames
+    let hostname = validHostnames.find(h => h === origin.hostname);
+    // fail if no match
+    if (!hostname)
+        throw new Error("Invalid origin in collectedClientData. Expected hostname " + validHostnames.join(', '));
+    // For non-localhost, require HTTPS
+    if (hostname !== "localhost" && origin.protocol !== "https:")
+        throw new Error("Invalid origin in collectedClientData. Expected HTTPS protocol.");
+
     //Step 3-6: Verify client data
-    await validateClientData(C, uid, "webauthn.create");
+    await validateClientData(clientData, uid, hostname, "webauthn.create");
     //Step 7: Compute the hash of response.clientDataJSON using SHA-256.
     const clientDataHash = sha256(attestation.clientDataJSON);
 
@@ -170,6 +189,7 @@ fido.makeCredential = async (uid, attestation) => {
  * @return {Promise<Credential>} credential object that the assertion verified
  */
 fido.verifyAssertion = async (uid, assertion) => {
+
     // https://w3c.github.io/webauthn/#verifying-assertion
 
     // Step 1 and 2 are skipped because this is a sample app
@@ -190,15 +210,32 @@ fido.verifyAssertion = async (uid, assertion) => {
     const sig = Buffer.from(assertion.signature, 'base64');
 
     // Step 5 and 6: Let C be the decoded client data claimed by the signature.
-    let C;
+    let clientData;
     try {
-        C = JSON.parse(cData);
+        clientData = JSON.parse(cData);
     } catch (e) {
         throw new Error("clientDataJSON could not be parsed");
     }
 
+    let origin;
+    try {
+        origin = url.parse(clientData.origin);
+    } catch (e) {
+        throw new Error("Invalid origin in collectedClientData");
+    }
+    // Valid hostnames
+    let validHostnames = [custom_domain, env_hostname, 'localhost'].filter(Boolean);
+    // Find hostname by matching origin.hostname in validHostnames
+    let hostname = validHostnames.find(h => h === origin.hostname);
+    // fail if no match
+    if (!hostname)
+        throw new Error("Invalid origin in collectedClientData. Expected hostname " + validHostnames.join(', '));
+    // For non-localhost, require HTTPS
+    if (hostname !== "localhost" && origin.protocol !== "https:")
+        throw new Error("Invalid origin in collectedClientData. Expected HTTPS protocol.");
+
     //Step 7-10: Verify client data
-    await validateClientData(C, uid, "webauthn.get");
+    await validateClientData(clientData, uid, hostname, "webauthn.get");
 
     //Parse authenticator data used for the next few steps
     const authenticatorData = parseAuthenticatorData(authData);
@@ -297,8 +334,12 @@ fido.verifyAssertion = async (uid, assertion) => {
     return updatedCredential;
 };
 
-fido.getCredentials = async (uid) => {
-    const credentials = await storage.Credentials.find({ uid: uid }).lean();
+fido.getCredentials = async (uid, clientHostname) => {
+    const credentials = await storage.Credentials.find({
+        uid: uid,
+        "metadata.rpId": clientHostname
+    }).lean();
+
     return credentials;
 };
 
@@ -310,24 +351,12 @@ fido.deleteCredential = async (uid, id) => {
  * Validates CollectedClientData
  * @param {any} clientData JSON parsed client data object received from client
  * @param {string} uid user id (used to validate challenge)
+ * @param {string} clientHostname expected client hostname (used to validate origin)
  * @param {string} type Operation type: webauthn.create or webauthn.get
  */
-const validateClientData = async (clientData, uid, type) => {
+const validateClientData = async (clientData, uid, clientHostname, type) => {
     if (clientData.type !== type)
         throw new Error("collectedClientData type was expected to be " + type);
-
-    let origin;
-    try {
-        origin = url.parse(clientData.origin);
-    } catch (e) {
-        throw new Error("Invalid origin in collectedClientData");
-    }
-
-    if (origin.hostname !== hostname)
-        throw new Error("Invalid origin in collectedClientData. Expected hostname " + hostname);
-
-    if (hostname !== "localhost" && origin.protocol !== "https:")
-        throw new Error("Invalid origin in collectedClientData. Expected HTTPS protocol.");
 
     try {
         // clientData.challenge is base64url-encoded; normalize base64url and compare to stored base64url
@@ -340,9 +369,10 @@ const validateClientData = async (clientData, uid, type) => {
             while (s.endsWith('=')) s = s.slice(0, -1);
             return s;
         }
-    const clientB64Url = normalizeBase64Url(clientData.challenge);
-    const stored = challengeStore.get(uid);
+        const clientB64Url = normalizeBase64Url(clientData.challenge);
+        const stored = challengeStore.get(uid);
         if (!stored) throw new Error('No challenge stored');
+        if (stored.clientHostname !== clientHostname) throw new Error('Client hostname mismatch');
         if (Date.now() > stored.expiresAt) {
             challengeStore.delete(uid);
             throw new Error('Challenge expired');
