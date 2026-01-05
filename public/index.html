@@ -60,7 +60,7 @@
             <hr>
 
             <span>
-                <span>Require Resident Key (L1)</span>
+                <span>Require Resident Key</span>
                 <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="false">False</option>
@@ -70,7 +70,7 @@
             <hr>
 
             <span>
-                <span>Resident Key (L2)</span>
+                <span>Resident Key</span>
                 <select name="create_residentKey" id="create_residentKey" class="float-right">
                     <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
@@ -360,7 +360,7 @@
         </div>
 
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="createDialog_createButton">Create</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="createDialog_createButton" autofocus>Create</button>
             <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="createDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
@@ -379,7 +379,7 @@
                     autocomplete="username webauthn"
                     label="username">
             </span>
-            <hr>
+            <hr>            
             <span>
                 <span>RP ID</span>
                 <select name="get_rpId" id="get_rpId" class="float-right">
@@ -526,10 +526,9 @@
                 </label>
             </span>
             <hr>
-
         </div>
         <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="getDialog_getButton">Get</button>
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="getDialog_getButton" autofocus>Get</button>
             <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="getDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
