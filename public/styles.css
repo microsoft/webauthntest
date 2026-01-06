@@ -186,6 +186,8 @@ select {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  padding: 20px 24px;
+  color: rgba(0, 0, 0, 0.54);
 }
 
 dialog {
@@ -213,6 +215,19 @@ dialog {
   gap: 10px; /* spacing for single column */
   -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on Safari/iOS */
 }
+
+/* Mobile Chrome iOS fix - reduce content height to ensure actions visible */
+@supports (-webkit-touch-callout: none) {
+  #createDialog .mdl-dialog__content {
+    max-height: 60vh;
+  }
+  
+  @media (max-height: 700px) {
+    #createDialog .mdl-dialog__content {
+      max-height: 50vh;
+    }
+  }
+}
 #createDialog .mdl-dialog__content > hr { display:none; }
 #createDialog .mdl-dialog__content > span {
   background:#fafafa;
@@ -239,6 +254,19 @@ dialog {
   flex-direction: column;
   gap: 10px;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile Chrome iOS fix - reduce content height to ensure actions visible */
+@supports (-webkit-touch-callout: none) {
+  #getDialog .mdl-dialog__content {
+    max-height: 60vh;
+  }
+  
+  @media (max-height: 700px) {
+    #getDialog .mdl-dialog__content {
+      max-height: 50vh;
+    }
+  }
 }
 #getDialog .mdl-dialog__content > hr { display:none; }
 #getDialog .mdl-dialog__content > span {
@@ -288,6 +316,24 @@ dialog {
   overflow: hidden; /* clip outer overflow; inner content scrolls */
 }
 
+/* Mobile-specific adjustments for Chrome on iOS */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari and Chrome specific */
+  .mdl-dialog {
+    /* Use smaller viewport unit to account for browser UI */
+    max-height: calc(100vh - 80px);
+    margin: 20px auto;
+  }
+  
+  /* Extra safety for very small screens */
+  @media (max-height: 700px) {
+    .mdl-dialog {
+      max-height: 90vh;
+      margin: 16px auto;
+    }
+  }
+}
+
 .mdl-dialog__title {
   padding: 24px 24px 0;
   margin: 0;
@@ -299,18 +345,9 @@ a {
   color: rgb(63, 81, 181);
 }
 
-/*
-.mdl-dialog {
-  border: none;
-  box-shadow: 0 9px 46px 8px rgba(0, 0, 0, 0.14), 0 11px 15px -7px rgba(0, 0, 0, 0.12), 0 24px 38px 3px rgba(0, 0, 0, 0.2);
-  width: 280px;
-}
-
-
-}
-
+/* Dialog action buttons - ACTIVE (uncommented to fix button visibility) */
 .mdl-dialog__actions {
-  padding: 8px 8px 8px 24px;
+  padding: 12px 24px;
   display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
@@ -320,6 +357,10 @@ a {
   -webkit-flex-wrap: wrap;
   -ms-flex-wrap: wrap;
   flex-wrap: wrap;
+  flex-shrink: 0; /* Prevent actions from being compressed */
+  background: white; /* Ensure solid background */
+  position: relative; /* Ensure it's in flow */
+  z-index: 1; /* Keep above content */
 }
 
 .mdl-dialog__actions>* {
@@ -344,11 +385,6 @@ a {
   margin-right: 0;
   text-align: right;
 }
-
-.mdl-dialog__content {
-  padding: 20px 24px 24px 24px;
-  color: rgba(0, 0, 0, 0.54);
-}*/
 
 #signInPrompt {
   background-color: #FAFAFA;
