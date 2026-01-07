@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const cbor = require('cbor');
 // Using raw random challenges instead of JWT
-const url = require('url');
 const storage = require('./storage.js');
 const fidoAttestation = require('./fidoAttestation.js');
 const {sha256, coseToJwk, coseToHex, defaultTo} = require('./utils.js');
@@ -77,7 +76,7 @@ fido.makeCredential = async (uid, attestation) => {
 
     let origin;
     try {
-        origin = url.parse(clientData.origin);
+        origin = new URL(clientData.origin);
     } catch (e) {
         throw new Error("Invalid origin in collectedClientData");
     }
@@ -219,7 +218,7 @@ fido.verifyAssertion = async (uid, assertion) => {
 
     let origin;
     try {
-        origin = url.parse(clientData.origin);
+        origin = new URL(clientData.origin);
     } catch (e) {
         throw new Error("Invalid origin in collectedClientData");
     }
