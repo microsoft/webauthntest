@@ -3,7 +3,7 @@
     "description": "WebAuthn Test App",
     "license": "MIT",
     "author": "Akshay Kumar",
-    "version": "2025.10.17",
+    "version": "2026.01.07",
     "main": "app.js",
     "scripts": {
         "start": "node app.js"

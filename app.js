@@ -3,6 +3,8 @@ const app = express();
 const fido = require('./fido.js');
 const cookieParser = require('cookie-parser');
 const enforce = require('express-sslify');
+const { execSync } = require('child_process');
+
 
 if (process.env.ENFORCE_SSL_AZURE === "true") {
     app.use(enforce.HTTPS({ trustAzureHeader: true }));
@@ -10,12 +12,22 @@ if (process.env.ENFORCE_SSL_AZURE === "true") {
 
 const appVersion = `${process.env.npm_package_version}` || 'unknown';
 
+// Get commit ID from Git or environment variable
+let commitId = process.env.COMMIT_ID || 'unknown';
+if (commitId === 'unknown') {
+    try {
+        commitId = execSync('git rev-parse HEAD').toString().trim();
+    } catch (e) {
+        console.warn('Could not get commit ID from git');
+    }
+}
+
 app.use(express.static('public'));
 app.use(cookieParser());
 app.use(express.json());
 
 app.get('/metadata', (req, res) => {
-    res.status(200).json({ appVersion });
+    res.status(200).json({ appVersion, commitId });
   });
 
 app.get('/credentials', async (req, res) => {

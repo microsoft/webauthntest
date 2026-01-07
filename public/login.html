@@ -46,7 +46,8 @@
         .then(resp => resp.json())
         .then((data) => {
             const elemVersion = document.querySelector('#version');
-            elemVersion.innerHTML = `Version: ${data.appVersion}`;
+            const commitIdShort = data.commitId ? data.commitId.substring(0, 7) : 'unknown';
+            elemVersion.innerHTML = `Version: ${data.appVersion} (${commitIdShort})`;
         })
         .catch((err) => {
             console.error(err);

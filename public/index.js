@@ -543,6 +543,17 @@ try {
         });
 
         $('#moreButton').click(async () => {
+            // Fetch and display deployment version and commit ID
+            try {
+                const response = await fetch('/metadata');
+                const data = await response.json();
+                const commitIdShort = data.commitId ? data.commitId.substring(0, 7) : 'unknown';
+                $("#moreDialog_version").text(`${data.appVersion} (${commitIdShort})`);
+            } catch (err) {
+                console.error('Error fetching metadata:', err);
+                $("#moreDialog_version").text('Unable to fetch');
+            }
+
             if (!PublicKeyCredential || typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function") {
                 $("#moreDialog_platformAuthenticatorAvailable").text("Not defined");
             } else {

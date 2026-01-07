@@ -1,7 +1,7 @@
 
 const mongoose = require('mongoose');
 
-mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost/fido');
+mongoose.connect(process.env.AZURE_COSMOS_CONNECTIONSTRING || 'mongodb://localhost/fido');
 
 var storage = {};
 
