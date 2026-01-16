@@ -1,9 +1,9 @@
 {
     "name": "webauthntest",
-    "description": "WebAuthn Test App",
+    "description": "WebAuthn Playground",
     "license": "MIT",
     "author": "Akshay Kumar",
-    "version": "2025.10.17",
+    "version": "2026.01.16",
     "main": "app.js",
     "scripts": {
         "start": "node app.js"

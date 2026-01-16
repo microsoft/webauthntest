@@ -1,11 +1,46 @@
 /* Spacing & layout for Update Transports dialog action buttons */
 .transport-actions {
-  margin-top: 20px; /* space before divider */
+  margin-top: 12px;
   padding-top: 14px; /* spacing above buttons */
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  border-top: 2px solid rgba(63,81,181,0.45); /* thicker themed indigo divider */
+  justify-content: center;
+  border-top: 2px solid rgba(63,81,181,0.45);
+}
+
+/* Update Transports: add a horizontal divider between the two bottom button rows
+   (between Clear/Select All row and Cancel/Save row). */
+#updateTransportsDialog .transport-actions {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid rgba(63,81,181,0.45);
+}
+
+/* Update Transports: center bottom Cancel/Save row */
+#updateTransportsDialog > .app-dialog-actions {
+  justify-content: center;
+}
+
+/* Update Credential Transports: keep checkbox labels left-aligned like Create/Get */
+#updateTransportsDialog .app-dialog-content label.label {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+#updateTransportsDialog .app-dialog-content label.label .label-text {
+  margin-left: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+/* Update Credential Transports: Clear/Select All should not look outlined */
+#updateTransportsDialog_clearButton,
+#updateTransportsDialog_selectAllButton {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 /*
   NOTE: Several elements inside credential cards use a .mono class with
@@ -16,24 +51,7 @@
   and inner boxes don't escape their parent boundaries.
 */
 
-.transport-actions .mdl-button {
-  min-width: 120px;
-}
-/**
- * Copyright 2015 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 
 html, body {
   font-family: 'Roboto', 'Helvetica', sans-serif;
@@ -41,32 +59,101 @@ html, body {
   padding: 0;
 }
 
+html {
+  background-color: rgb(var(--fallback-b2, 245 245 245)) !important;
+  background-color: oklch(var(--b2)) !important;
+}
+
+/* Ensure the page background stays consistent (matches DaisyUI base-200).
+   Use a safe fallback for browsers that don't support oklch(). */
+body {
+  background-color: rgb(var(--fallback-b2, 245 245 245)) !important;
+  background-color: oklch(var(--b2)) !important;
+}
+
+main {
+  background-color: rgb(var(--fallback-b2, 245 245 245)) !important;
+  background-color: oklch(var(--b2)) !important;
+}
+
 :root {
   /* configurable max-height for mono blocks inside dialogs/cards; viewport-relative by default */
   --mono-max-height: 60vh;
+
+  /* Old-UI action color */
+  --action-blue: #1a73e8;
+
+  /* Global button hover treatment */
+  --btn-hover-outline: rgba(26, 115, 232, 0.55);
+  --btn-hover-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  --btn-hover-bg: #ffffff;
+
+  /* Original MDL-ish FAB accent */
+  --fab-accent: #ff4081;
+
+    /* Credentials toolbar icon button color */
+    --toolbar-color: #f4305b;
+    --toolbar-color-hover: #28d940;
+    --toolbar-color-active: #3721b6;
+}
+
+/* Global button styling: rectangle corners everywhere */
+.btn,
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"] {
+  border-radius: 0 !important;
+}
+
+/* But keep explicitly circular buttons circular (FABs, close buttons, etc.) */
+.btn.btn-circle {
+  border-radius: 9999px !important;
+}
+
+/* Global hover: shadow + light background (no outline)
+   Keep filled DaisyUI buttons (primary/secondary/etc.) using their own hover colors. */
+.btn:not(.btn-disabled):not(:disabled):not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):hover {
+  outline: none;
+  background-color: var(--btn-hover-bg) !important;
+  box-shadow: var(--btn-hover-shadow);
+}
+
+button:not(.btn):not(:disabled):hover,
+input[type="button"]:not(:disabled):hover,
+input[type="submit"]:not(:disabled):hover,
+input[type="reset"]:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover {
+  outline: none;
+  background-color: var(--btn-hover-bg);
+  box-shadow: var(--btn-hover-shadow);
+}
+
+/* Global keyboard focus: keep a rectangular outline + shadow */
+.btn:not(.btn-disabled):not(:disabled):not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):focus-visible,
+button:not(.btn):not(:disabled):focus-visible,
+input[type="button"]:not(:disabled):focus-visible,
+input[type="submit"]:not(:disabled):focus-visible,
+input[type="reset"]:not(:disabled):focus-visible,
+[role="button"]:not([aria-disabled="true"]):focus-visible {
+  outline: 2px solid var(--btn-hover-outline);
+  outline-offset: 0;
+  background-color: var(--btn-hover-bg);
+  box-shadow: var(--btn-hover-shadow);
+}
+
+/* Material Symbols baseline (replaces legacy Material Icons) */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
 }
 
 .cloak {
   visibility: hidden;
-}
-
-dialog .mdl-progress {
-  position: absolute;
-  bottom: 0px;
-  left: 0px;
-  width: 100%;
-  z-index: 999;
-}
-
-body .mdl-layout__header-row {
-  padding-left: 40px;
-  height: 30px;
-}
-
-body .mdl-layout__header-row h3 {
-  font-size: 30px;
-  line-height: 36px;
-  font-weight: 400;
 }
 
 /* Header title link (used in index.html and cbor.html) */
@@ -79,77 +166,112 @@ body .mdl-layout__header-row h3 {
   text-decoration: underline; /* subtle affordance on hover/focus */
 }
 
-body .mdl-layout__tab-bar-button {
-  display: none;
+/* Link-style buttons should match the old UI: uppercase, no underline */
+.btn.btn-link {
+  text-decoration: none !important;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--action-blue) !important;
+}
+.btn.btn-link:hover,
+.btn.btn-link:focus {
+  text-decoration: none !important;
 }
 
-body .mdl-layout .mdl-layout__tab-bar, body .mdl-layout .mdl-layout__tab-bar-container {
-  overflow: visible;
+/* Credential card action row: match old all-caps actions (scope to credential cards only) */
+#credentialsContainer .card-actions .btn {
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--action-blue) !important;
 }
 
-body .mdl-layout__tab-bar-container {
-  height: 64px;
+/* Old-UI button text color for non-filled buttons */
+.btn.btn-ghost,
+.btn.btn-outline {
+  color: var(--action-blue) !important;
 }
 
-body .mdl-layout__tab-bar {
-  padding: 0;
-  padding-left: 16px;
-  box-sizing: border-box;
-  height: 100%;
-  width: 100%;
+/* When the UI disables all controls during an in-progress action, DaisyUI can
+   render ghost/outline/link buttons with a grey filled background, which looks
+   like they're "active". Keep these disabled buttons transparent and muted. */
+.btn.btn-ghost:disabled,
+.btn.btn-link:disabled,
+.btn.btn-outline:disabled,
+.btn.btn-ghost.btn-disabled,
+.btn.btn-link.btn-disabled,
+.btn.btn-outline.btn-disabled {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 
-body .mdl-card__title-text {
-  font-size: 24px;
+.btn.btn-ghost:disabled,
+.btn.btn-link:disabled,
+.btn.btn-outline:disabled {
+  opacity: 0.55;
 }
 
-body .mdl-layout__tab-bar .mdl-layout__tab {
-  height: 64px;
-  line-height: 64px;
+.btn.btn-outline:disabled,
+.btn.btn-outline.btn-disabled {
+  border-color: rgba(0, 0, 0, 0.18) !important;
 }
 
-body .mdl-layout__tab-bar .mdl-layout__tab.is-active::after {
-  background-color: white;
-  height: 4px;
+/* Header Sign out should match old action styling */
+#signOutButton {
+  text-transform: uppercase;
+  font-weight: 400;
+  color: #fff !important;
 }
 
-/* Header control layout: title sits to the left, a group of FABs on the right. Use flex for responsiveness. */
-body #signOutButton { position:absolute; right:16px; top:30px; z-index:999; color:white; }
-
-/* New responsive FAB group placed in the header tab bar */
-.fab-group {
-  display: inline-flex;
-  gap: 12px;
-  align-items: center;
-  position: absolute;
-  right: 16px;
-  top: 28px;
-  z-index: 999;
+/* Keep Sign out readable on the dark header (override global .btn:hover white background) */
+#signOutButton:not(.btn-disabled):not(:disabled):hover {
+  background: rgba(255,255,255,0.14) !important;
+  box-shadow: none !important;
 }
 
-/* Reduce FAB size on small screens to avoid wrapping */
-.fab-group .mdl-button--fab { width: 56px; height: 56px; min-width: 56px; }
-
-/* If the window is very narrow, collapse the group by scaling down */
-@media (max-width: 760px) {
-  .fab-group { gap: 8px; right: 8px; }
-  .fab-group .mdl-button--fab { width: 48px; height: 48px; min-width: 48px; }
+#signOutButton:not(.btn-disabled):not(:disabled):focus-visible {
+  outline: 2px solid rgba(255,255,255,0.65) !important;
+  outline-offset: 2px;
+  background: rgba(255,255,255,0.14) !important;
+  box-shadow: none !important;
 }
 
-/* Overflow menu used on narrow screens */
-.fab-overflow { position: absolute; right: 8px; top: 26px; z-index: 1000; display: none; }
-
-@media (max-width: 560px) {
-  /* On very small screens, hide the large FABs and show overflow */
-  .fab-group { display: none; }
-  .fab-overflow { display: block; }
+/* Dialog buttons/links: match old UI (uppercase, no underline) */
+dialog.app-dialog .btn {
+  text-transform: uppercase;
+  font-weight: 500;
+  /* Keep filled buttons readable; only force blue for non-filled styles */
 }
 
-/* (header small controls removed) */
+dialog.app-dialog .btn.btn-link {
+  text-decoration: none !important;
+}
 
-/* Back button fallback (used in CBOR page) still absolute when present */
-body #cborBackButton { position:absolute; right:40px; top:36px; z-index:999; color:white; }
-body #cborBackButton .material-icons { color:inherit; }
+dialog.app-dialog .btn.btn-ghost,
+dialog.app-dialog .btn.btn-outline,
+dialog.app-dialog .btn.btn-link {
+  color: var(--action-blue) !important;
+}
+
+dialog.app-dialog .btn.btn-link:hover,
+dialog.app-dialog .btn.btn-link:focus {
+  text-decoration: none !important;
+}
+
+/* Reset Order buttons: remove outline/border everywhere */
+#algorithmsResetOrder,
+#hintsResetOrderCreate,
+#hintsResetOrderGet {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Remove the progress line shown at the top of Create/Get dialogs */
+#createDialog .loading-indicator,
+#getDialog .loading-indicator {
+  display: none !important;
+}
+
 
 p {
   font-size: 14px;
@@ -159,13 +281,6 @@ p {
 
 .highlighted {
   animation: 2000ms linear 0ms normal highlightedKeyframes;
-}
-
-select {
-  min-width: 140px;
-  max-width: 200px;
-  width: auto;
-  height: 20px;
 }
 
 /* Small numeric inputs for fake exclude credential controls */
@@ -178,24 +293,79 @@ select {
   float: right;
 }
 
-.mdl-dialog__content {
+/* Credentials layout: enforce a responsive multi-column grid regardless of utility availability */
+#credentialsContainer {
+  display: grid;
+  gap: 16px;
+  /* Use as many columns as fit, but keep cards readable */
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  /* Stretch cards to the tallest item in the row for equal-height rows */
+  align-items: stretch;
+  /* Give cards breathing room from the viewport edges */
+  padding-left: clamp(8px, 2vw, 16px);
+  padding-right: clamp(8px, 2vw, 16px);
+  /* Tiny bottom buffer so the last card's border/shadow isn't visually clipped */
+  padding-bottom: 12px;
+}
+
+/* Credential cards: rectangular outline + shadow (no rounded corners) */
+#credentialsContainer .card {
+  border-radius: 0 !important;
+  /* MDL-like elevation (original app feel) */
+  box-shadow: 0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.20), 0 1px 5px 0 rgba(0,0,0,0.12);
+  /* Make the entire card fill the grid row height */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Let the card body take remaining height so actions can sit at the bottom */
+#credentialsContainer .card .card-body {
+  flex: 1 1 auto;
+}
+
+/* Credential username at top of each card: slightly larger + lighter */
+#credentialsContainer .card .card-title {
+  font-size: 22px !important;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+/* Credential card bottom actions: add breathing room and consistent spacing */
+#credentialsContainer .card-actions {
+  /* Thin separator line above the bottom actions (matches original) */
+  border-top: 1px solid rgba(0,0,0,0.12);
+  padding: 12px 12px 14px;
+  margin-top: 10px;
+  gap: 12px;
+  /* Pin actions to the bottom of the card */
+  margin-top: auto;
+}
+
+@media (max-width: 420px) {
+  #credentialsContainer {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-dialog-content {
   font-size: 16px;
   /* Allow dialog content to flex and scroll when dialog height is constrained
-     by the viewport. Using flex on the dialog container (see .mdl-dialog)
+     by the viewport. Using flex on the dialog container (see dialog.app-dialog)
      plus min-height:0 here ensures overflow-y works reliably across browsers. */
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   padding: 20px 24px;
-  color: rgba(0, 0, 0, 0.54);
+  color: oklch(var(--bc));
 }
 
-dialog {
+dialog.app-dialog {
   min-width: 280px;
 }
 
 @media (max-width: 600px) {
-  dialog {
+  dialog.app-dialog {
     min-width: 0;
   }
 }
@@ -205,7 +375,126 @@ dialog {
 @media (max-width: 600px) {
   #createDialog { width: calc(100vw - 40px); max-width: 360px; }
 }
-#createDialog .mdl-dialog__content {
+
+/* Align controls within Create dialog rows (dropdowns, etc.).
+   The markup uses floats; setting a consistent select width makes right edges align. */
+#createDialog {
+  --create-control-width: min(240px, 46vw);
+}
+
+/* Single-column mode (below wide-screen breakpoint): stack labels and controls (avoid float-right misalignment). */
+@media (max-width: 899px) {
+  #createDialog {
+    --create-control-width: 100%;
+  }
+
+  #createDialog .app-dialog-content > span {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #createDialog .app-dialog-content .float-right {
+    float: none;
+    align-self: stretch;
+  }
+
+  #createDialog .app-dialog-content select.select.float-right,
+  #createDialog .app-dialog-content input.float-right {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 900px) {
+  #createDialog {
+    --create-control-width: 260px;
+  }
+}
+
+#createDialog .app-dialog-content select.select {
+  width: var(--create-control-width) !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+/* Full-width text inputs in Create dialog (clear the floated select in the same block). */
+#createDialog #create_credBlob,
+#createDialog #create_prf_first,
+#createDialog #create_prf_second {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  clear: both;
+}
+
+/* Extra separation between PRF inputs */
+#createDialog #create_prf_second {
+  margin-top: 10px !important;
+}
+
+/* Space between PRF enable dropdown and first PRF input */
+#createDialog #create_prf {
+  margin-bottom: 10px;
+}
+
+/* Checkbox rows inside Create dialog: keep text close to the box (avoid DaisyUI space-between). */
+#createDialog .app-dialog-content label.label {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+#createDialog .app-dialog-content label.label .label-text {
+  margin-left: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+/* Wide-screen layout: make the dialog wider and flow option blocks into 2 columns.
+   NOTE: These need to win the cascade against the base (mobile-first) rules below. */
+@media (min-width: 900px) {
+  #createDialog {
+    width: clamp(720px, 92vw, 1040px);
+    max-width: calc(100vw - 48px);
+  }
+
+  #createDialog .app-dialog-content {
+    /* Wide-screen: the content area stays vertically scrollable.
+       The masonry layout is provided by an inner two-column wrapper. */
+    display: block !important;
+    max-height: 88vh !important;
+    padding: 10px !important;
+  }
+
+  #createDialog .create-dialog-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #createDialog .create-dialog-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  /* Algorithms + Hints: use a simple vertical flex stack (no grid). */
+  #createDialog #create_algorithmsList,
+  #createDialog #create_hintsList {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 1200px) {
+  #createDialog {
+    width: clamp(880px, 92vw, 1240px);
+  }
+}
+#createDialog .app-dialog-content {
   max-height: 75vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -218,18 +507,19 @@ dialog {
 
 /* Mobile Chrome iOS fix - reduce content height to ensure actions visible */
 @supports (-webkit-touch-callout: none) {
-  #createDialog .mdl-dialog__content {
+  #createDialog .app-dialog-content {
     max-height: 60vh;
   }
   
   @media (max-height: 700px) {
-    #createDialog .mdl-dialog__content {
+    #createDialog .app-dialog-content {
       max-height: 50vh;
     }
   }
 }
-#createDialog .mdl-dialog__content > hr { display:none; }
-#createDialog .mdl-dialog__content > span {
+#createDialog .app-dialog-content > hr { display:none; }
+#createDialog .app-dialog-content > span,
+#createDialog .app-dialog-content .create-dialog-col > span {
   background:#fafafa;
   border:1px solid #e5e5e5;
   border-radius:4px;
@@ -239,13 +529,122 @@ dialog {
   flex-shrink: 0; /* Prevent items from shrinking */
 }
 
+/* Align controls within Get dialog rows (dropdowns, etc.). */
+#getDialog {
+  --get-control-width: min(240px, 46vw);
+}
+
+@media (min-width: 900px) {
+  #getDialog {
+    --get-control-width: 260px;
+  }
+}
+
+#getDialog .app-dialog-content select.select {
+  width: var(--get-control-width) !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+/* Full-width text inputs in Get dialog (clear any floated selects in the same block). */
+#getDialog #get_conditionalUI,
+#getDialog #get_largeBlobText,
+#getDialog #get_prf_first,
+#getDialog #get_prf_second {
+  display: block;
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  clear: both;
+}
+
+/* Extra separation between PRF inputs (Get) */
+#getDialog #get_prf_second {
+  margin-top: 10px !important;
+}
+
+/* Single-column mode (below wide-screen breakpoint): stack labels and controls in Get dialog. */
+@media (max-width: 899px) {
+  #getDialog {
+    --get-control-width: 100%;
+  }
+
+  #getDialog .app-dialog-content > span {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #getDialog .app-dialog-content .float-right {
+    float: none;
+    align-self: stretch;
+  }
+
+  #getDialog .app-dialog-content select.select.float-right,
+  #getDialog .app-dialog-content input.float-right {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Checkbox rows inside Get dialog: keep text close to the box (avoid DaisyUI space-between). */
+#getDialog .app-dialog-content label.label {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+#getDialog .app-dialog-content label.label .label-text {
+  margin-left: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
 
 /* Hybrid layout for Get Credential dialog */
 #getDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 40px); min-width: 0; }
 @media (max-width: 600px) {
   #getDialog { width: calc(100vw - 40px); max-width: 360px; }
 }
-#getDialog .mdl-dialog__content {
+
+/* Wide-screen Get dialog: match Create dialog (wider + masonry-style two columns via inner wrapper) */
+@media (min-width: 900px) {
+  #getDialog {
+    width: clamp(720px, 92vw, 1040px);
+    max-width: calc(100vw - 48px);
+  }
+
+  #getDialog .app-dialog-content {
+    display: block !important;
+    max-height: 88vh !important;
+    padding: 10px !important;
+  }
+
+  #getDialog .get-dialog-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #getDialog .get-dialog-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  #getDialog #get_hintsList {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 1200px) {
+  #getDialog {
+    width: clamp(880px, 92vw, 1240px);
+  }
+}
+#getDialog .app-dialog-content {
   max-height: 75vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -258,18 +657,19 @@ dialog {
 
 /* Mobile Chrome iOS fix - reduce content height to ensure actions visible */
 @supports (-webkit-touch-callout: none) {
-  #getDialog .mdl-dialog__content {
+  #getDialog .app-dialog-content {
     max-height: 60vh;
   }
   
   @media (max-height: 700px) {
-    #getDialog .mdl-dialog__content {
+    #getDialog .app-dialog-content {
       max-height: 50vh;
     }
   }
 }
-#getDialog .mdl-dialog__content > hr { display:none; }
-#getDialog .mdl-dialog__content > span {
+#getDialog .app-dialog-content > hr { display:none; }
+#getDialog .app-dialog-content > span,
+#getDialog .app-dialog-content .get-dialog-col > span {
   background:#fafafa;
   border:1px solid #e5e5e5;
   border-radius:4px;
@@ -303,7 +703,7 @@ dialog {
   }
 }
 
-.mdl-dialog {
+dialog.app-dialog {
   width: 400px;
   /* Keep the dialog from exceeding the viewport height and allow
     its inner content area to scroll when needed. Use flexbox so
@@ -311,15 +711,140 @@ dialog {
     content area takes the remaining space and becomes scrollable. */
   margin: 24px auto;
   max-height: calc(100vh - 48px);
-  display: flex;
   flex-direction: column;
   overflow: hidden; /* clip outer overflow; inner content scrolls */
+  border: 1px solid oklch(var(--b3));
+  border-radius: 1rem;
+  background: oklch(var(--b1));
+}
+
+/* Create Credential Options dialog: square corners */
+#createDialog {
+  border-radius: 0 !important;
+}
+
+#createDialog .app-dialog-content > span,
+#createDialog .app-dialog-content .create-dialog-col > span {
+  border-radius: 0 !important;
+}
+
+/* Get Credential Options dialog: square corners */
+#getDialog {
+  border-radius: 0 !important;
+}
+
+#getDialog .app-dialog-content > span {
+  border-radius: 0 !important;
+}
+
+#getDialog .app-dialog-content .get-dialog-col > span {
+  border-radius: 0 !important;
+}
+
+/* More Options dialog: improve layout and avoid horizontal clipping */
+#moreDialog {
+  width: clamp(420px, 55vw, 760px);
+  max-width: 95vw;
+  border-radius: 0 !important;
+}
+
+#moreDialog .app-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-x: hidden;
+}
+
+#moreDialog .more-kv {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+}
+
+#moreDialog .more-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: #333;
+}
+
+#moreDialog .more-value {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  color: #555;
+}
+
+#moreDialog .more-capabilities {
+  padding: 10px 12px;
+  background: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+}
+
+/* Capabilities table: full width, wrap long capability names, no horizontal scroll */
+#moreDialog_ClientCapabilities {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#moreDialog_ClientCapabilities th,
+#moreDialog_ClientCapabilities td {
+  padding: 8px 10px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+#moreDialog_ClientCapabilities tr:first-child th {
+  border-top: 0;
+}
+
+#moreDialog_ClientCapabilities th {
+  font-weight: 700;
+  color: #333;
+}
+
+#moreDialog_ClientCapabilities th:first-child,
+#moreDialog_ClientCapabilities td:first-child {
+  width: calc(100% - 140px);
+  text-align: left;
+}
+
+#moreDialog_ClientCapabilities th:last-child,
+#moreDialog_ClientCapabilities td:last-child {
+  width: 140px;
+  text-align: right;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  color: #555;
+}
+
+#moreDialog_ClientCapabilities tr:nth-child(odd):not(:first-child) {
+  background: rgba(0,0,0,0.02);
+}
+
+/* Only force flex layout while the dialog is open.
+   (Closed <dialog> elements should remain display:none per UA styles.) */
+dialog.app-dialog[open] {
+  display: flex;
+}
+
+dialog.app-dialog::backdrop {
+  background: rgba(0,0,0,.45);
 }
 
 /* Mobile-specific adjustments for Chrome on iOS */
 @supports (-webkit-touch-callout: none) {
   /* iOS Safari and Chrome specific */
-  .mdl-dialog {
+  dialog.app-dialog {
     /* Use smaller viewport unit to account for browser UI */
     max-height: calc(100vh - 80px);
     margin: 20px auto;
@@ -327,97 +852,111 @@ dialog {
   
   /* Extra safety for very small screens */
   @media (max-height: 700px) {
-    .mdl-dialog {
+    dialog.app-dialog {
       max-height: 90vh;
       margin: 16px auto;
     }
   }
 }
 
-.mdl-dialog__title {
+.app-dialog-title {
   padding: 24px 24px 0;
   margin: 0;
   font-size: 1.5rem;
 }
 
-a {
-  text-decoration: none;
-  color: rgb(63, 81, 181);
-}
-
-/* Dialog action buttons - ACTIVE (uncommented to fix button visibility) */
-.mdl-dialog__actions {
-  padding: 12px 24px;
-  display: -webkit-flex;
-  display: -ms-flexbox;
+.app-dialog-actions {
+  padding: 12px 24px 18px 24px;
   display: flex;
-  -webkit-flex-direction: row-reverse;
-  -ms-flex-direction: row-reverse;
+  gap: 8px;
+  /* Most dialogs have primary action first in the DOM. Reverse the visual
+     order so the primary action appears on the far right (like the reference). */
   flex-direction: row-reverse;
-  -webkit-flex-wrap: wrap;
-  -ms-flex-wrap: wrap;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  flex-shrink: 0; /* Prevent actions from being compressed */
-  background: white; /* Ensure solid background */
-  position: relative; /* Ensure it's in flow */
-  z-index: 1; /* Keep above content */
+  flex-shrink: 0;
+  background: oklch(var(--b1));
 }
 
-.mdl-dialog__actions>* {
-  margin-right: 8px;
-  height: 36px;
+/* Floating top-right quick actions (Create/Get/More/CBOR) */
+.app-fab {
+  position: fixed;
+  top: 84px;
+  right: 16px;
+  display: flex;
+  gap: 10px;
+  z-index: 60;
 }
 
-.mdl-dialog__actions>*:first-child {
-  margin-right: 0;
-}
-
-.mdl-dialog__actions--full-width {
-  padding: 0 0 8px 0;
-}
-
-.mdl-dialog__actions--full-width>* {
+/* Give the floating buttons a bit more presence (closer to the original FAB feel) */
+.app-fab .btn {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  width: 48px;
   height: 48px;
-  -webkit-flex: 0 0 100%;
-  -ms-flex: 0 0 100%;
-  flex: 0 0 100%;
-  padding-right: 16px;
-  margin-right: 0;
-  text-align: right;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 9999px !important;
+  background-color: var(--fab-accent) !important;
+  border-color: var(--fab-accent) !important;
+  color: #fff !important;
 }
 
-#signInPrompt {
-  background-color: #FAFAFA;
-  height: 100%;
-  padding-top: 200px;
-  margin: auto;
-  width: 300px;
-
-};
-
-.text-center {
-  text-align: center;
+.app-fab .btn:hover {
+  background-color: #f50057 !important;
+  border-color: #f50057 !important;
 }
 
-.center {
-  margin-left: auto;
-  margin-right: auto;
+.app-fab .btn:active {
+  background-color: #e0004d !important;
+  border-color: #e0004d !important;
 }
 
-.text-italic {
-  font-style: italic;
+.app-fab .material-symbols-outlined {
+  font-size: 32px;
+  line-height: 32px;
 }
 
-.text-muted {
-  color: #6c757d;
+@media (max-width: 520px) {
+  .app-fab {
+    top: 76px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .app-fab .btn {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .app-fab .material-symbols-outlined {
+    font-size: 28px;
+    line-height: 28px;
+  }
 }
 
-.mb-5 {
-  margin-bottom: 5px;
+/* Header sizing: keep it closer to the original bigger top bar */
+header.navbar {
+  min-height: 72px;
+  padding: 12px 16px;
 }
 
-.mt-5 {
-  margin-top: 5px;
+header.navbar .navbar-start h1 {
+  font-size: 32px;
+  font-weight: 400;
+  margin: 0;
+}
+
+header.navbar #signOutButton {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 18px;
+}
+
+/* Section title under header (Credentials) */
+main h2 {
+  font-size: 24px;
 }
 
 .mt-10 {
@@ -427,6 +966,120 @@ a {
 #loginHeader {
   text-align: center;
   margin-bottom: 5px;
+}
+
+/* Login page: center card + constrain username width even without utilities */
+body#signInPrompt {
+  min-height: 100vh;
+  display: flex;
+}
+
+body#signInPrompt > main {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+body#signInPrompt .login-shell {
+  width: 100%;
+  max-width: 360px;
+}
+
+/* Login title: force size/weight even if utility classes are missing */
+body#signInPrompt .login-title {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+/* Credentials header row: title + icon actions (matches reference-style toolbar) */
+.credentials-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  min-height: 56px;
+  margin-bottom: 12px;
+  background: var(--toolbar-color-active);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  border: none;
+}
+
+/* Pink accent strip under the Credentials bar (like the reference) */
+.credentials-toolbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: min(200px, 28%);
+  background: var(--fab-accent);
+}
+
+.credentials-title {
+  margin: 0;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 400;
+  font-size: 18px !important;
+}
+
+.credentials-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Icon buttons in the Credentials toolbar */
+.credentials-toolbar-actions .btn {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 9999px !important;
+  background-color: var(--toolbar-color) !important;
+  border: 1px solid var(--toolbar-color) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.16) !important;
+  color: #fff !important;
+}
+
+/* Override the global .btn:hover (very high specificity due to many :not() clauses) */
+.credentials-toolbar-actions .btn.btn-ghost.btn-circle.btn-sm:not(.btn-disabled):not(:disabled):not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):hover,
+.credentials-toolbar-actions .btn.btn-ghost.btn-circle.btn-sm:not(.btn-disabled):not(:disabled):not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):focus-visible {
+  background-color: var(--toolbar-color-hover) !important;
+  border-color: var(--toolbar-color-hover) !important;
+  color: #fff !important;
+  outline: none !important;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.20) !important;
+}
+
+.credentials-toolbar-actions .btn:active {
+  background-color: var(--toolbar-color-active) !important;
+  border-color: var(--toolbar-color-active) !important;
+}
+
+.credentials-toolbar-actions .material-symbols-outlined {
+  font-size: 26px;
+  line-height: 26px;
+}
+
+/* Make the Sign In button match the input width */
+body#signInPrompt .card-actions {
+  display: block;
+}
+
+body#signInPrompt #signInButton {
+  width: 100%;
+  display: block;
+  color: #fff !important;
 }
 
 #loginFooter {
@@ -451,11 +1104,9 @@ a {
 
 /* Visually indicate disabled credentials */
 .cred-disabled {
-  background-color: #f5f5f5; /* slightly muted background */
-  color: #9e9e9e; /* muted text color */
-  opacity: 0.9;
+  opacity: 0.85;
+  filter: grayscale(0.15);
 }
-.cred-disabled .mdl-card__title-text,
 .cred-disabled .reg-data-list,
 .cred-disabled .reg-data-body,
 .cred-disabled .reg-data-header,
@@ -465,21 +1116,21 @@ a {
 .cred-disabled dd {
   color: #8a8a8a;
 }
-/* keep action buttons fully opaque so enable/disable remains discoverable */
-/* Actions: by default, dim actions on disabled cards but keep toggle enabled */
-.cred-disabled .mdl-card__actions a,
-.cred-disabled .mdl-card__actions button {
-  opacity: 0.85;
-  color: #9e9e9e;
+/* Disabled credential cards: disable all action buttons except the toggle */
+.cred-disabled .card-actions a:not(.toggleEnabledButton),
+.cred-disabled .card-actions button:not(.toggleEnabledButton) {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+  cursor: default !important;
+  color: #9e9e9e !important;
 }
 /* Keep the enable/disable toggle fully visible and interactive */
-.cred-disabled .mdl-card__actions .toggleEnabledButton {
+.cred-disabled .toggleEnabledButton {
   opacity: 1 !important;
-  color: rgb(63, 81, 181) !important;
   pointer-events: auto !important;
 }
 /* Disable Authenticate button on disabled cards (non-interactive and visibly muted) */
-.cred-disabled .mdl-card__actions .authenticateCredentialButton {
+.cred-disabled .authenticateCredentialButton {
   opacity: 0.45 !important;
   pointer-events: none !important;
   cursor: default !important;
@@ -566,11 +1217,7 @@ a {
   width: 44px; /* matches typical action button tappable area */
   min-width: 44px;
 }
-.mono-actions .mdl-button {
-  min-width: 36px;
-  height: 36px;
-  padding: 6px;
-}
+.mono-actions .btn { min-width: 36px; height: 36px; padding: 6px; }
 
 @media (max-width: 640px) {
   .mono-block { grid-template-columns: 1fr; }
@@ -604,6 +1251,17 @@ a {
 .alg-list { list-style: none; margin: 0 0 8px 0; padding: 0; }
 .alg-list li { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #eee; }
 .alg-list li:last-child { border-bottom: none; }
+
+/* Algorithms/Hints list: keep checkbox and text separated */
+#createDialog .alg-list label.label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#createDialog .alg-list label.label .label-text {
+  margin-left: 0;
+}
 .alg-actions { display: flex; gap: 4px; }
 .alg-actions button { background: transparent; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; padding: 2px 6px; font-size: 12px; line-height: 1; color: #3f51b5; }
 .alg-actions button:hover { background: #f5f5f5; }
@@ -624,11 +1282,11 @@ a {
   color: #3f51b5; /* primary color */
   text-decoration: none;
 }
-.view-cert-btn .material-icons { font-size: 20px; line-height: 20px; }
+.view-cert-btn .material-symbols-outlined { font-size: 20px; line-height: 20px; }
 .view-cert-btn:hover {
   background: rgba(63,81,181,0.08);
 }
-.mdl-card__actions .view-cert-btn { margin-left: 8px; }
+.card-actions .view-cert-btn { margin-left: 8px; }
 
 /* Copy button next to credential ID: visually similar to cert-copy-fingerprint */
 .cred-copy-id {
@@ -642,18 +1300,18 @@ a {
   color: #1a73e8 !important;
   border: none !important;
 }
-.cred-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+.cred-copy-id .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
 
 /* AAGUID copy button style mirrors Credential ID copy button */
 .aaguid-copy-id { padding: 6px 8px !important; min-width: 0 !important; height: 36px; display: inline-flex; align-items: center; justify-content: center; background: transparent !important; color: #1a73e8 !important; border: none !important; }
-.aaguid-copy-id .material-icons { font-size:18px !important; color: inherit !important; }
+.aaguid-copy-id .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
 
 /* Registration summary block in credential cards */
 .reg-data { margin-top: 8px; padding: 8px 10px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; }
 .reg-data-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
 .reg-data-controls { margin-left: auto; display:flex; gap:8px; align-items:center; }
 .reg-data-list { margin:0; padding:0; display:block; }
-.reg-data-list dt { font-weight:600; color:#333; margin: 12px 0 4px 0; }
+.reg-data-list dt { font-weight:500; color:#333; margin: 12px 0 4px 0; }
 .reg-data-list dd { margin:0 0 12px 0; color:#555; display:block; align-items:baseline; gap:8px; overflow-wrap:anywhere; word-break:normal; }
 .reg-data-list dd::before { content: ""; }
 .reg-data-list dd .credential-id { display:block; min-width:0; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
@@ -666,11 +1324,39 @@ a {
 /* Transport chips for credential transports */
 /* Transport chips for credential transports (non-interactive decorative chips) */
 /* Small spacing helper for MDL chips inside reg-data */
-.reg-data .mdl-chip { margin-right: 6px; margin-bottom: 4px; }
+
+.reg-data .transport-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.reg-data .transport-item {
+  width: 100%;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 10px 12px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: #555;
+  white-space: normal;
+}
+
+.reg-data .transport-item.badge {
+  border-radius: 4px;
+  background: #dbdde2;
+  border: 1px solid #e5e7eb;
+  color: inherit;
+  text-transform: none;
+}
+
 
 /* DECODE button placement inside reg-data/dialog content: ensure button sits below its related value */
 .decode-action { margin-top: 6px; }
-.decode-action .mdl-button { padding: 6px 8px !important; min-width: 0 !important; height: 36px; }
+.decode-action .btn { padding: 6px 8px !important; min-width: 0 !important; height: 36px; }
 
 /* Ensure decode-action sits on its own row inside the registration data dd (which is a flex container) */
 .reg-data-list dd > span { flex: 1 1 auto; min-width: 0; display: block; }
@@ -714,14 +1400,10 @@ a {
 
 /* Left-column placement for DECODE action: sit under dt label in the left column */
 .decode-action-left { margin-top:6px; }
-.decode-action-left .mdl-button { padding: 4px 6px !important; min-width: 0 !important; height: 28px; font-size: 12px; }
+.decode-action-left .btn { padding: 4px 6px !important; min-width: 0 !important; height: 28px; font-size: 12px; }
 
 /* Responsive adjustments for credential cards and registration summary on narrow screens */
 @media (max-width: 760px) {
-  /* Make credential cards take full width and stack vertically */
-  .mdl-cell.mdl-cell--4-col, .mdl-grid > .mdl-cell { width: 100% !important; box-sizing: border-box; }
-  /* Increase card spacing for readability */
-  .mdl-card { margin-bottom: 14px; }
   /* Stack labels above values for reg-data lists (single-column everywhere) */
   .reg-data-list { display: block; }
   .reg-data-list dt { font-size: 0.95em; }
@@ -735,13 +1417,6 @@ a {
 
 /* Additional narrow-screen tweaks for credential cards */
 @media (max-width: 760px) {
-  /* Slightly smaller titles to avoid overflow */
-  .mdl-card__title-text { font-size: 18px; line-height: 22px; }
-
-  /* Make action buttons wrap instead of overflowing */
-  .mdl-card__actions { display:flex; flex-wrap:wrap; gap:8px; }
-  .mdl-card__actions .mdl-button { margin-bottom:6px; }
-
   /* Give reg-data a bit more breathing room for touch */
   .reg-data { padding: 12px; }
 
@@ -754,10 +1429,10 @@ a {
 
 /* Certificate dialog action buttons under each cert */
 .cert-actions { display:flex; gap:8px; margin-top:8px; }
-.cert-actions .material-icons { vertical-align: middle; }
+.cert-actions .material-symbols-outlined { vertical-align: middle; }
 
 /* Make per-cert action buttons visually consistent */
-#certsDialog .cert-actions .mdl-button {
+#certsDialog .cert-actions .btn {
   display: inline-flex !important;
   align-items: center;
   gap: 8px;
@@ -770,15 +1445,15 @@ a {
   min-width: 0 !important;
 }
 
-#certsDialog .cert-actions .mdl-button .material-icons {
+#certsDialog .cert-actions .btn .material-symbols-outlined {
   color: inherit !important;
   font-size: 20px !important;
   line-height: 20px !important;
 }
 
 /* hover effect to match other action links/buttons */
-#certsDialog .cert-actions .mdl-button:hover {
-  background: rgba(26,115,232,0.06) !important;
+#certsDialog .cert-actions .btn:hover {
+  background: var(--btn-hover-bg) !important;
 }
 
 /* Icon-only copy buttons next to fingerprint/serial */
@@ -795,8 +1470,8 @@ a {
   color: #1a73e8 !important;
   border: none !important;
 }
-#certsDialog .cert-copy-fingerprint .material-icons,
-#certsDialog .cert-copy-serial .material-icons { font-size:18px !important; color: inherit !important; }
+#certsDialog .cert-copy-fingerprint .material-symbols-outlined,
+#certsDialog .cert-copy-serial .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
 
 /* Public key copy button: same style as other copy icons */
 #certsDialog .cert-copy-publickey {
@@ -810,7 +1485,7 @@ a {
   color: #1a73e8 !important;
   border: none !important;
 }
-#certsDialog .cert-copy-publickey .material-icons { font-size:18px !important; color: inherit !important; }
+#certsDialog .cert-copy-publickey .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
 
 /* Responsive adjustments: allow per-cert action buttons to wrap and
    use a compact icon-first layout on narrow screens so label text doesn't
@@ -824,7 +1499,7 @@ a {
   }
 
   /* Make each button a bit more compact and allow it to shrink */
-  #certsDialog .cert-actions .mdl-button {
+  #certsDialog .cert-actions .btn {
     padding: 6px 6px !important;
     font-size: 13px !important;
     gap: 6px !important;
@@ -834,7 +1509,7 @@ a {
   /* When space is very narrow, show an icon-first style where label can wrap
      onto the next line; ensure icons remain left-aligned and visible. */
   @media (max-width: 380px) {
-    #certsDialog .cert-actions .mdl-button {
+    #certsDialog .cert-actions .btn {
       display: inline-flex !important;
       flex-direction: row !important;
       align-items: center !important;
@@ -844,13 +1519,13 @@ a {
     /* If necessary, hide the text on ultra-narrow screens but keep title accessible
        via title attribute (handled in JS if desired). We prefer to keep text when possible,
        so only reduce visibility using a subtle technique: shrink text and allow wrapping. */
-    #certsDialog .cert-actions .mdl-button { white-space: normal !important; }
+    #certsDialog .cert-actions .btn { white-space: normal !important; }
   }
 }
 
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
-#certsDialog.mdl-dialog, dialog#certsDialog {
+dialog#certsDialog {
   width: auto;
   max-width: 1100px;
   /* add bottom padding so footer buttons aren't flush to the dialog edge */
@@ -860,7 +1535,7 @@ a {
 /* Layout certificate cards as a single column (top-to-bottom). Each card
    stretches to fill the dialog content width so available space on the right
    is used. This keeps the vertical flow but makes entries flexible. */
-#certsDialog .mdl-dialog__content {
+#certsDialog .app-dialog-content {
   display: flex !important;
   flex-direction: column;
   gap: 16px;
@@ -995,8 +1670,35 @@ a {
   border: 1px solid rgba(0,0,0,0.08);
 }
 .cert-card small { color: #555; display:block; }
-.cert-actions .material-icons { color: #666; }
-.cert-actions button.mdl-button { background: transparent; }
+.cert-actions .material-symbols-outlined { color: #666; }
+.cert-actions .btn { background: transparent; }
+
+/* Certificate dialog typography: values use the same font as public-key bytes */
+#certsDialog .cert-label {
+  font-family: inherit;
+  font-weight: 600;
+}
+
+#certsDialog .cert-value {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  font-weight: 400;
+  color: #555;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Main certificate fields (Subject/Issuer/Serial/Validity/etc.): keep labels same size as values */
+#certsDialog .cert-card .text-sm .cert-label {
+  font-size: 13px;
+}
+
+/* Extension rows use <small>; don't upsize them via cert-value/cert-label rules */
+#certsDialog .cert-card .cert-ext small .cert-label,
+#certsDialog .cert-card .cert-ext small .cert-value {
+  font-size: inherit;
+}
 
 /* Force wrapping for long certificate fields so text doesn't overflow the card */
 #certsDialog .cert-card,
@@ -1079,7 +1781,7 @@ a {
 /* Stronger rule for hex displays inside registration dialogs to avoid accidental wrapping
    when .mono or .reg-data-list rules try to apply pre-wrap. This ensures the computed
    bytes-per-row can render without being reflowed onto multiple visual lines. */
-.mdl-dialog__content .hex-mono,
+.app-dialog-content .hex-mono,
 .reg-data-list dd .hex-mono {
   white-space: pre !important;
   overflow-x: auto !important;
@@ -1093,22 +1795,82 @@ a {
 .public-key-toggle { padding: 6px 8px; font-weight: 500; }
 
 /* Match visual style of other action buttons: remove heavy background and use link-like appearance */
-.public-key-toggle.mdl-js-button { background: transparent !important; color: #1a73e8 !important; text-transform: none !important; font-weight: 500 !important; }
-.public-key-toggle .material-icons { font-size: 18px; }
+.public-key-toggle { background: transparent !important; color: #1a73e8 !important; text-transform: none !important; font-weight: 500 !important; }
+.public-key-toggle .material-symbols-outlined { font-size: 18px; }
 
-/* Right-align dialog actions at bottom-right */
-.mdl-dialog__actions.cert-dialog-actions { display:flex; justify-content:space-between; padding:12px 24px 18px 24px; }
-.mdl-dialog__actions.cert-dialog-actions .mdl-button { min-width: 120px; }
+/* Certificate dialog footer uses an explicit left/right layout */
+.app-dialog-actions.cert-dialog-actions { display:flex; flex-direction: row !important; justify-content:space-between; padding:12px 24px 18px 24px; }
+.app-dialog-actions.cert-dialog-actions .btn { min-width: 120px; }
 
 /* Force Download Chain on the left and Close on the right */
 #certsDownloadChain { order: 0; }
 #certsDialog_x { order: 1; margin-left: auto; }
 
 /* Make dialog content tighter */
-.mdl-dialog__content { padding: 12px 16px 0 16px; }
+.app-dialog-content { padding: 12px 16px 0 16px; }
 
 /* Styling for the Decode CBOR button in the creation data dialog */
 .openCborButton {
   margin-left: 8px; /* keep spacing but defer visual style to MDL */
 }
-.openCborButton.mdl-button { min-width: 0; }
+.openCborButton.btn { min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   Tailwind/DaisyUI migration overrides
+   -------------------------------------------------------------------------- */
+
+/* Avoid legacy global element rules from fighting DaisyUI */
+select,
+input[type="text"],
+input[type="number"],
+textarea {
+  font: inherit;
+}
+
+/* Toast placement: bottom-center (override DaisyUI toast-end defaults) */
+#toast.toast {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  align-items: center !important;
+  width: auto;
+  max-width: min(92vw, 640px);
+}
+
+#toast.toast > .alert {
+  width: auto;
+  max-width: 100%;
+}
+
+/* CBOR Playground: keep editor inputs monospace like other value blocks */
+.cbor-mono {
+  min-height: 180px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
+  font-size: 13px;
+  color: #555;
+}
+
+/* CBOR Playground: constrain line lengths on wide monitors */
+.cbor-page .cbor-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* CBOR Playground: space between major sections */
+.cbor-page .cbor-section {
+  margin-top: 16px;
+}
+.cbor-page .cbor-section + .cbor-section {
+  margin-top: 28px;
+}
+
+/* Space between cards within a section (e.g., Decode -> Decoded) */
+.cbor-page .cbor-section .card + .card {
+  margin-top: 18px;
+}
+
+/* Ensure our new page layout isn't constrained by old dialog rules */
+dialog.modal {
+  min-width: 0 !important;
+}

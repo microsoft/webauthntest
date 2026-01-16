@@ -1,31 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <title>WebAuthn Test App</title>
+    <title>WebAuthn Playground</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <!-- Material Symbols (newer Material Icons set which includes 'certificate') -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/getmdl-select@2.0.1/getmdl-select.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css">
+    <!-- Material Symbols (newer Material Icons set) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="styles.css">
 
 </head>
 
-<body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base cloak">
-    <dialog class="mdl-dialog" id="createDialog">
-        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate cloak"></div>
-        <h3 class="mdl-dialog__title">Create Credential Options</h3>
-        <div class="mdl-dialog__content">
+<body class="min-h-screen bg-base-200 text-base-content cloak">
+    <dialog class="app-dialog" id="createDialog">
+        <div class="loading-indicator hidden"><progress class="progress progress-primary w-full"></progress></div>
+        <h3 class="app-dialog-title">Create Credential Options</h3>
+        <div class="app-dialog-content">
             <span>
                 <span>RP Info</span>
-                <select name="create_rpInfo" id="create_rpInfo" class="float-right">
+                <select name="create_rpInfo" id="create_rpInfo" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined RP ID</option>
                     <option value="normal">This domain</option>
                     <option value="suffix">Suffix to this domain</option>
@@ -38,7 +35,7 @@
             <hr>
             <span>
                 <span>User Info</span>
-                <select name="create_userInfo" id="create_userInfo" class="float-right">
+                <select name="create_userInfo" id="create_userInfo" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="bob" selected>Bob</option>
                     <option value="alice">Alice</option>
                     <option value="stella">Stella</option>
@@ -51,7 +48,7 @@
 
             <span>
                 <span>Attachment</span>
-                <select name="create_authenticatorAttachment" id="create_authenticatorAttachment" class="float-right">
+                <select name="create_authenticatorAttachment" id="create_authenticatorAttachment" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="platform">Platform</option>
                     <option value="cross-platform">Cross-Platform</option>
@@ -61,7 +58,7 @@
 
             <span>
                 <span>Require Resident Key</span>
-                <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right">
+                <select name="create_requireResidentKey" id="create_requireResidentKey" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="false">False</option>
                     <option value="true" selected>True</option>
@@ -71,7 +68,7 @@
 
             <span>
                 <span>Resident Key</span>
-                <select name="create_residentKey" id="create_residentKey" class="float-right">
+                <select name="create_residentKey" id="create_residentKey" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
                     <option value="preferred">Preferred</option>
@@ -82,7 +79,7 @@
 
             <span>
                 <span>User Verification</span>
-                <select name="create_userVerification" id="create_userVerification" class="float-right">
+                <select name="create_userVerification" id="create_userVerification" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="discouraged">Discouraged</option>
                     <option value="preferred">Preferred</option>
@@ -93,7 +90,7 @@
 
             <span>
                 <span>Attestation</span>
-                <select name="create_attestation" id="create_attestation" class="float-right">
+                <select name="create_attestation" id="create_attestation" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="none">None</option>
                     <option value="indirect">Indirect</option>
@@ -107,9 +104,9 @@
                 <span>Algorithms<br><br></span>
                 <ul id="create_algorithmsList" class="alg-list">
                     <li id="algItem_ES256" data-alg-id="-7">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES256">
-                            <input type="checkbox" id="create_ES256" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ES256 (-7)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ES256">
+                            <input type="checkbox" id="create_ES256" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ES256 (-7)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ES256 up">▲</button>
@@ -117,9 +114,9 @@
                         </div>
                     </li>
                     <li id="algItem_ES384" data-alg-id="-35">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES384">
-                            <input type="checkbox" id="create_ES384" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ES384 (-35)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ES384">
+                            <input type="checkbox" id="create_ES384" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ES384 (-35)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ES384 up">▲</button>
@@ -127,9 +124,9 @@
                         </div>
                     </li>
                     <li id="algItem_ES512" data-alg-id="-36">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ES512">
-                            <input type="checkbox" id="create_ES512" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ES512 (-36)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ES512">
+                            <input type="checkbox" id="create_ES512" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ES512 (-36)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ES512 up">▲</button>
@@ -137,9 +134,9 @@
                         </div>
                     </li>
                     <li id="algItem_RS256" data-alg-id="-257">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_RS256">
-                            <input type="checkbox" id="create_RS256" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">RS256 (-257)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_RS256">
+                            <input type="checkbox" id="create_RS256" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">RS256 (-257)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move RS256 up">▲</button>
@@ -147,9 +144,9 @@
                         </div>
                     </li>
                     <li id="algItem_EdDSA" data-alg-id="-8">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_EdDSA">
-                            <input type="checkbox" id="create_EdDSA" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">EdDSA (-8)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_EdDSA">
+                            <input type="checkbox" id="create_EdDSA" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">EdDSA (-8)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move EdDSA up">▲</button>
@@ -157,9 +154,9 @@
                         </div>
                     </li>
                     <li id="algItem_ML_DSA_44" data-alg-id="-48">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_44">
-                            <input type="checkbox" id="create_ML_DSA_44" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ML-DSA-44 (-48)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ML_DSA_44">
+                            <input type="checkbox" id="create_ML_DSA_44" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ML-DSA-44 (-48)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ML-DSA-44 up">▲</button>
@@ -167,9 +164,9 @@
                         </div>
                     </li>
                     <li id="algItem_ML_DSA_65" data-alg-id="-49">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_65">
-                            <input type="checkbox" id="create_ML_DSA_65" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ML-DSA-65 (-49)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ML_DSA_65">
+                            <input type="checkbox" id="create_ML_DSA_65" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ML-DSA-65 (-49)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ML-DSA-65 up">▲</button>
@@ -177,9 +174,9 @@
                         </div>
                     </li>
                     <li id="algItem_ML_DSA_87" data-alg-id="-50">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_ML_DSA_87">
-                            <input type="checkbox" id="create_ML_DSA_87" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">ML-DSA-87 (-50)</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_ML_DSA_87">
+                            <input type="checkbox" id="create_ML_DSA_87" class="checkbox checkbox-sm" checked>
+                            <span class="label-text">ML-DSA-87 (-50)</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="alg-up" aria-label="Move ML-DSA-87 up">▲</button>
@@ -188,7 +185,7 @@
                     </li>
                 </ul>
                 <div id="algorithmsWarning" class="alg-warning" style="display:none;">Select at least one algorithm.</div>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="algorithmsResetOrder">Reset Order</button>
+                <button type="button" class="btn btn-outline btn-sm" id="algorithmsResetOrder">Reset Order</button>
             </span>
 
             <hr>
@@ -196,9 +193,9 @@
                 <span>Hints<br><br></span>
                 <ul id="create_hintsList" class="alg-list">
                     <li id="hintItem_security_key" data-hint="security-key">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_security_key">
-                            <input type="checkbox" id="create_hint_security_key" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">security-key</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_hint_security_key">
+                            <input type="checkbox" id="create_hint_security_key" class="checkbox checkbox-sm">
+                            <span class="label-text">security-key</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move security-key up">▲</button>
@@ -206,9 +203,9 @@
                         </div>
                     </li>
                     <li id="hintItem_client_device" data-hint="client-device">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_client_device">
-                            <input type="checkbox" id="create_hint_client_device" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">client-device</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_hint_client_device">
+                            <input type="checkbox" id="create_hint_client_device" class="checkbox checkbox-sm">
+                            <span class="label-text">client-device</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move client-device up">▲</button>
@@ -216,9 +213,9 @@
                         </div>
                     </li>
                     <li id="hintItem_hybrid" data-hint="hybrid">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_hint_hybrid">
-                            <input type="checkbox" id="create_hint_hybrid" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">hybrid</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="create_hint_hybrid">
+                            <input type="checkbox" id="create_hint_hybrid" class="checkbox checkbox-sm">
+                            <span class="label-text">hybrid</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move hybrid up">▲</button>
@@ -226,49 +223,49 @@
                         </div>
                     </li>
                 </ul>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="hintsResetOrderCreate">Reset Order</button>
+                <button type="button" class="btn btn-outline btn-sm" id="hintsResetOrderCreate">Reset Order</button>
             </span>
 
             <hr>
             <span>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="create_excludeCredentials">
-                    <input type="checkbox" id="create_excludeCredentials" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Exclude Existing Credentials?</span>
+                <label class="label cursor-pointer justify-start gap-2" for="create_excludeCredentials">
+                    <input type="checkbox" id="create_excludeCredentials" class="checkbox checkbox-sm">
+                    <span class="label-text">Exclude Existing Credentials?</span>
                 </label>
             </span>
             <hr>
             <span>
                 <span>Extra Credentials Count</span>
-                <input type="number" id="create_fakeExcludeCount" class="float-right small-number-input" min="0" value="0" />
+                <input type="number" id="create_fakeExcludeCount" class="float-right input input-bordered input-sm small-number-input" min="0" value="0" />
             </span>
             <hr>
             <span>
                 <span>Extra Credentials ID Length</span>
-                <input type="number" id="create_fakeExcludeLength" class="float-right small-number-input" min="1" value="64" />
+                <input type="number" id="create_fakeExcludeLength" class="float-right input input-bordered input-sm small-number-input" min="1" value="64" />
             </span>
             <hr>
             <span>
                 <span>Extra Credentials Transports<br><br></span>
-                <div class="mdl-grid mdl-grid--no-spacing">
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_internal">
-                        <input type="checkbox" id="create_internal" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">Internal</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="label cursor-pointer justify-start gap-2" for="create_internal">
+                        <input type="checkbox" id="create_internal" class="checkbox checkbox-sm">
+                        <span class="label-text">Internal</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_usb">
-                        <input type="checkbox" id="create_usb" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">USB</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="create_usb">
+                        <input type="checkbox" id="create_usb" class="checkbox checkbox-sm">
+                        <span class="label-text">USB</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_nfc">
-                        <input type="checkbox" id="create_nfc" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">NFC</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="create_nfc">
+                        <input type="checkbox" id="create_nfc" class="checkbox checkbox-sm">
+                        <span class="label-text">NFC</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_ble">
-                        <input type="checkbox" id="create_ble" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">BLE</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="create_ble">
+                        <input type="checkbox" id="create_ble" class="checkbox checkbox-sm">
+                        <span class="label-text">BLE</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="create_hybrid">
-                        <input type="checkbox" id="create_hybrid" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">Hybrid</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="create_hybrid">
+                        <input type="checkbox" id="create_hybrid" class="checkbox checkbox-sm">
+                        <span class="label-text">Hybrid</span>
                     </label>
                 </div>
             </span>
@@ -276,7 +273,7 @@
 
             <span>
                 <span>HMAC Extension</span>
-                <select name="create_hmac_create" id="create_hmac_create" class="float-right">
+                <select name="create_hmac_create" id="create_hmac_create" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="true" selected>True</option>
                 </select>
@@ -285,7 +282,7 @@
 
             <span>
                 <span>CredProps Extension</span>
-                <select name="create_cred_props" id="create_cred_props" class="float-right">
+                <select name="create_cred_props" id="create_cred_props" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="true" selected>True</option>
                 </select>
@@ -294,7 +291,7 @@
 
             <span>
                 <span>CredProtect Extension</span>
-                <select name="create_cred_protect" id="create_cred_protect" class="float-right">
+                <select name="create_cred_protect" id="create_cred_protect" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="userVerificationOptional">UVOptional</option>
                     <option value="userVerificationOptionalWithCredentialIDList">UVOptionalWithCredIDList</option>
@@ -305,7 +302,7 @@
 
             <span>
                 <span>Enforce CredProtect</span>
-                <select name="create_cred_protect_enforce" id="create_cred_protect_enforce" class="float-right">
+                <select name="create_cred_protect_enforce" id="create_cred_protect_enforce" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>
@@ -315,7 +312,7 @@
 
             <span>
                 <span>MinPinLength Extension</span>
-                <select name="create_minPinLength" id="create_minPinLength" class="float-right">
+                <select name="create_minPinLength" id="create_minPinLength" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>
@@ -325,7 +322,7 @@
 
             <span>
                 <span>LargeBlob Extension</span>
-                <select name="create_largeBlob" id="create_largeBlob" class="float-right">
+                <select name="create_largeBlob" id="create_largeBlob" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="preferred">Preferred</option>
                     <option value="required">Required</option>
@@ -335,44 +332,35 @@
 
             <span>
                 <span>CredBlob Extension<br></span>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_credBlob">
-                    <label class = "mdl-textfield__label" for = "create_credBlob">CredBlob...</label>
-                </div>
+                <input class="input input-bordered input-sm w-full mt-1" type="text" id="create_credBlob" placeholder="CredBlob...">
             </span>
             <hr>
             <span>
                 <span>PRF Extension</span>
-                <select name="create_prf" id="create_prf" class="float-right">
+                <select name="create_prf" id="create_prf" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined">Undefined</option>
                     <option value="enable" selected>Enable</option>
                 </select>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_first">
-                    <label class = "mdl-textfield__label" for = "create_prf_first">First Salt/Nonce...</label>
-                </div>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "create_prf_second">
-                    <label class = "mdl-textfield__label" for = "create_prf_second">Second Salt/Nonce...</label>
-                </div>
+                <input class="input input-bordered input-sm w-full mt-2" type="text" id="create_prf_first" placeholder="First Salt/Nonce...">
+                <input class="input input-bordered input-sm w-full mt-2" type="text" id="create_prf_second" placeholder="Second Salt/Nonce...">
             </span>
             <hr>
         </div>
 
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="createDialog_createButton" autofocus>Create</button>
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="createDialog_cancelButton">Cancel</button>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="createDialog_createButton" autofocus>Create</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="createDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="getDialog">
-        <div class="mdl-progress mdl-js-progress mdl-progress__indeterminate cloak"></div>
-        <h3 class="mdl-dialog__title">Get Credential Options</h3>
-        <div class="mdl-dialog__content">
+    <dialog class="app-dialog" id="getDialog">
+        <div class="loading-indicator hidden"><progress class="progress progress-primary w-full"></progress></div>
+        <h3 class="app-dialog-title">Get Credential Options</h3>
+        <div class="app-dialog-content">
             <span>
                 <span>AutoFill Credentials <br></span>
                 <input
-                    class = "mdl-textfield__input"
+                    class="input input-bordered input-sm w-full mt-1"
                     type = "text"
                     id = "get_conditionalUI"
                     name="username"
@@ -382,7 +370,7 @@
             <hr>            
             <span>
                 <span>RP ID</span>
-                <select name="get_rpId" id="get_rpId" class="float-right">
+                <select name="get_rpId" id="get_rpId" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="normal">This domain</option>
                     <option value="suffix">Suffix to this domain</option>
@@ -392,7 +380,7 @@
             <hr>
             <span>
                 <span>User Verification</span>
-                <select name="get_userVerification" id="get_userVerification" class="float-right">
+                <select name="get_userVerification" id="get_userVerification" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="discouraged">Discouraged</option>
                     <option value="preferred">Preferred</option>
@@ -401,44 +389,44 @@
             </span>
             <hr>
             <span>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_allowCredentials">
-                    <input type="checkbox" id="get_allowCredentials" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Use allowCredentials</span>
+                <label class="label cursor-pointer justify-start gap-2" for="get_allowCredentials">
+                    <input type="checkbox" id="get_allowCredentials" class="checkbox checkbox-sm" checked>
+                    <span class="label-text">Include Existing Credentials?</span>
                 </label>
             </span>
             <hr>
             <span>
                 <span>Extra Credentials Count</span>
-                <input type="number" id="get_fakeAllowCount" class="float-right small-number-input" min="0" value="0" />
+                <input type="number" id="get_fakeAllowCount" class="float-right input input-bordered input-sm small-number-input" min="0" value="0" />
             </span>
             <hr>
             <span>
                 <span>Extra Credentials ID Length</span>
-                <input type="number" id="get_fakeAllowLength" class="float-right small-number-input" min="1" value="64" />
+                <input type="number" id="get_fakeAllowLength" class="float-right input input-bordered input-sm small-number-input" min="1" value="64" />
             </span>
             <hr>
             <span>
                 <span>Extra Credentials Transports <br><br></span>
-                <div class="mdl-grid mdl-grid--no-spacing">
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_internal">
-                        <input type="checkbox" id="get_internal" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">Internal</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="label cursor-pointer justify-start gap-2" for="get_internal">
+                        <input type="checkbox" id="get_internal" class="checkbox checkbox-sm">
+                        <span class="label-text">Internal</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_usb">
-                        <input type="checkbox" id="get_usb" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">USB</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="get_usb">
+                        <input type="checkbox" id="get_usb" class="checkbox checkbox-sm">
+                        <span class="label-text">USB</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_nfc">
-                        <input type="checkbox" id="get_nfc" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">NFC</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="get_nfc">
+                        <input type="checkbox" id="get_nfc" class="checkbox checkbox-sm">
+                        <span class="label-text">NFC</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_ble">
-                        <input type="checkbox" id="get_ble" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">BLE</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="get_ble">
+                        <input type="checkbox" id="get_ble" class="checkbox checkbox-sm">
+                        <span class="label-text">BLE</span>
                     </label>
-                    <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="get_hybrid">
-                        <input type="checkbox" id="get_hybrid" class="mdl-checkbox__input">
-                        <span class="mdl-checkbox__label">Hybrid</span>
+                    <label class="label cursor-pointer justify-start gap-2" for="get_hybrid">
+                        <input type="checkbox" id="get_hybrid" class="checkbox checkbox-sm">
+                        <span class="label-text">Hybrid</span>
                     </label>
                 </div>
             </span>
@@ -447,9 +435,9 @@
                 <span>Hints<br><br></span>
                 <ul id="get_hintsList" class="alg-list">
                     <li id="getHintItem_security_key" data-hint="security-key">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_security_key">
-                            <input type="checkbox" id="get_hint_security_key" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">security-key</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="get_hint_security_key">
+                            <input type="checkbox" id="get_hint_security_key" class="checkbox checkbox-sm">
+                            <span class="label-text">security-key</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move security-key up">▲</button>
@@ -457,9 +445,9 @@
                         </div>
                     </li>
                     <li id="getHintItem_client_device" data-hint="client-device">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_client_device">
-                            <input type="checkbox" id="get_hint_client_device" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">client-device</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="get_hint_client_device">
+                            <input type="checkbox" id="get_hint_client_device" class="checkbox checkbox-sm">
+                            <span class="label-text">client-device</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move client-device up">▲</button>
@@ -467,9 +455,9 @@
                         </div>
                     </li>
                     <li id="getHintItem_hybrid" data-hint="hybrid">
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_hint_hybrid">
-                            <input type="checkbox" id="get_hint_hybrid" class="mdl-checkbox__input">
-                            <span class="mdl-checkbox__label">hybrid</span>
+                        <label class="label cursor-pointer justify-start gap-2" for="get_hint_hybrid">
+                            <input type="checkbox" id="get_hint_hybrid" class="checkbox checkbox-sm">
+                            <span class="label-text">hybrid</span>
                         </label>
                         <div class="alg-actions">
                             <button type="button" class="hint-up" aria-label="Move hybrid up">▲</button>
@@ -477,12 +465,12 @@
                         </div>
                     </li>
                 </ul>
-                <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="hintsResetOrderGet">Reset Order</button>
+                <button type="button" class="btn btn-outline btn-sm" id="hintsResetOrderGet">Reset Order</button>
             </span>
             <hr>
             <span>
                 <span>Get CredBlob</span>
-                <select name="get_credBlob" id="get_credBlob" class="float-right">
+                <select name="get_credBlob" id="get_credBlob" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>
@@ -491,7 +479,7 @@
             <hr>
             <span>
                 <span>Get LargeBlob</span>
-                <select name="get_largeBlob" id="get_largeBlob" class="float-right">
+                <select name="get_largeBlob" id="get_largeBlob" class="float-right select select-bordered select-sm max-w-xs">
                     <option value="undefined" selected>Undefined</option>
                     <option value="false">False</option>
                     <option value="true">True</option>
@@ -500,47 +488,38 @@
             <hr>
             <span>
                 <span>Write LargeBlob<br></span>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "get_largeBlobText">
-                    <label class = "mdl-textfield__label" for = "get_largeBlobText">LargeBlob...</label>
-                </div>
+                <input class="input input-bordered input-sm w-full mt-1" type="text" id="get_largeBlobText" placeholder="LargeBlob...">
             </span>
             <hr>
             <span>
                 <span>PRF Extension<br></span>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_first">
-                    <label class = "mdl-textfield__label" for = "get_prf_first">First Salt/Nonce...</label>
-                </div>
-                <div class = "mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                    <input class = "mdl-textfield__input" type = "text" id = "get_prf_second">
-                    <label class = "mdl-textfield__label" for = "get_prf_second">Second Salt/Nonce...</label>
-                </div>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_global">
-                    <input type="checkbox" id="get_prf_global" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Global Eval</span>
+                <input class="input input-bordered input-sm w-full mt-1" type="text" id="get_prf_first" placeholder="First Salt/Nonce...">
+                <input class="input input-bordered input-sm w-full mt-2" type="text" id="get_prf_second" placeholder="Second Salt/Nonce...">
+                <label class="label cursor-pointer justify-start gap-2" for="get_prf_global">
+                    <input type="checkbox" id="get_prf_global" class="checkbox checkbox-sm">
+                    <span class="label-text">Global Eval</span>
                 </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="get_prf_per_credential">
-                    <input type="checkbox" id="get_prf_per_credential" class="mdl-checkbox__input" checked>
-                    <span class="mdl-checkbox__label">Per Credential Eval</span>
+                <label class="label cursor-pointer justify-start gap-2" for="get_prf_per_credential">
+                    <input type="checkbox" id="get_prf_per_credential" class="checkbox checkbox-sm" checked>
+                    <span class="label-text">Per Credential Eval</span>
                 </label>
             </span>
             <hr>
         </div>
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="getDialog_getButton" autofocus>Get</button>
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="getDialog_cancelButton">Cancel</button>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="getDialog_getButton" autofocus>Get</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="getDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="creationDataDialog">
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="creationDataDialog_xButton">
-                <i class="material-icons">close</i>
+    <dialog class="app-dialog" id="creationDataDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="creationDataDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Registration Details</h3>
-        <div class="mdl-dialog__content">
+        <h3 class="app-dialog-title">Registration Details</h3>
+        <div class="app-dialog-content">
             <div class="reg-data">
                 <div class="reg-data-body">
                     <dl class="reg-data-list">
@@ -552,15 +531,15 @@
 
                         <dt>Public Key (CBOR)
                             <div class="decode-action-left">
-                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
                             </div>
                         </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_publicKeyCbor"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_publicKeyCbor" data-copy-label="Public Key (CBOR)" title="Copy Public Key (CBOR)">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_publicKeyCbor" data-copy-label="Public Key (CBOR)" title="Copy Public Key (CBOR)">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -571,8 +550,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_clientDataJSON"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -583,8 +562,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_authenticatorDataHex"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -592,15 +571,15 @@
 
                         <dt>Extensions
                             <div class="decode-action-left">
-                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
                             </div>
                         </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_extensionData"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -608,15 +587,15 @@
 
                         <dt>Attestation Object
                             <div class="decode-action-left">
-                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
                             </div>
                         </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_attestationObject"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_attestationObject" data-copy-label="Attestation Object" title="Copy Attestation Object">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_attestationObject" data-copy-label="Attestation Object" title="Copy Attestation Object">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -630,8 +609,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_PRF_First"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -642,8 +621,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_PRF_Second"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -653,21 +632,21 @@
             </div>
         </div>
 
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect close" id="creationDataDialog_closeButton">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm close" id="creationDataDialog_closeButton">
                 Close
             </button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="authenticationDataDialog">
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="authenticationDataDialog_xButton">
-                <i class="material-icons">close</i>
+    <dialog class="app-dialog" id="authenticationDataDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="authenticationDataDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Authentication Details</h3>
-        <div class="mdl-dialog__content">
+        <h3 class="app-dialog-title">Authentication Details</h3>
+        <div class="app-dialog-content">
             <div class="reg-data">
                 <div class="reg-data-body">
                     <dl class="reg-data-list">
@@ -679,8 +658,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_userHandleHex"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_userHandleHex" data-copy-label="User Handle" title="Copy User Handle">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_userHandleHex" data-copy-label="User Handle" title="Copy User Handle">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -691,8 +670,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_clientDataJSON"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_clientDataJSON" data-copy-label="Client Data JSON" title="Copy Client Data JSON">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -703,8 +682,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_authenticatorDataHex"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_authenticatorDataHex" data-copy-label="Authenticator Data" title="Copy Authenticator Data">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -712,15 +691,15 @@
 
                         <dt>Extensions
                             <div class="decode-action-left">
-                                <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
                             </div>
                         </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_extensionData"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_extensionData" data-copy-label="Extensions" title="Copy Extensions">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -731,8 +710,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_signatureHex"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_signatureHex" data-copy-label="Signature" title="Copy Signature">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_signatureHex" data-copy-label="Signature" title="Copy Signature">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -743,8 +722,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_PRF_First"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_First" data-copy-label="PRF First" title="Copy PRF First">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -755,8 +734,8 @@
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_PRF_Second"></pre>
                                 <div class="mono-actions">
-                                    <button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
-                                        <i class="material-icons">content_copy</i>
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
                             </div>
@@ -766,166 +745,133 @@
             </div>
         </div>
 
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect close" id="authenticationDataDialog_closeButton">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm close" id="authenticationDataDialog_closeButton">
                 Close
             </button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="updateTransportsDialog">
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="updateTransportsDialog_xButton">
-                <i class="material-icons">close</i>
+    <dialog class="app-dialog" id="updateTransportsDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="updateTransportsDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Update Credential Transports</h3>
-        <div class="mdl-dialog__content">
+        <h3 class="app-dialog-title">Update Credential Transports</h3>
+        <div class="app-dialog-content">
             <p>Select the transports supported by this credential. This will overwrite the stored values.</p>
-            <div class="mdl-grid mdl-grid--no-spacing">
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_internal">
-                    <input type="checkbox" id="update_transport_internal" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Internal</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_usb">
-                    <input type="checkbox" id="update_transport_usb" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">USB</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_nfc">
-                    <input type="checkbox" id="update_transport_nfc" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">NFC</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_ble">
-                    <input type="checkbox" id="update_transport_ble" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">BLE</span>
-                </label>
-                <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect mdl-cell mdl-cell--6-col" for="update_transport_hybrid">
-                    <input type="checkbox" id="update_transport_hybrid" class="mdl-checkbox__input">
-                    <span class="mdl-checkbox__label">Hybrid</span>
-                </label>
-            </div>
             <div class="transport-actions">
-        <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="updateTransportsDialog_clearButton">Clear All</button>
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="updateTransportsDialog_selectAllButton">Select All</button>
+        <button type="button" class="btn btn-outline btn-sm" id="updateTransportsDialog_clearButton">Clear All</button>
+            <button type="button" class="btn btn-outline btn-sm" id="updateTransportsDialog_selectAllButton">Select All</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <label class="label cursor-pointer justify-start gap-2" for="update_transport_internal">
+                    <input type="checkbox" id="update_transport_internal" class="checkbox checkbox-sm">
+                    <span class="label-text">Internal</span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-2" for="update_transport_usb">
+                    <input type="checkbox" id="update_transport_usb" class="checkbox checkbox-sm">
+                    <span class="label-text">USB</span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-2" for="update_transport_nfc">
+                    <input type="checkbox" id="update_transport_nfc" class="checkbox checkbox-sm">
+                    <span class="label-text">NFC</span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-2" for="update_transport_ble">
+                    <input type="checkbox" id="update_transport_ble" class="checkbox checkbox-sm">
+                    <span class="label-text">BLE</span>
+                </label>
+                <label class="label cursor-pointer justify-start gap-2" for="update_transport_hybrid">
+                    <input type="checkbox" id="update_transport_hybrid" class="checkbox checkbox-sm">
+                    <span class="label-text">Hybrid</span>
+                </label>
             </div>
         </div>
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="updateTransportsDialog_saveButton">Save</button>
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect close mdl-button--colored" id="updateTransportsDialog_cancelButton">Cancel</button>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="updateTransportsDialog_saveButton">Save</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="updateTransportsDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="confirmDeleteDialog">
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="confirmDeleteDialog_xButton">
-                <i class="material-icons">close</i>
+    <dialog class="app-dialog" id="confirmDeleteDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="confirmDeleteDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
         </div>
-        <h3 class="mdl-dialog__title">Confirm Delete</h3>
-        <div class="mdl-dialog__content">
+        <h3 class="app-dialog-title">Confirm Delete</h3>
+        <div class="app-dialog-content">
             <p>Are you sure you want to delete this credential? This action cannot be undone.</p>
         </div>
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-button--colored" id="confirmDeleteDialog_confirm">Delete</button>
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="confirmDeleteDialog_cancel">Cancel</button>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-error btn-sm" id="confirmDeleteDialog_confirm">Delete</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="confirmDeleteDialog_cancel">Cancel</button>
         </div>
     </dialog>
 
-    <dialog class="mdl-dialog" id="moreDialog">
-        <h3 class="mdl-dialog__title">More Options</h3>
-        <div class="mdl-dialog__content">
-            <span>
-                <span>Platform authenticator (isUVPAA)</span>
-                <span class="float-right" id="moreDialog_platformAuthenticatorAvailable">
-                    Not defined
-                </span>
-            </span>
-            <hr>
-            <span>
-                <span>isConditionalMediationAvailable</span>
-                <span class="float-right" id="moreDialog_autofillUiSupported">
-                    Not defined
-                </span>
-            </span>
-            <hr>
-            <span>
-                <table id="moreDialog_ClientCapabilities">
-                </table>
-            </span>
-            <hr>
+    <dialog class="app-dialog" id="moreDialog">
+        <h3 class="app-dialog-title">More Options</h3>
+        <div class="app-dialog-content">
+            <div class="more-kv">
+                <div class="more-label">Platform authenticator (isUVPAA)</div>
+                <div class="more-value" id="moreDialog_platformAuthenticatorAvailable">Not defined</div>
+            </div>
+
+            <div class="more-kv">
+                <div class="more-label">isConditionalMediationAvailable</div>
+                <div class="more-value" id="moreDialog_autofillUiSupported">Not defined</div>
+            </div>
+
+            <div class="more-capabilities">
+                <table id="moreDialog_ClientCapabilities"></table>
+            </div>
         </div>
 
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored close" id="moreDialog_closeButton">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm close" id="moreDialog_closeButton">
                 Close
             </button>
         </div>
     </dialog>
 
-
-
-    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header class="mdl-layout__header mdl-layout__header--scroll mdl-color--primary">
-            <div class="mdl-layout__header-row">
+    <div class="min-h-screen flex flex-col">
+        <header class="navbar bg-primary text-primary-content px-4">
+            <div class="navbar-start">
+                <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">WebAuthn Playground</a></h1>
             </div>
-            <div class="mdl-layout__header-row">
-                <h3><a href="index.html" class="title-link">WebAuthn Test App</a></h3>
-                <button class="mdl-button mdl-js-button mdl-js-ripple-effect" id="signOutButton">
-                    Sign Out
-                </button>
-            </div>
-            <div class="mdl-layout__header-row">
-            </div>
-            <div class="mdl-layout__tab-bar mdl-js-ripple-effect mdl-color--primary-dark">
-                <a href="#credentials" class="mdl-layout__tab is-active">Credentials</a>
-                <div class="fab-group" aria-hidden="false">
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="createButton" title="Create">
-                        <i class="material-icons" role="presentation">add</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="getButton" title="Get">
-                        <i class="material-icons" role="presentation">lock_open</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="moreButton" title="More">
-                        <i class="material-icons" role="presentation">more_horiz</i>
-                    </button>
-                    <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored mdl-shadow--4dp mdl-color--accent" id="cborButton" title="Open CBOR Playground">
-                        <i class="material-icons" role="presentation">code</i>
-                    </button>
-            </div>
-            <!-- Overflow menu for narrow screens (MDL menu for consistent styling) -->
-            <div class="fab-overflow" id="fabOverflow">
-                <button id="fabOverflowToggle" class="mdl-button mdl-js-button mdl-button--icon" title="More actions">
-                    <i class="material-icons">more_vert</i>
-                </button>
-                <ul class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" for="fabOverflowToggle" id="fabOverflowMenu">
-                    <li class="mdl-menu__item" data-target="#createButton">Create</li>
-                    <li class="mdl-menu__item" data-target="#getButton">Get</li>
-                    <li class="mdl-menu__item" data-target="#moreButton">More</li>
-                    <li class="mdl-menu__item" data-target="#cborButton">CBOR</li>
-                    <!-- AAGUID menu item removed temporarily -->
-                </ul>
-            </div>
+            <div class="navbar-end">
+                <button class="btn btn-ghost btn-sm" id="signOutButton">Sign out</button>
             </div>
         </header>
-        <main class="mdl-layout__content">
-            <div class="mdl-layout__tab-panel is-active" id="credentials">
-                <div class="mdl-grid" id="credentialsContainer">
 
+        <main class="flex-1 p-4">
+            <div class="max-w-7xl mx-auto">
+                <div class="credentials-toolbar">
+                    <h2 class="text-lg font-semibold credentials-title">Credentials</h2>
+                    <div class="credentials-toolbar-actions" aria-label="Credential actions">
+                        <button class="btn btn-ghost btn-sm btn-circle" id="createButton" title="Create" aria-label="Create">
+                            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                        </button>
+                        <button class="btn btn-ghost btn-sm btn-circle" id="getButton" title="Get" aria-label="Get">
+                            <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
+                        </button>
+                        <button class="btn btn-ghost btn-sm btn-circle" id="moreButton" title="More" aria-label="More">
+                            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+                        </button>
+                        <button class="btn btn-ghost btn-sm btn-circle" id="cborButton" title="Open CBOR Playground" aria-label="Open CBOR Playground">
+                            <span class="material-symbols-outlined" aria-hidden="true">code</span>
+                        </button>
+                    </div>
                 </div>
+                <div id="credentialsContainer" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
             </div>
 
-
-            <div id="toast" class="mdl-js-snackbar mdl-snackbar">
-                <div class="mdl-snackbar__text"></div>
-                <button class="mdl-snackbar__action" type="button"></button>
-            </div>
+            <div id="toast" class="toast toast-center toast-bottom z-50"></div>
         </main>
     </div>
-    
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/getmdl-select@2.0.1/getmdl-select.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>

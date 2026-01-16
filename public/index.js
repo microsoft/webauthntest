@@ -269,6 +269,155 @@ try {
             dialogPolyfill.registerDialog(createDialog);
         }
 
+        // Wide-screen masonry layout for Create dialog: two independent columns inside a scrollable content area.
+        // This avoids CSS grid row alignment (wasted space) and avoids CSS multi-column overflow hiding content.
+        (function initCreateDialogMasonryLayout() {
+            if (!createDialog) return;
+
+            var contentEl = createDialog.querySelector('.app-dialog-content');
+            if (!contentEl) return;
+
+            var originalNodes = null;
+            var resizeTimer = null;
+
+            function isWide() {
+                try { return !!(window.matchMedia && window.matchMedia('(min-width: 900px)').matches); } catch (e) { return false; }
+            }
+
+            function captureOriginalIfNeeded() {
+                if (originalNodes) return;
+                originalNodes = Array.prototype.slice.call(contentEl.childNodes);
+            }
+
+            function restoreOriginal() {
+                if (!originalNodes) return;
+                while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+                for (var i = 0; i < originalNodes.length; i++) {
+                    contentEl.appendChild(originalNodes[i]);
+                }
+            }
+
+            function ensureColumnsWrapper() {
+                var wrapper = contentEl.querySelector('.create-dialog-columns');
+                if (wrapper) return wrapper;
+
+                wrapper = document.createElement('div');
+                wrapper.className = 'create-dialog-columns';
+
+                var colA = document.createElement('div');
+                colA.className = 'create-dialog-col';
+                var colB = document.createElement('div');
+                colB.className = 'create-dialog-col';
+
+                wrapper.appendChild(colA);
+                wrapper.appendChild(colB);
+                contentEl.appendChild(wrapper);
+                return wrapper;
+            }
+
+            function applyMasonry() {
+                if (!createDialog.open) return;
+                captureOriginalIfNeeded();
+
+                if (!isWide()) {
+                    restoreOriginal();
+                    return;
+                }
+
+                // Start from a clean baseline, then rebuild the two columns.
+                restoreOriginal();
+
+                var wrapper = ensureColumnsWrapper();
+                var cols = wrapper.querySelectorAll('.create-dialog-col');
+                if (!cols || cols.length < 2) return;
+                var colA = cols[0];
+                var colB = cols[1];
+
+                // Clear columns
+                colA.textContent = '';
+                colB.textContent = '';
+
+                // Preserve option order: fill left column first (top-to-bottom), then right.
+                // Use the visible content height as an approximate "page height" for the left column.
+                var colAHeight = 0;
+                var gap = 10;
+                var maxLeftHeight = 0;
+                try {
+                    maxLeftHeight = contentEl.clientHeight || 0;
+                } catch (e) { maxLeftHeight = 0; }
+                if (!maxLeftHeight || maxLeftHeight < 200) {
+                    // Fallback if the dialog hasn't fully laid out yet.
+                    try { maxLeftHeight = Math.max(400, Math.floor(window.innerHeight * 0.72)); } catch (e) { maxLeftHeight = 600; }
+                }
+                var fillingLeft = true;
+
+                // Move only the option blocks (direct child spans). HRs remain (and are display:none).
+                var blocks = [];
+                try {
+                    blocks = Array.prototype.slice.call(contentEl.querySelectorAll(':scope > span'));
+                } catch (e) {
+                    // Fallback for older selectors: only direct children
+                    var direct = contentEl.children;
+                    for (var i = 0; i < direct.length; i++) {
+                        if (direct[i] && direct[i].tagName && direct[i].tagName.toLowerCase() === 'span') blocks.push(direct[i]);
+                    }
+                }
+
+                for (var i = 0; i < blocks.length; i++) {
+                    var block = blocks[i];
+                    if (!block || !block.parentNode) continue;
+                    // Detach from content before appending to a column
+                    block.parentNode.removeChild(block);
+
+                    if (fillingLeft) {
+                        colA.appendChild(block);
+                    } else {
+                        colB.appendChild(block);
+                    }
+
+                    // Measure the block after it is in the DOM.
+                    // Force a layout read so the next placement decision has a usable estimate.
+                    var blockHeight = 0;
+                    try {
+                        blockHeight = block.getBoundingClientRect().height || block.offsetHeight || 0;
+                    } catch (e) {
+                        blockHeight = block.offsetHeight || 0;
+                    }
+
+                    if (fillingLeft) {
+                        colAHeight += blockHeight + gap;
+                        // Switch to right column once the left column is "full".
+                        // Keep at least one item in the left column even if the first block is very tall.
+                        if (colA.childElementCount > 0 && (colAHeight + 40) >= maxLeftHeight) {
+                            fillingLeft = false;
+                        }
+                    }
+                }
+            }
+
+            // Expose a debug hook (optional)
+            try { window.__applyCreateDialogMasonry = applyMasonry; } catch (e) { }
+
+            // Re-apply on resize while open
+            window.addEventListener('resize', function () {
+                if (!createDialog.open) return;
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () {
+                    try { applyMasonry(); } catch (e) { }
+                }, 120);
+            });
+
+            // Restore DOM on close (so narrow/mobile behavior stays unchanged)
+            createDialog.addEventListener('close', function () {
+                try { restoreOriginal(); } catch (e) { }
+            });
+
+            // Attach to dialog for use by showModal wrapper below.
+            createDialog.__applyMasonryLayout = function () {
+                try { applyMasonry(); } catch (e) { }
+            };
+        })();
+
         // Prevent body scrolling while modal is open so the dialog's own
         // internal scrollbar is used. Wrap showModal and restore on close.
         try {
@@ -276,7 +425,18 @@ try {
                 const _origCreateShow = createDialog.showModal.bind(createDialog);
                 createDialog.showModal = function () {
                     try { document.body.style.overflow = 'hidden'; } catch (e) {}
-                    return _origCreateShow();
+                    var ret = _origCreateShow();
+                    // Apply wide-screen masonry after the dialog is open and laid out.
+                    try {
+                        if (createDialog.__applyMasonryLayout) {
+                            requestAnimationFrame(function () {
+                                requestAnimationFrame(function () {
+                                    createDialog.__applyMasonryLayout();
+                                });
+                            });
+                        }
+                    } catch (e) { /* non-fatal */ }
+                    return ret;
                 };
                 createDialog.addEventListener('close', function () { try { document.body.style.overflow = ''; } catch (e) {} });
             }
@@ -287,12 +447,159 @@ try {
             dialogPolyfill.registerDialog(getDialog);
         }
 
+        // Wide-screen masonry layout for Get dialog: match Create dialog behavior.
+        (function initGetDialogMasonryLayout() {
+            if (!getDialog) return;
+
+            var contentEl = getDialog.querySelector('.app-dialog-content');
+            if (!contentEl) return;
+
+            var originalNodes = null;
+            var resizeTimer = null;
+
+            function isWide() {
+                try { return !!(window.matchMedia && window.matchMedia('(min-width: 900px)').matches); } catch (e) { return false; }
+            }
+
+            function captureOriginalIfNeeded() {
+                if (originalNodes) return;
+                originalNodes = Array.prototype.slice.call(contentEl.childNodes);
+            }
+
+            function restoreOriginal() {
+                if (!originalNodes) return;
+                while (contentEl.firstChild) contentEl.removeChild(contentEl.firstChild);
+                for (var i = 0; i < originalNodes.length; i++) {
+                    contentEl.appendChild(originalNodes[i]);
+                }
+            }
+
+            function ensureColumnsWrapper() {
+                var wrapper = contentEl.querySelector('.get-dialog-columns');
+                if (wrapper) return wrapper;
+
+                wrapper = document.createElement('div');
+                wrapper.className = 'get-dialog-columns';
+
+                var colA = document.createElement('div');
+                colA.className = 'get-dialog-col';
+                var colB = document.createElement('div');
+                colB.className = 'get-dialog-col';
+
+                wrapper.appendChild(colA);
+                wrapper.appendChild(colB);
+                contentEl.appendChild(wrapper);
+                return wrapper;
+            }
+
+            function applyMasonry() {
+                if (!getDialog.open) return;
+                captureOriginalIfNeeded();
+
+                if (!isWide()) {
+                    restoreOriginal();
+                    return;
+                }
+
+                // Start from a clean baseline, then rebuild the two columns.
+                restoreOriginal();
+
+                var wrapper = ensureColumnsWrapper();
+                var cols = wrapper.querySelectorAll('.get-dialog-col');
+                if (!cols || cols.length < 2) return;
+                var colA = cols[0];
+                var colB = cols[1];
+
+                // Clear columns
+                colA.textContent = '';
+                colB.textContent = '';
+
+                // Preserve option order: fill left column first, then right.
+                var colAHeight = 0;
+                var gap = 10;
+                var maxLeftHeight = 0;
+                try {
+                    maxLeftHeight = contentEl.clientHeight || 0;
+                } catch (e) { maxLeftHeight = 0; }
+                if (!maxLeftHeight || maxLeftHeight < 200) {
+                    try { maxLeftHeight = Math.max(400, Math.floor(window.innerHeight * 0.72)); } catch (e) { maxLeftHeight = 600; }
+                }
+                var fillingLeft = true;
+
+                // Move only the option blocks (direct child spans). HRs remain (and are display:none).
+                var blocks = [];
+                try {
+                    blocks = Array.prototype.slice.call(contentEl.querySelectorAll(':scope > span'));
+                } catch (e) {
+                    var direct = contentEl.children;
+                    for (var i = 0; i < direct.length; i++) {
+                        if (direct[i] && direct[i].tagName && direct[i].tagName.toLowerCase() === 'span') blocks.push(direct[i]);
+                    }
+                }
+
+                for (var i = 0; i < blocks.length; i++) {
+                    var block = blocks[i];
+                    if (!block || !block.parentNode) continue;
+                    block.parentNode.removeChild(block);
+
+                    if (fillingLeft) {
+                        colA.appendChild(block);
+                    } else {
+                        colB.appendChild(block);
+                    }
+
+                    if (fillingLeft) {
+                        var blockHeight = 0;
+                        try {
+                            blockHeight = block.getBoundingClientRect().height || block.offsetHeight || 0;
+                        } catch (e) {
+                            blockHeight = block.offsetHeight || 0;
+                        }
+
+                        colAHeight += blockHeight + gap;
+                        if (colA.childElementCount > 0 && (colAHeight + 40) >= maxLeftHeight) {
+                            fillingLeft = false;
+                        }
+                    }
+                }
+            }
+
+            try { window.__applyGetDialogMasonry = applyMasonry; } catch (e) { }
+
+            window.addEventListener('resize', function () {
+                if (!getDialog.open) return;
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function () {
+                    try { applyMasonry(); } catch (e) { }
+                }, 120);
+            });
+
+            getDialog.addEventListener('close', function () {
+                try { restoreOriginal(); } catch (e) { }
+            });
+
+            getDialog.__applyMasonryLayout = function () {
+                try { applyMasonry(); } catch (e) { }
+            };
+        })();
+
         try {
             if (getDialog) {
                 const _origGetShow = getDialog.showModal.bind(getDialog);
                 getDialog.showModal = function () {
                     try { document.body.style.overflow = 'hidden'; } catch (e) {}
-                    return _origGetShow();
+                    var ret = _origGetShow();
+                    // Apply wide-screen masonry after the dialog is open and laid out.
+                    try {
+                        if (getDialog.__applyMasonryLayout) {
+                            requestAnimationFrame(function () {
+                                requestAnimationFrame(function () {
+                                    getDialog.__applyMasonryLayout();
+                                });
+                            });
+                        }
+                    } catch (e) { /* non-fatal */ }
+                    return ret;
                 };
                 getDialog.addEventListener('close', function () { try { document.body.style.overflow = ''; } catch (e) {} });
             }
@@ -345,7 +652,7 @@ try {
             }
             if (!isiOS()) return;
 
-            const selector = 'button,a,input[type="button"],input[type="submit"],.mdl-button';
+            const selector = 'button,a,input[type="button"],input[type="submit"],[role="button"],.btn';
             ['touchstart','touchend','pointerdown','pointerup','mousedown','mouseup','click'].forEach(evtName => {
                 document.addEventListener(evtName, (e) => {
                     try {
@@ -370,20 +677,7 @@ try {
                 });
             } catch (e) { /* non-fatal */ }
 
-            // On iOS, MDL's ripple effect can sometimes interfere with first-tap activation.
-            // As a non-destructive test, remove the ripple class from interactive elements so
-            // the platform's native click behavior is clearer. This can be reverted if it
-            // changes UI appearance undesirably.
-            try {
-                // Permanently disable MDL ripple on iOS for interactive elements to avoid
-                // first-tap activation issues seen on some Safari versions.
-                Array.from(document.querySelectorAll(selector + '.mdl-js-ripple-effect')).forEach(el => {
-                    try {
-                        el.classList.remove('mdl-js-ripple-effect');
-                        el.setAttribute('data-ripple-removed-for-ios', '1');
-                    } catch (e) { /* ignore per-element failure */ }
-                });
-            } catch (e) { /* non-fatal */ }
+            // MDL ripple no longer in use; keep selector-based touch helpers only.
 
             // Touch->click shim control. Set to false to disable synthesis + suppression so we can
             // observe native behavior during debugging on iOS.
@@ -628,11 +922,11 @@ try {
             createDialog.close();
         });
 
-        // MDL overflow menu forwarding: when a menu item is clicked, trigger the corresponding button
+        // Overflow menu forwarding: trigger the corresponding button
         try{
-            const mdlMenuItems = document.querySelectorAll('#fabOverflowMenu .mdl-menu__item');
-            Array.from(mdlMenuItems).forEach(item => {
-                item.addEventListener('click', (e)=>{
+            const menuItems = document.querySelectorAll('#fabOverflowMenu [data-target]');
+            Array.from(menuItems).forEach(item => {
+                item.addEventListener('click', ()=>{
                     const target = item.getAttribute('data-target');
                     if(target){
                         const t = document.querySelector(target);
@@ -640,7 +934,7 @@ try {
                     }
                 });
             });
-        }catch(e){ console.warn('MDL overflow init failed', e); }
+        }catch(e){ console.warn('Overflow init failed', e); }
 
         
 
@@ -1713,35 +2007,38 @@ try {
             renderCredential(cred);
         });
 
-        $("a.deleteCredentialButton").click(e => {
+        $(".deleteCredentialButton").click(e => {
             const id = $(e.currentTarget).attr("data-value");
             // show confirmation dialog
             try {
                 const dlg = document.querySelector('#confirmDeleteDialog');
                 dlg._deleteId = id;
                 dlg.showModal();
-                try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) {}
             } catch(err) {
                 // fallback: delete immediately
                 deleteCredential(id).catch(err=> toast('Delete failed: '+(err && err.message?err.message:err)));
             }
         });
 
-        $("a.creationDataDetails").click(e => {
+        $(".creationDataDetails").click(e => {
             const id = $(e.currentTarget).attr("data-value");
+            try { e.preventDefault(); } catch(_) {}
             showCreationData(id);
         });
 
-        $("a.authenticationDataDetails").click(e => {
+        $(".authenticationDataDetails").click(e => {
             const id = $(e.currentTarget).attr("data-value");
+            try { e.preventDefault(); } catch(_) {}
             showAuthenticationData(id);
         });
-        $("a.updateTransportsButton").click(e => {
+
+        $(".updateTransportsButton").click(e => {
             var id = $(e.currentTarget).attr("data-value");
+            try { e.preventDefault(); } catch(_) {}
             showUpdateTransports(id);
         });
         // Toggle enabled/disabled state for a credential
-        $("a.toggleEnabledButton").click(async e => {
+        $(".toggleEnabledButton").click(async e => {
             e.preventDefault();
             const el = e.currentTarget;
             const id = $(el).attr('data-value');
@@ -1763,14 +2060,7 @@ try {
                 enableControls();
             }
         });
-        // Ensure MDL upgrades newly added elements so styles/ripples apply
-        try {
-            if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') {
-                componentHandler.upgradeDom();
-            }
-        } catch (e) {
-            console.warn('MDL upgradeDom failed', e);
-        }
+        // No MDL upgrade step required
     $(".viewCertificatesButton").click(async e => {
             var id = $(e.currentTarget).attr("data-value");
             var credential = credentials.find(c => c.id === id);
@@ -1798,7 +2088,7 @@ try {
                 toast('Failed to parse certificates: ' + (err && err.message ? err.message : err));
             }
         });
-        $("a.authenticateCredentialButton").click(async e => {
+        $(".authenticateCredentialButton").click(async e => {
             e.preventDefault();
             const id = $(e.currentTarget).attr("data-value");
             try {
@@ -1830,17 +2120,17 @@ try {
 
     // Apply a disabled class when credential.enabled === false (treat missing enabled as true)
     var isEnabled = (typeof credential.enabled === 'undefined') ? true : !!credential.enabled;
-    var cardClass = 'mdl-card mdl-shadow--2dp mdl-cell mdl-cell--4-col' + (isEnabled ? '' : ' cred-disabled');
+    var cardClass = 'card bg-base-100 shadow-xl border border-base-300' + (isEnabled ? '' : ' cred-disabled');
     html += '<div class="' + cardClass + '" id="credential-' + credential.idHex + '">';
-        html += ' <div class="mdl-card__title">';
-        html += '     <h2 class="mdl-card__title-text">' + credential.metadata.userName + '</h2>';
-        html += ' </div>';
-        html += ' <div class="mdl-card__supporting-text mdl-card--expand">';
+        html += ' <div class="card-body gap-3">';
+        html += '   <div class="flex items-start justify-between gap-3">';
+        html += '     <h2 class="card-title text-base">' + escapeHtml(credential.metadata.userName || '') + '</h2>';
+        html += '   </div>';
         html += '     <div class="reg-data">';
         html += '         <div class="reg-data-header"><b>Registration Summary</b> ';
         html += '         <span class="reg-data-controls">';
-        html += '           <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect creationDataDetails" data-value="' + credential.id + '">Details</a>';
-        html += '           <button class="mdl-button mdl-js-button mdl-js-ripple-effect reg-data-toggle" title="Collapse" data-target-cred="' + credential.idHex + '" aria-expanded="true"><i class="material-icons">expand_less</i></button>';
+        html += '           <button type="button" class="btn btn-link btn-sm creationDataDetails" data-value="' + credential.id + '">Details</button>';
+        html += '           <button type="button" class="btn btn-ghost btn-sm btn-square reg-data-toggle" title="Collapse" data-target-cred="' + credential.idHex + '" aria-expanded="true"><span class="material-symbols-outlined" aria-hidden="true">expand_less</span></button>';
         html += '         </span>';
         html += '         </div>';
         html += '         <div class="reg-data-body">';
@@ -1851,11 +2141,11 @@ try {
     // Render a placeholder pre for the credential id; we'll format it after insertion based on element width
     html += '             <dt>Credential ID</dt><dd>';
     html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
-    html += '<div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><i class="material-icons">content_copy</i></button></div>';
+    html += '<div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
     html += '</div></dd>';
     // Add a small img container to the mono-block for AAGUID icon (left side). The img is placed before the pre element.
     // Arrange as: text | icon | actions so AAGUID text is left-aligned and icon sits to its right
-    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions"><button class="mdl-button mdl-js-button mdl-js-ripple-effect copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><i class="material-icons">content_copy</i></button></div></div></dd>';
+    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div></div></dd>';
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
@@ -1863,10 +2153,11 @@ try {
     html += '             <dt>Authenticator Data</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</span></dd>';
         if (credential.hasOwnProperty('transports')) {
             html += '             <dt>Transports</dt><dd>';
+            html += '<div class="transport-list" role="list">';
             (credential.transports || []).forEach(t => {
-                // Use MDL chip markup for decorative chips
-                html += '<span class="mdl-chip" aria-hidden="true"><span class="mdl-chip__text">' + escapeHtml(t) + '</span></span> ';
+                html += '<div class="transport-item badge badge-neutral" role="listitem">' + escapeHtml(t) + '</div>';
             });
+            html += '</div>';
             html += '</dd>';
         }
         html += '         </dl>';
@@ -1875,7 +2166,7 @@ try {
             html += '     <div class="reg-data">';
     html += '         <div class="reg-data-header"><b>Authentication Summary</b> ';
     html += '         <span class="reg-data-controls">';
-    html += '           <a href="#" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticationDataDetails" data-value="' + credential.id + '">Details</a>';
+            html += '           <button type="button" class="btn btn-link btn-sm authenticationDataDetails" data-value="' + credential.id + '">Details</button>';
     html += '         </span>';
     html += '         </div>';
         html += '         <dl class="reg-data-list">';
@@ -1883,24 +2174,24 @@ try {
         html += '         </dl>';
         html += '     </div>';
         html += ' </div>';
-        html += ' <div class="mdl-card__actions mdl-card--border">';
-        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect deleteCredentialButton" data-value="'
+        html += ' <div class="card-actions justify-end flex-wrap pt-2">';
+        html += '     <button type="button" class="btn btn-ghost btn-sm deleteCredentialButton" data-value="'
             + credential.id
-            + '">Delete</a>';
-        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect updateTransportsButton" data-value="'
+            + '">Delete</button>';
+        html += '     <button type="button" class="btn btn-ghost btn-sm updateTransportsButton" data-value="'
             + credential.id
-            + '">Update Transports</a>';
-        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect authenticateCredentialButton" data-value="'
+            + '">Update transports</button>';
+        html += '     <button type="button" class="btn btn-ghost btn-sm authenticateCredentialButton" data-value="'
             + credential.id
-            + '">Authenticate</a>';
+            + '">Authenticate</button>';
         // Add enable/disable button based on credential.enabled (default to enabled if missing)
         var isEnabled = (typeof credential.enabled === 'undefined') ? true : !!credential.enabled;
         if (isEnabled) {
-            html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect toggleEnabledButton" data-value="' + credential.id + '" data-enabled="true">Disable</a>';
+            html += '     <button type="button" class="btn btn-ghost btn-sm toggleEnabledButton" data-value="' + credential.id + '" data-enabled="true">Disable</button>';
         } else {
-            html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect toggleEnabledButton" data-value="' + credential.id + '" data-enabled="false">Enable</a>';
+            html += '     <button type="button" class="btn btn-ghost btn-sm toggleEnabledButton" data-value="' + credential.id + '" data-enabled="false">Enable</button>';
         }
-        html += '     <a class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect viewCertificatesButton" data-value="' + credential.id + '" style="display:none; margin-left:8px;">View Certs</a>';
+        html += '     <button type="button" class="btn btn-ghost btn-sm viewCertificatesButton" data-value="' + credential.id + '" style="display:none;">View certs</button>';
         html += ' </div>';
         html += '</div>';
 
@@ -2036,7 +2327,7 @@ try {
                         if (map && map[credKey]) {
                             body.style.display = 'none';
                             toggle.setAttribute('aria-expanded', 'false');
-                            const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                            const icon = toggle.querySelector('.material-symbols-outlined'); if (icon) icon.textContent = 'expand_more';
                             toggle.title = 'Expand';
                             applied = true;
                         }
@@ -2048,7 +2339,7 @@ try {
                                 if (def) {
                                     body.style.display = 'none';
                                     toggle.setAttribute('aria-expanded', 'false');
-                                    const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                                    const icon = toggle.querySelector('.material-symbols-outlined'); if (icon) icon.textContent = 'expand_more';
                                     toggle.title = 'Expand';
                                 }
                             } catch (e) { }
@@ -2068,14 +2359,14 @@ try {
                                 body.style.display = 'none';
                                 toggle.setAttribute('aria-expanded', 'false');
                                 toggle.title = 'Expand';
-                                const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_more';
+                                const icon = toggle.querySelector('.material-symbols-outlined'); if (icon) icon.textContent = 'expand_more';
                                 map[credKey] = true;
                             } else {
                                 // expand
                                 body.style.display = '';
                                 toggle.setAttribute('aria-expanded', 'true');
                                 toggle.title = 'Collapse';
-                                const icon = toggle.querySelector('.material-icons'); if (icon) icon.textContent = 'expand_less';
+                                const icon = toggle.querySelector('.material-symbols-outlined'); if (icon) icon.textContent = 'expand_less';
                                 if (map[credKey]) delete map[credKey];
                             }
                             try { localStorage.setItem(storageKey, JSON.stringify(map)); } catch (e) { /* ignore quota/errors */ }
@@ -2281,7 +2572,7 @@ try {
         var creationDataDialog = document.querySelector('#creationDataDialog');
         creationDataDialog.showModal();
         // Ensure newly-added MDL icon buttons are upgraded
-        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch(e) { }
+        // no MDL upgrade required
         // After any MDL upgrade, re-evaluate copy button visibility to be safe
         try {
             ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
@@ -2708,14 +2999,14 @@ try {
         let dlg = document.getElementById('certsDialog');
         if (!dlg) {
             dlg = document.createElement('dialog');
-            dlg.className = 'mdl-dialog';
+            dlg.className = 'app-dialog';
             dlg.id = 'certsDialog';
             document.body.appendChild(dlg);
         }
 
     let html = '';
-    html += '<h3 class="mdl-dialog__title">Certificates</h3>';
-    html += '<div class="mdl-dialog__content">';
+    html += '<h3 class="app-dialog-title">Certificates</h3>';
+    html += '<div class="app-dialog-content">';
 
         certs.forEach((c, idx) => {
             // Helper to render name arrays and prefer commonName when present
@@ -2727,21 +3018,20 @@ try {
                 } catch (e) { return JSON.stringify(arr); }
             }
 
-            html += '<div class="mdl-card mdl-shadow--2dp cert-card" style="margin-bottom:12px; padding:12px; background:#fff;">';
-            html += '<div style="display:flex; flex-direction:column; gap:8px;">';
-            html += '<div><b>Certificate ' + (idx+1) + '</b></div>';
-            html += '<div><small><b>Subject:</b> ' + escapeHtml(formatName(c.subject || [])) + '</small></div>';
-            html += '<div><small><b>Issuer:</b> ' + escapeHtml(formatName(c.issuer || [])) + '</small></div>';
-            html += '<div><small><b>Serial:</b> ' + escapeHtml(c.serialNumber || '') + ' <button class="mdl-button cert-copy-serial" data-idx="' + idx + '" title="Copy serial"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
-            html += '<div><small><b>Validity:</b> ' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</small></div>';
-            if (c.fingerprintSHA256) html += '<div><small><b>Fingerprint (SHA-256):</b> ' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + ' <button class="mdl-button cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><i class="material-icons" aria-hidden="true">content_copy</i></button></small></div>';
+            html += '<div class="card bg-base-100 border border-base-300 shadow-sm cert-card" style="margin-bottom:12px;">';
+            html += '<div class="card-body p-4" style="display:flex; flex-direction:column; gap:8px;">';
+            html += '<div class="font-semibold">Certificate ' + (idx+1) + '</div>';
+            html += '<div class="text-sm"><span class="cert-label">Subject:</span> <span class="cert-value">' + escapeHtml(formatName(c.subject || [])) + '</span></div>';
+            html += '<div class="text-sm"><span class="cert-label">Issuer:</span> <span class="cert-value">' + escapeHtml(formatName(c.issuer || [])) + '</span></div>';
+            html += '<div class="text-sm"><span class="cert-label">Serial:</span> <span class="cert-value">' + escapeHtml(c.serialNumber || '') + '</span> <button class="btn btn-ghost btn-xs btn-square cert-copy-serial" data-idx="' + idx + '" title="Copy serial"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
+            html += '<div class="text-sm"><span class="cert-label">Validity:</span> <span class="cert-value">' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</span></div>';
+            if (c.fingerprintSHA256) html += '<div class="text-sm"><span class="cert-label">Fingerprint (SHA-256):</span> <span class="cert-value">' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + '</span> <button class="btn btn-ghost btn-xs btn-square cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
                 const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
                 // Build inline Public Key line: label, summary, copy button and toggle
-                let copyBtn = c.publicKeyHex ? '<button class="mdl-button cert-copy-publickey" data-idx="' + idx + '" title="Copy public key (hex)"><i class="material-icons" aria-hidden="true">content_copy</i></button>' : '';
-                // Use same base classes as other inline MDL buttons so styling is consistent
-                let toggleBtn = c.publicKeyHex ? '<button class="mdl-button mdl-js-button mdl-js-ripple-effect public-key-toggle" aria-expanded="false" title="Show public key"><i class="material-icons" aria-hidden="true">expand_more</i>&nbsp;Show</button>' : '';
-                html += '<div><small><b>Public Key:</b> ' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + copyBtn + toggleBtn + '</small></div>';
+                let copyBtn = c.publicKeyHex ? '<button class="btn btn-ghost btn-xs btn-square cert-copy-publickey" data-idx="' + idx + '" title="Copy public key (hex)"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>' : '';
+                let toggleBtn = c.publicKeyHex ? '<button class="btn btn-link btn-sm public-key-toggle" aria-expanded="false" title="Show public key"><span class="material-symbols-outlined" aria-hidden="true">expand_more</span>&nbsp;Show</button>' : '';
+                html += '<div class="text-sm"><span class="cert-label">Public Key:</span> <span class="cert-value">' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</span> ' + copyBtn + ' ' + toggleBtn + '</div>';
                 // Public key block (collapsed by default) contains only the code element
                 if (c.publicKeyHex) {
                     html += '<div class="public-key-block collapsed"><code class="public-key-hex" data-public-key-raw="' + escapeHtml(c.publicKeyHex) + '"></code></div>';
@@ -2750,14 +3040,14 @@ try {
             // Extensions
             if (c.extensions) {
                 if (c.extensions.basicConstraints) {
-                    html += '<div><small><b>Basic Constraints:</b> CA=' + (c.extensions.basicConstraints.cA ? 'true' : 'false') + (c.extensions.basicConstraints.pathLenConstraint ? ', pathLen=' + c.extensions.basicConstraints.pathLenConstraint : '') + '</small></div>';
+                    html += '<div class="cert-ext"><small><span class="cert-label">Basic Constraints:</span> <span class="cert-value">CA=' + (c.extensions.basicConstraints.cA ? 'true' : 'false') + (c.extensions.basicConstraints.pathLenConstraint ? ', pathLen=' + c.extensions.basicConstraints.pathLenConstraint : '') + '</span></small></div>';
                 }
                 if (c.extensions.keyUsage) {
-                    html += '<div><small><b>Key Usage:</b> ' + escapeHtml(String(c.extensions.keyUsage)) + '</small></div>';
+                    html += '<div class="cert-ext"><small><span class="cert-label">Key Usage:</span> <span class="cert-value">' + escapeHtml(String(c.extensions.keyUsage)) + '</span></small></div>';
                 }
                 if (c.extensions.extKeyUsage) {
                     const ekus = c.extensions.extKeyUsage.map(o => (oidToName(o) + ' (' + o + ')'));
-                    html += '<div><small><b>Extended Key Usage:</b> ' + escapeHtml(ekus.join(', ')) + '</small></div>';
+                    html += '<div class="cert-ext"><small><span class="cert-label">Extended Key Usage:</span> <span class="cert-value">' + escapeHtml(ekus.join(', ')) + '</span></small></div>';
                 }
                 if (c.extensions.subjectAltName) {
                         // Decode possible id:HEX patterns inside SAN values to ASCII when practical
@@ -2781,30 +3071,30 @@ try {
                             const val = decodeIdHex(rawVal);
                             return t + ':' + val;
                         }).join(', ');
-                        html += '<div><small><b>Subject Alt Names:</b> ' + escapeHtml(san) + '</small></div>';
+                        html += '<div class="cert-ext"><small><span class="cert-label">Subject Alt Names:</span> <span class="cert-value">' + escapeHtml(san) + '</span></small></div>';
                     }
             }
 
             // Action buttons
             html += '<div class="cert-actions">';
-                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">file_download</i>&nbsp;DOWNLOAD PEM</button>';
-                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-download-der" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">cloud_download</i>&nbsp;DOWNLOAD DER</button>';
-                html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect cert-copy-pem" data-idx="' + idx + '"><i class="material-icons" aria-hidden="true">content_copy</i>&nbsp;COPY PEM</button>';
+                html += '<button class="btn btn-outline btn-sm cert-download-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">file_download</span>&nbsp;Download PEM</button>';
+                html += '<button class="btn btn-outline btn-sm cert-download-der" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>&nbsp;Download DER</button>';
+                html += '<button class="btn btn-ghost btn-sm cert-copy-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span>&nbsp;Copy PEM</button>';
             html += '</div>';
 
-            html += '</div>'; // end column
+            html += '</div>'; // end body
             html += '</div>';
         });
 
     html += '</div>'; // end content
     // dialog actions/footer: Download Chain on left, Close on right
     // Wrap buttons in left/right containers so CSS ordering is deterministic
-    html += '<div class="mdl-dialog__actions cert-dialog-actions" role="toolbar">';
+    html += '<div class="app-dialog-actions cert-dialog-actions" role="toolbar">';
     html += '<div class="cert-actions-left">';
-    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored" id="certsDownloadChain">Download Chain</button>';
+    html += '<button class="btn btn-primary btn-sm" id="certsDownloadChain">Download chain</button>';
     html += '</div>';
     html += '<div class="cert-actions-right">';
-    html += '<button class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored" id="certsDialog_x">Close</button>';
+    html += '<button class="btn btn-ghost btn-sm" id="certsDialog_x">Close</button>';
     html += '</div>';
     html += '</div>';
     dlg.innerHTML = html;
@@ -2837,8 +3127,7 @@ try {
             }, 1000);
         }
 
-        // Upgrade MDL components inside dialog before wiring handlers
-        try { if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') componentHandler.upgradeDom(); } catch (e) { /* ignore */ }
+        // no MDL upgrade required
 
         // Safety: MDL may re-order or re-insert DOM nodes during upgrade. Ensure
         // our footer left/right containers are in the expected order so Close
@@ -3041,12 +3330,12 @@ try {
                     block.classList.add('collapsed');
                     btn.setAttribute('aria-expanded', 'false');
                     // update button content to 'Show'
-                    btn.innerHTML = '<i class="material-icons" aria-hidden="true">expand_more</i>&nbsp;Show';
+                    btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">expand_more</span>&nbsp;Show';
                 } else {
                     // expand
                     block.classList.remove('collapsed');
                     btn.setAttribute('aria-expanded', 'true');
-                    btn.innerHTML = '<i class="material-icons" aria-hidden="true">expand_less</i>&nbsp;Hide';
+                    btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">expand_less</span>&nbsp;Hide';
                     // After making the block visible, attach responsive formatting
                     // once using the real measured width. Use requestAnimationFrame
                     // to ensure the DOM has updated and layout is available.
@@ -3544,29 +3833,18 @@ try {
         var updateTransportsDialog = document.querySelector('#updateTransportsDialog');
         if (updateTransportsDialog) {
             updateTransportsDialog.showModal();
-            // Force MDL to upgrade any components to avoid first-click miss
-            if (window.componentHandler && typeof componentHandler.upgradeDom === 'function') {
-                try { componentHandler.upgradeDom(); } catch (e) { /* ignore upgrade errors */ }
-            }
+            // no MDL upgrade required
         }
     }
 
     function resetTransportCheckbox(name) {
         var $input = $('#update_transport_' + name);
         $input.prop('checked', false);
-        var $label = $input.closest('label.mdl-checkbox');
-        $label.removeClass('is-checked');
     }
 
     function setTransportCheckbox(name, checked) {
         var $input = $('#update_transport_' + name);
         $input.prop('checked', checked);
-        var $label = $input.closest('label.mdl-checkbox');
-        if (checked) {
-            $label.addClass('is-checked');
-        } else {
-            $label.removeClass('is-checked');
-        }
     }
 
 
@@ -3575,27 +3853,40 @@ try {
      * @param {string} text text to display in toast
      */
     function toast(text) {
-        var container = document.querySelector('#toast');
-        container.MaterialSnackbar.showSnackbar({
-            message: text,
-            timeout: 5000,
-        });
+        try {
+            var container = document.querySelector('#toast');
+            if (!container) {
+                alert(text);
+                return;
+            }
+            var item = document.createElement('div');
+            item.className = 'alert alert-info shadow-lg';
+            item.setAttribute('role', 'status');
+            item.innerHTML = '<span style="word-break:break-word; overflow-wrap:anywhere;">' + escapeHtml(String(text || '')) + '</span>';
+            container.appendChild(item);
+            setTimeout(function(){
+                try { item.remove(); } catch (e) { /* ignore */ }
+            }, 8000);
+        } catch (e) {
+            try { console.warn('toast failed', e); } catch (_) {}
+        }
     }
 
     /**
      * UI: Disables all page controls (used when loading)
      */
     function disableControls() {
-        $('dialog').find('div.mdl-progress').removeClass('cloak');
-        $('body').find('input, button, select').attr('disabled', true);
+        // Show any dialog progress indicator and disable form controls
+        $('dialog').find('.loading-indicator').removeClass('hidden').removeClass('cloak');
+        $('body').find('input, button, select, textarea').attr('disabled', true);
     }
 
     /**
      * UI: Enables all page controls (used when loading is complete)
      */
     function enableControls() {
-        $('dialog').find('div.mdl-progress').addClass('cloak');
-        $('body').find('input, button, select').attr('disabled', false);
+        $('dialog').find('.loading-indicator').addClass('hidden').addClass('cloak');
+        $('body').find('input, button, select, textarea').attr('disabled', false);
     }
 
     //#endregion UI Rendering
