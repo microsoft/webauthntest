@@ -1,116 +1,108 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="utf-8">
     <title>CBOR Playground</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&lang=en">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .container { max-width: 1180px; margin: 0 auto; padding: 16px; }
-        textarea { width: 100%; min-height: 180px; font-family: monospace; }
-        pre { background:#fff; padding:16px; overflow:auto; border-radius:4px; }
-        .error { color:#b00020; font-weight:500; }
-        .samples button { margin-right:8px; margin-bottom:8px; }
-        footer { margin-top:40px; font-size:12px; opacity:0.8; }
-        .mdl-card { width:100%; }
-        .card-title { font-size:16px; font-weight:500; margin-bottom:8px; }
-        .mono { font-family: monospace; font-size: 13px; }
-    </style>
 </head>
-<body class="mdl-color--grey-100 mdl-color-text--grey-700 mdl-base">
-    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
-        <header class="mdl-layout__header mdl-layout__header--scroll mdl-color--primary">
-            <div class="mdl-layout__header-row"></div>
-            <div class="mdl-layout__header-row">
-                <h3 style="flex:1; display:flex; align-items:center; gap:8px; margin:0;" class="mdl-color-text--white">
-                    <a href="cbor.html" class="title-link">CBOR Playground</a>
-                </h3>
-                <a href="index.html" id="backToAppBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--white" title="Back to main app" style="display:flex; align-items:center; gap:4px;">
-                    <i class="material-icons" aria-hidden="true">arrow_back</i>
+<body class="min-h-screen bg-base-200 text-base-content cbor-page">
+    <div class="min-h-screen flex flex-col">
+        <header class="navbar bg-primary text-primary-content px-4">
+            <div class="navbar-start">
+                <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">CBOR Playground</a></h1>
+            </div>
+            <div class="navbar-end">
+                <a href="index.html" id="backToAppBtn" class="btn btn-sm bg-base-100 text-base-content hover:bg-base-200 border border-base-300" title="Back to main app">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                     Back
                 </a>
             </div>
-            <div class="mdl-layout__header-row"></div>
         </header>
-        <main class="mdl-layout__content">
-            <div class="container">
-                <p>This page provides an educational encoder/decoder for <a href="https://www.rfc-editor.org/rfc/rfc8949.html" target="_blank" rel="noopener">CBOR (RFC 8949)</a>. Not for production use.</p>
 
-                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-bottom:24px;">
-                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Decode CBOR to JSON</span>
-                        <button id="decodeBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored">Decode</button>
-                    </div>
-                    <textarea id="cborInput" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
-                    <div style="margin-top:8px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
-                        <button id="clearBtn" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored">Clear</button>
-                        <label class="mdl-button mdl-js-button" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
-                        <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
-                        <span id="formatInfo" style="font-size:12px; opacity:0.8;"></span>
-                    </div>
-                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+        <main class="flex-1 p-4">
+            <div class="cbor-container">
 
-                        <!-- Import JSON feature removed -->
+        <section class="cbor-section">
+        <div class="card bg-base-100 shadow-xl border border-base-300">
+            <div class="card-body gap-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-semibold">Decode CBOR to JSON</h2>
+                    <button id="decodeBtn" class="btn btn-primary btn-sm">Decode</button>
+                </div>
+                <textarea id="cborInput" class="textarea textarea-bordered w-full cbor-mono" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
+                <div class="flex items-center flex-wrap gap-2">
+                    <button id="clearBtn" class="btn btn-ghost btn-sm">Clear</button>
+                    <label class="btn btn-ghost btn-sm" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
+                    <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
+                    <span id="formatInfo" class="text-xs opacity-70"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="decodedCard" class="card bg-base-100 shadow-xl border border-base-300" style="display:none;">
+            <div class="card-body gap-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-semibold">Decoded CBOR (JSON)</h2>
+                    <div class="flex gap-1">
+                        <button id="downloadDecodedJson" class="btn btn-ghost btn-sm btn-square" title="Download decoded JSON"><span class="material-symbols-outlined" aria-hidden="true">file_download</span></button>
+                        <button id="copyDecoded" class="btn btn-ghost btn-sm btn-square" title="Copy decoded output"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
                     </div>
                 </div>
+                <pre id="decodedJson" class="mono" aria-label="Decoded output" style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+            </div>
+        </div>
 
-                <div id="decodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; display:none;">
-                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Decoded CBOR (JSON)</span>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <button id="downloadDecodedJson" class="mdl-button mdl-js-button mdl-button--icon" title="Download decoded JSON"><i class="material-icons">file_download</i></button>
-                            <button id="copyDecoded" class="mdl-button mdl-js-button mdl-button--icon" title="Copy decoded output">
-                                <i class="material-icons">content_copy</i>
-                            </button>
-                        </div>
-                    </div>
-                    <pre id="decodedJson" class="mono" aria-label="Decoded output" style="position:relative; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+        </section>
+
+        <section class="cbor-section">
+        <div class="card bg-base-100 shadow-xl border border-base-300">
+            <div class="card-body gap-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-semibold">Encode JSON to CBOR</h2>
+                    <button id="encodeRun" class="btn btn-primary btn-sm">Encode</button>
                 </div>
+                <textarea id="jsonInput" class="textarea textarea-bordered w-full cbor-mono" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
+                <div class="flex items-center flex-wrap gap-2">
+                    <button id="encodeClear" class="btn btn-ghost btn-sm">Clear</button>
+                    <label class="btn btn-ghost btn-sm" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
+                    <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="canonicalOrder" class="checkbox checkbox-sm" checked>
+                        <span class="text-sm">Canonical</span>
+                    </label>
+                    <span id="encodeInfo" class="text-xs opacity-70"></span>
+                </div>
+            </div>
+        </div>
 
-                <!-- Encode JSON to CBOR - Input Card -->
-                <div class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:24px;">
-                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Encode JSON to CBOR</span>
-                        <button id="encodeRun" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--raised mdl-button--colored">Encode</button>
-                    </div>
-                    <textarea id="jsonInput" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
-                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                        <button id="encodeClear" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--colored">Clear</button>
-                        <label class="mdl-button mdl-js-button" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
-                        <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
-                        <label class="mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect" for="canonicalOrder" style="margin-left:8px;">
-                            <input type="checkbox" id="canonicalOrder" class="mdl-checkbox__input" checked>
-                            <span class="mdl-checkbox__label">Canonical</span>
-                        </label>
-                        <span id="encodeInfo" style="font-size:12px; opacity:0.8;"></span>
+        <div id="encodedCard" class="card bg-base-100 shadow-xl border border-base-300" style="display:none;">
+            <div class="card-body gap-3">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="font-semibold">Encoded CBOR (Hex)</h2>
+                    <div class="flex gap-1">
+                        <button id="downloadEncodedCbor" class="btn btn-ghost btn-sm btn-square" title="Download encoded CBOR (.cbor)"><span class="material-symbols-outlined" aria-hidden="true">file_download</span></button>
+                        <button id="copyEncodedHex" class="btn btn-ghost btn-sm btn-square" title="Copy encoded hex"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
                     </div>
                 </div>
+                <pre id="encodedHex" class="mono" aria-label="Encoded CBOR hex output" style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+            </div>
+        </div>
 
-                <!-- Encoded CBOR Output Card -->
-                <div id="encodedCard" class="mdl-card mdl-shadow--2dp" style="padding:16px; margin-top:16px; display:none;">
-                    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-                        <span>Encoded CBOR (Hex)</span>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <button id="downloadEncodedCbor" class="mdl-button mdl-js-button mdl-button--icon" title="Download encoded CBOR (.cbor)"><i class="material-icons">file_download</i></button>
-                            <button id="copyEncodedHex" class="mdl-button mdl-js-button mdl-button--icon" title="Copy encoded hex"><i class="material-icons">content_copy</i></button>
-                        </div>
-                    </div>
-                    <pre id="encodedHex" class="mono" aria-label="Encoded CBOR hex output" style="position:relative; background:#fff; padding:8px; min-height:60px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
-                </div>
+        </section>
 
-                <div id="errorArea" class="error" role="alert" style="margin-top:16px;"></div>
+        <div id="errorArea" class="text-error font-medium mt-4" role="alert"></div>
 
-                <footer>
-                    Notes: duplicate map keys still overwrite previous (last wins); large integers (including bignum tags 2 & 3) decode to BigInt; common semantic tags decoded (date/time, epoch, embedded CBOR, URI, base64/url, regex, mime); other tags appear as {"@tag":N,"value":...}; simple values < 32 shown as {"@simple":N}.
-                </footer>
+        <footer class="opacity-80" style="margin-top: 40px; font-size: 12px;">
+            Notes: duplicate map keys still overwrite previous (last wins); large integers (including bignum tags 2 & 3) decode to BigInt; common semantic tags decoded (date/time, epoch, embedded CBOR, URI, base64/url, regex, mime); other tags appear as {"@tag":N,"value":...}; simple values &lt; 32 shown as {"@simple":N}.
+        </footer>
             </div>
         </main>
     </div>
 
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.min.js"></script>
     <script src="cbor.js"></script>
     <script>
         const inputEl = document.getElementById('cborInput');
