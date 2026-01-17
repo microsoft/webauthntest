@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Passkey AAGUIDs</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="min-h-screen bg-base-200 text-base-content" style="--mono-max-height: none;">
+    <div class="min-h-screen flex flex-col">
+        <header class="navbar bg-primary text-primary-content px-4">
+            <div class="navbar-start">
+                <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">Passkey Provider Info</a></h1>
+            </div>
+            <div class="navbar-end gap-2">
+                <a href="index.html" class="btn btn-sm bg-base-100 text-base-content hover:bg-base-200 border border-base-300" title="Back to main app">
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    Back
+                </a>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 flex">
+            <div class="max-w-5xl mx-auto w-full flex flex-col min-h-0">
+                <div class="card bg-base-100 shadow-xl border border-base-300 flex-1 min-h-0">
+                    <div class="card-body gap-3 flex flex-col flex-1 min-h-0">
+                        <h2 class="font-semibold">Enter AAGUID/Name</h2>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <div class="relative w-full md:w-96">
+                                <label class="form-control w-full">
+                                    <input id="aaguidInput" class="input input-bordered w-full" placeholder="Search by AAGUID or Name" autocomplete="off" spellcheck="false">
+                                </label>
+                                <ul id="suggestions" class="menu bg-base-100 rounded-box shadow border border-base-300 mt-1 absolute left-0 right-0 max-h-72 overflow-y-auto z-20" hidden></ul>
+                            </div>
+                            <button id="searchBtn" class="btn btn-primary btn-sm">
+                                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                                Search
+                            </button>
+                        </div>
+                        <div id="selectedLabel" class="text-sm opacity-80" hidden></div>
+                        <pre id="entryDetails" class="mono flex-1 min-h-0" hidden style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="mds.js"></script>
+</body>
+
+</html>
