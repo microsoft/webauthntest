@@ -3,6 +3,7 @@ const app = express();
 const fido = require('./fido.js');
 const cookieParser = require('cookie-parser');
 const enforce = require('express-sslify');
+const { normalizeUsername, hashUsername } = require('./utils.js');
 
 if (process.env.ENFORCE_SSL_AZURE === "true") {
     app.use(enforce.HTTPS({ trustAzureHeader: true }));
@@ -134,11 +135,17 @@ app.put('/assertion', async (req, res) => {
 });
 
 function getUser(req) {
-    if (req.cookies.uid) {
-        return req.cookies.uid;
-    } else {
+    if (!req.cookies.uid) {
         throw new Error("You need to sign out and sign back in again.");
     }
+
+    const normalized = normalizeUsername(req.cookies.uid);
+    if (!normalized || normalized.length < 3 || normalized.includes(' ')) {
+        throw new Error('Invalid username. Please sign out and sign back in.');
+    }
+
+    // Always use the hashed uid for all server-side operations.
+    return hashUsername(normalized);
 }
 
 app.listen(process.env.PORT || 3000, () => console.log('App launched.'));
