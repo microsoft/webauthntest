@@ -45,15 +45,17 @@
     });
 
     function handleSubmit() {
-        if (!$('#uid').val() || $('#uid').val().length < 3 || $('#uid').val().includes(" ")) {
+        const uid = String($('#uid').val() || '').trim().toLowerCase();
+
+        if (!uid || uid.length < 3 || uid.includes(" ")) {
             alert("Invalid username");
             return false;
         }
 
-    // Persist the uid cookie for 1 year so the user stays logged in across browser restarts.
-    // Use a reasonably long expiry and a conservative SameSite/path. In production consider
-    // using secure cookies served from the server-side (HttpOnly, Secure).
-    Cookies.set('uid', $('#uid').val(), { expires: 365, path: '/', sameSite: 'Lax' });
+        // Persist the uid cookie for 1 year so the user stays logged in across browser restarts.
+        // Use a reasonably long expiry and a conservative SameSite/path. In production consider
+        // using secure cookies served from the server-side (HttpOnly, Secure).
+        Cookies.set('uid', uid, { expires: 365, path: '/', sameSite: 'Lax' });
         window.location.href = "./";
         return false;
     }
