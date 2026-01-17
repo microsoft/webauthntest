@@ -6,7 +6,6 @@ const RAW_BASE = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/mai
 
 const els = {
     aaguidInput: document.getElementById('aaguidInput'),
-    searchBtn: document.getElementById('searchBtn'),
     suggestions: document.getElementById('suggestions'),
     selectedLabel: document.getElementById('selectedLabel'),
     entryDetails: document.getElementById('entryDetails')
@@ -327,8 +326,6 @@ function wireUi() {
 
         await selectEntry(matches[0]);
     }
-
-    if (els.searchBtn) els.searchBtn.addEventListener('click', () => doSearch(true));
 
     if (els.aaguidInput) {
         els.aaguidInput.addEventListener('input', () => {
