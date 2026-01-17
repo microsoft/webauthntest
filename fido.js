@@ -11,7 +11,7 @@ const custom_domain = process.env.CUSTOM_DOMAIN;
 // In-memory challenge store: map uid -> {challengeBase64, expiresAt}
 const challengeStore = new Map();
 
-const CHALLENGE_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
+const CHALLENGE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 const fido = {};
 

@@ -1153,11 +1153,11 @@ body#signInPrompt #signInButton {
   height: 0;
 }
 
-/* AAGUID mono-block layout: three columns — icon | text | actions
-   Make icon and actions columns fixed-width so the copy icon lines up with other entries. */
+/* AAGUID mono-block layout: four columns — text | icon | mds | copy
+   Make icon/actions columns fixed-width so buttons line up. */
 .aaguid-mono-block {
   display: grid;
-  grid-template-columns: 1fr 44px 44px; /* text (fluid) | icon (44px) | actions (44px) */
+  grid-template-columns: 1fr 44px 44px 44px; /* text (fluid) | icon | mds | copy */
   gap: 8px; /* match .mono-block default */
   align-items: center;
 }
@@ -1175,9 +1175,10 @@ body#signInPrompt #signInButton {
   width: 100%;
 }
 .mono-block .copy-to-clipboard {
-  min-width: 36px;
-  height: 36px;
-  padding: 6px;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
 }
 .mono-block pre.mono {
   max-height: var(--mono-max-height);
@@ -1191,7 +1192,7 @@ body#signInPrompt #signInButton {
 /* Ensure AAGUID mono-block uses a three-column grid even though .mono-block sets a different template.
    Specific selector (.mono-block.aaguid-mono-block) ensures this rule wins. */
 .mono-block.aaguid-mono-block {
-  grid-template-columns: 1fr 44px 44px !important;
+  grid-template-columns: 1fr 44px 44px 44px !important;
   display: grid;
   gap: 8px;
   align-items: center;
@@ -1200,7 +1201,9 @@ body#signInPrompt #signInButton {
 /* Force column placement so order is guaranteed regardless of DOM or inherited styles */
 .aaguid-mono-block > pre.mono { grid-column: 1 / 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; writing-mode: horizontal-tb; }
 .aaguid-mono-block > .aaguid-icon-wrap { grid-column: 2 / 3; }
-.aaguid-mono-block > .mono-actions { grid-column: 3 / 4; }
+.aaguid-mono-block > .aaguid-mds-actions { grid-column: 3 / 4; }
+/* Place only the copy action in the last column; don't override the MDS action. */
+.aaguid-mono-block > .mono-actions:not(.aaguid-mds-actions) { grid-column: 4 / 5; }
 /* allow the text column to shrink inside the grid instead of forcing wrapping */
 .aaguid-mono-block > pre.mono { min-width: 0; }
 
@@ -1217,7 +1220,13 @@ body#signInPrompt #signInButton {
   width: 44px; /* matches typical action button tappable area */
   min-width: 44px;
 }
-.mono-actions .btn { min-width: 36px; height: 36px; padding: 6px; }
+.mono-actions .btn { min-width: 44px; height: 44px; padding: 8px; }
+.mono-actions .btn {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
+}
 
 @media (max-width: 640px) {
   .mono-block { grid-template-columns: 1fr; }
@@ -1229,11 +1238,11 @@ body#signInPrompt #signInButton {
 @media (max-width: 640px) {
   .mono-block.aaguid-mono-block {
     display: grid !important;
-    grid-template-columns: 1fr 44px !important; /* text | icon+action */
+    grid-template-columns: 1fr 44px 44px !important; /* text | icon | actions */
     grid-template-rows: auto auto !important;
     grid-template-areas: 
-      "text text"
-      "icon actions";
+      "text text text"
+      "icon mds actions";
     gap: 8px;
     width: 100%;
   }
@@ -1244,7 +1253,8 @@ body#signInPrompt #signInButton {
     min-width: 0;
   }
   .aaguid-mono-block > .aaguid-icon-wrap { grid-area: icon; justify-content: flex-start; }
-  .aaguid-mono-block > .mono-actions { grid-area: actions; justify-content: center; }
+  .aaguid-mono-block > .aaguid-mds-actions { grid-area: mds; justify-content: center; }
+  .aaguid-mono-block > .mono-actions:not(.aaguid-mds-actions) { grid-area: actions; justify-content: center; }
 }
 
 /* Algorithm priority list */
