@@ -27,7 +27,7 @@
         </header>
 
         <main class="flex-1 p-4 flex">
-            <div class="cbor-container w-full flex flex-col min-h-0">
+            <div class="cbor-container w-full flex flex-col min-h-0 gap-4" style="row-gap:16px;">
                 <div class="card bg-base-100 shadow-xl border border-base-300">
                     <div class="card-body gap-3">
                         <h2 class="font-semibold">Enter Authenticator AAGUID/Name</h2>
@@ -47,7 +47,7 @@
                     </div>
                 </div>
 
-                <div id="detailsCard" class="card bg-base-100 shadow-xl border border-base-300 flex-1 min-h-0" hidden>
+                <div id="detailsCard" class="card bg-base-100 shadow-xl border border-base-300 flex-1 min-h-0" style="margin-top:18px;" hidden>
                     <div class="card-body gap-3 flex flex-col flex-1 min-h-0">
                         <div id="selectedLabel" class="text-sm opacity-80" style="flex:0 0 auto; line-height:1.4; padding:2px 0;" hidden></div>
                         <pre id="entryDetails" class="mono flex-1 min-h-0" hidden style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>

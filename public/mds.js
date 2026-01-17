@@ -19,11 +19,19 @@ const metadataCache = new Map();
 let activeSuggestionIndex = -1;
 let selectedAaguid = '';
 
+function setDetailsCardVisible(visible) {
+    if (!els.detailsCard) return;
+    const v = Boolean(visible);
+    // Use both to avoid any CSS/utility overrides.
+    els.detailsCard.hidden = !v;
+    els.detailsCard.style.display = v ? '' : 'none';
+}
+
 function updateDetailsCardVisibility() {
     if (!els.detailsCard) return;
     const labelVisible = els.selectedLabel ? !els.selectedLabel.hidden : false;
     const detailsVisible = els.entryDetails ? !els.entryDetails.hidden : false;
-    els.detailsCard.hidden = !(labelVisible || detailsVisible);
+    setDetailsCardVisible(labelVisible || detailsVisible);
 }
 
 function getToastContainer() {
@@ -441,6 +449,14 @@ function wireUi() {
             els.aaguidInput.select?.();
         }
     } catch { /* ignore */ }
+
+    // Ensure details are hidden on initial load.
+    try {
+        if (els.selectedLabel) els.selectedLabel.hidden = true;
+        if (els.entryDetails) els.entryDetails.hidden = true;
+    } catch { /* ignore */ }
+    updateDetailsCardVisibility();
+
     updateClearButtonVisibility();
     await loadDataset();
 })();
