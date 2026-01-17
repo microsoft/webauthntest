@@ -342,6 +342,14 @@ async function loadDataset() {
 function wireUi() {
     let debounceTimer = null;
 
+    function isEditableTarget(target) {
+        const el = target;
+        if (!el) return false;
+        if (el.isContentEditable) return true;
+        const tag = String(el.tagName || '').toUpperCase();
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    }
+
     function onQueryChange() {
         const q = els.aaguidInput ? els.aaguidInput.value : '';
 
@@ -437,6 +445,20 @@ function wireUi() {
         const t = e.target;
         const clickedInside = (els.suggestions && els.suggestions.contains(t)) || (els.aaguidInput && els.aaguidInput.contains(t)) || (els.clearBtn && els.clearBtn.contains(t));
         if (!clickedInside) hideSuggestions();
+    });
+
+    // Keyboard shortcut: press '/' anywhere to clear current selection/details
+    // and focus the search box (similar to common "focus search" UX).
+    document.addEventListener('keydown', (e) => {
+        if (e.defaultPrevented) return;
+        if (e.key !== '/') return;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (isEditableTarget(e.target)) return;
+
+        try { e.preventDefault(); } catch { /* ignore */ }
+
+        // Same behavior as clicking the X: clear query + selection/details + refocus.
+        clearSearchAndResults();
     });
 }
 

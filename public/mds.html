@@ -16,7 +16,7 @@
     <div class="min-h-screen flex flex-col">
         <header class="navbar bg-primary text-primary-content px-4">
             <div class="navbar-start">
-                <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">Authenticator Info</a></h1>
+                <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">Authenticator MDS Info</a></h1>
             </div>
             <div class="navbar-end gap-2">
                 <a href="index.html" class="btn btn-sm bg-base-100 text-base-content hover:bg-base-200 border border-base-300" title="Back to main app">
@@ -32,14 +32,14 @@
                     <div class="card-body gap-3">
                         <h2 class="font-semibold">Enter Authenticator AAGUID/Name</h2>
                         <div class="flex flex-wrap gap-2 items-center">
-                            <div style="display:flex; align-items:center; gap:8px; width:100%;">
-                                <div style="position: relative; flex: 1 1 auto; min-width: 0;">
+                            <div style="display:flex; align-items:stretch; gap:8px; width:100%;">
+                                <div style="position: relative; flex: 1 1 auto; min-width: 0; display:flex; flex-direction:column;">
                                     <label class="form-control w-full">
                                         <input id="aaguidInput" class="input input-bordered w-full" placeholder="Search by AAGUID or Name" autocomplete="off" spellcheck="false">
                                     </label>
                                     <ul id="suggestions" class="menu bg-base-100 rounded-box shadow border border-base-300" style="margin-top:4px; max-height:18rem; overflow-y:auto; overflow-x:hidden; width:100%; display:flex; flex-direction:column; flex-wrap:nowrap;" hidden></ul>
                                 </div>
-                                <button id="clearBtn" type="button" class="btn btn-sm btn-ghost btn-square" title="Clear" aria-label="Clear search" hidden>
+                                <button id="clearBtn" type="button" class="btn btn-ghost btn-square" style="height:100%; display:flex; align-items:center; justify-content:center;" title="Clear" aria-label="Clear search" hidden>
                                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                                 </button>
                             </div>
