@@ -2041,6 +2041,36 @@ try {
             showAuthenticationData(id);
         });
 
+        $(".aaguid-mds-button").click(e => {
+            try { e.preventDefault(); } catch(_) {}
+            try { e.stopPropagation(); } catch(_) {}
+
+            const spanId = $(e.currentTarget).attr('data-aaguid-span');
+            if (!spanId) {
+                toast('AAGUID not available');
+                return;
+            }
+
+            let raw = '';
+            try {
+                const el = document.getElementById(spanId);
+                raw = (el && el.getAttribute) ? (el.getAttribute('data-raw') || el.textContent || '') : '';
+            } catch(err) { raw = ''; }
+
+            const formatted = formatAaguidForUrl(raw);
+            if (!formatted) {
+                toast('AAGUID not available');
+                return;
+            }
+
+            const url = 'mds.html?aaguid=' + encodeURIComponent(formatted);
+            try {
+                window.open(url, '_blank', 'noopener');
+            } catch(err) {
+                window.location.href = url;
+            }
+        });
+
         $(".updateTransportsButton").click(e => {
             var id = $(e.currentTarget).attr("data-value");
             try { e.preventDefault(); } catch(_) {}
@@ -2152,9 +2182,9 @@ try {
     html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
     html += '<div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
     html += '</div></dd>';
-    // Add a small img container to the mono-block for AAGUID icon (left side). The img is placed before the pre element.
-    // Arrange as: text | icon | actions so AAGUID text is left-aligned and icon sits to its right
-    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div></div></dd>';
+    // Add a small img container to the mono-block for AAGUID icon.
+    // Arrange as: text | icon | mds | copy
+    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions aaguid-mds-actions"><button type="button" class="btn btn-ghost btn-xs btn-square aaguid-mds-button" data-aaguid-span="' + aaguidSpanId + '" title="Open Authenticator Info"><span class="material-symbols-outlined" aria-hidden="true">badge</span></button></div><div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div></div></dd>';
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
@@ -3443,6 +3473,25 @@ try {
         s = s.replace(/^0x/i, '');
         if (!/^[0-9a-fA-F]*$/.test(s)) return rawTrim;
         return s.toUpperCase();
+    }
+
+    /**
+     * Format an AAGUID value into a lowercase dashed GUID suitable for URLs.
+     * Accepts either 32-hex (with/without separators) or an already dashed GUID.
+     * @param {string} v
+     */
+    function formatAaguidForUrl(v) {
+        if (v === undefined || v === null) return '';
+        var raw = String(v || '').trim().toLowerCase();
+        if (!raw) return '';
+
+        // If already dashed GUID, validate and return.
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(raw)) return raw;
+
+        // Strip non-hex and attempt to build dashed GUID.
+        var hex = raw.replace(/[^0-9a-f]/g, '');
+        if (hex.length !== 32) return '';
+        return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
     }
 
     /**

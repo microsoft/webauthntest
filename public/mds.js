@@ -339,6 +339,16 @@ async function loadDataset() {
     }
 }
 
+function getInitialAaguidFromUrl() {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const v = params.get('aaguid') || params.get('q') || '';
+        return String(v || '').trim();
+    } catch {
+        return '';
+    }
+}
+
 function wireUi() {
     let debounceTimer = null;
 
@@ -481,4 +491,33 @@ function wireUi() {
 
     updateClearButtonVisibility();
     await loadDataset();
+
+    // If launched from a credential card, preselect the provided AAGUID.
+    const initial = getInitialAaguidFromUrl();
+    if (initial) {
+        const q = normalizeAaguid(initial);
+        try {
+            if (els.aaguidInput) {
+                els.aaguidInput.value = q;
+            }
+        } catch { /* ignore */ }
+
+        updateClearButtonVisibility();
+
+        const matches = findMatches(q);
+        if (matches && matches.length) {
+            await selectEntry(matches[0]);
+        } else {
+            // Fallback: try to load metadata directly (may still succeed even if not in dataset).
+            try {
+                const aaguid = String(q || initial).toLowerCase();
+                renderSelectedLabel({ aaguid, name: '' });
+                renderEntry(null);
+                const metadata = await fetchMetadataJson(aaguid);
+                renderEntry(metadata);
+            } catch (e) {
+                showToast('warning', 'No matching authenticator found for the provided AAGUID.');
+            }
+        }
+    }
 })();
