@@ -2632,7 +2632,7 @@ try {
                         // Last resort: fall back to query param (may fail for large payloads)
                         try { window.open('./cbor.html?input=' + encodeURIComponent(raw), '_blank'); } catch(e){ console.error('All transfer methods failed', e); toast('Failed to open CBOR playground'); }
                     }
-                }, 1500);
+                }, 10000);
                 return;
             } catch(pmErr){
                 // Popup blocked or other error; fall back to sessionStorage-based approach
