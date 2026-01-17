@@ -6,7 +6,9 @@ const RAW_BASE = 'https://raw.githubusercontent.com/akshayku/passkey-aaguids/mai
 
 const els = {
     aaguidInput: document.getElementById('aaguidInput'),
+    clearBtn: document.getElementById('clearBtn'),
     suggestions: document.getElementById('suggestions'),
+    detailsCard: document.getElementById('detailsCard'),
     selectedLabel: document.getElementById('selectedLabel'),
     entryDetails: document.getElementById('entryDetails')
 };
@@ -15,6 +17,14 @@ let aaguids = [];
 let indexed = [];
 const metadataCache = new Map();
 let activeSuggestionIndex = -1;
+let selectedAaguid = '';
+
+function updateDetailsCardVisibility() {
+    if (!els.detailsCard) return;
+    const labelVisible = els.selectedLabel ? !els.selectedLabel.hidden : false;
+    const detailsVisible = els.entryDetails ? !els.entryDetails.hidden : false;
+    els.detailsCard.hidden = !(labelVisible || detailsVisible);
+}
 
 function getToastContainer() {
     let el = document.getElementById('toastContainer');
@@ -79,12 +89,14 @@ function renderSelectedLabel(entry) {
     if (!entry) {
         els.selectedLabel.textContent = '';
         els.selectedLabel.hidden = true;
+        updateDetailsCardVisibility();
         return;
     }
     const name = entry && entry.name ? String(entry.name) : '(unknown)';
     const aaguid = entry && entry.aaguid ? String(entry.aaguid) : '';
     els.selectedLabel.textContent = `${name}${aaguid ? ` (${aaguid})` : ''}`;
     els.selectedLabel.hidden = false;
+    updateDetailsCardVisibility();
 }
 
 function renderEntry(entry) {
@@ -92,6 +104,7 @@ function renderEntry(entry) {
     if (!entry) {
         els.entryDetails.textContent = '';
         els.entryDetails.hidden = true;
+        updateDetailsCardVisibility();
         return;
     }
     try {
@@ -101,6 +114,7 @@ function renderEntry(entry) {
     }
 
     els.entryDetails.hidden = false;
+    updateDetailsCardVisibility();
 }
 
 function hideSuggestions() {
@@ -155,9 +169,12 @@ function showSuggestions(items) {
     for (let i = 0; i < maxItems; i++) {
         const item = items[i];
         const li = document.createElement('li');
+        li.style.width = '100%';
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'text-left whitespace-normal';
+        btn.style.width = '100%';
+        btn.style.display = 'block';
         const name = item && item.name ? String(item.name) : '(unknown)';
         const aaguid = item && item.aaguid ? String(item.aaguid) : '';
         btn.textContent = `${name}${aaguid ? ` (${aaguid})` : ''}`;
@@ -251,6 +268,8 @@ async function selectEntry(entry) {
 
     const aaguid = String(entry.aaguid).toLowerCase();
     if (els.aaguidInput) els.aaguidInput.value = aaguid;
+    selectedAaguid = aaguid;
+    updateClearButtonVisibility();
 
     renderSelectedLabel(entry);
     renderEntry(null);
@@ -262,6 +281,28 @@ async function selectEntry(entry) {
         renderEntry(null);
         showToast('error', `Metadata load failed: ${e && e.message ? e.message : e}`);
     }
+}
+
+function updateClearButtonVisibility() {
+    if (!els.clearBtn) return;
+    const hasText = Boolean(String(els.aaguidInput ? els.aaguidInput.value : '').trim());
+    els.clearBtn.hidden = !hasText;
+}
+
+function clearSearchAndResults() {
+    if (els.aaguidInput) els.aaguidInput.value = '';
+    selectedAaguid = '';
+    hideSuggestions();
+    renderSelectedLabel(null);
+    renderEntry(null);
+    updateClearButtonVisibility();
+    try { els.aaguidInput && els.aaguidInput.focus(); } catch { /* ignore */ }
+}
+
+function clearSelectionDisplayOnly() {
+    selectedAaguid = '';
+    renderSelectedLabel(null);
+    renderEntry(null);
 }
 
 async function loadDataset() {
@@ -295,8 +336,18 @@ function wireUi() {
 
     function onQueryChange() {
         const q = els.aaguidInput ? els.aaguidInput.value : '';
+
+        // If the user starts a new search, hide the old selection/details so it
+        // doesn't look clipped behind the dropdown.
+        if (selectedAaguid) {
+            const qNorm = normalizeAaguid(q);
+            const qLower = String(qNorm || q || '').trim().toLowerCase();
+            if (qLower && qLower !== selectedAaguid) clearSelectionDisplayOnly();
+        }
+
         const matches = findMatches(q);
         showSuggestions(matches);
+        updateClearButtonVisibility();
     }
 
     async function doSearch(commit = false) {
@@ -366,9 +417,17 @@ function wireUi() {
         });
     }
 
+    if (els.clearBtn) {
+        els.clearBtn.addEventListener('click', (e) => {
+            try { e.preventDefault(); } catch { /* ignore */ }
+            try { e.stopPropagation(); } catch { /* ignore */ }
+            clearSearchAndResults();
+        });
+    }
+
     document.addEventListener('click', (e) => {
         const t = e.target;
-        const clickedInside = (els.suggestions && els.suggestions.contains(t)) || (els.aaguidInput && els.aaguidInput.contains(t));
+        const clickedInside = (els.suggestions && els.suggestions.contains(t)) || (els.aaguidInput && els.aaguidInput.contains(t)) || (els.clearBtn && els.clearBtn.contains(t));
         if (!clickedInside) hideSuggestions();
     });
 }
@@ -382,5 +441,6 @@ function wireUi() {
             els.aaguidInput.select?.();
         }
     } catch { /* ignore */ }
+    updateClearButtonVisibility();
     await loadDataset();
 })();
