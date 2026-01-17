@@ -152,4 +152,28 @@ utils.defaultTo = (str, defaultStr) => {
     }
 }
 
+/**
+ * Normalizes a username coming from the client.
+ * @param {unknown} username
+ * @returns {string}
+ */
+utils.normalizeUsername = (username) => {
+    return String(username || '').trim().toLowerCase();
+};
+
+/**
+ * Hashes the client-provided username (after normalization) to a stable identifier.
+ * If UID_HASH_SECRET is set, uses HMAC-SHA256 for better resistance to offline guessing.
+ * @param {unknown} username
+ * @returns {string} hex-encoded hash
+ */
+utils.hashUsername = (username) => {
+    const normalized = utils.normalizeUsername(username);
+    const secret = process.env.UID_HASH_SECRET;
+    if (secret && String(secret).length > 0) {
+        return crypto.createHmac('sha256', String(secret)).update(normalized).digest('hex');
+    }
+    return crypto.createHash('sha256').update(normalized).digest('hex');
+};
+
 module.exports = utils;
