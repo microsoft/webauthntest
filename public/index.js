@@ -3091,7 +3091,6 @@ try {
 
             html += '<div class="card bg-base-100 border border-base-300 shadow-sm cert-card" style="margin-bottom:12px;">';
             html += '<div class="card-body p-4" style="display:flex; flex-direction:column; gap:8px;">';
-            html += '<div class="font-semibold">Certificate ' + (idx+1) + '</div>';
             html += '<div class="text-sm"><span class="cert-label">Subject:</span> <span class="cert-value">' + escapeHtml(formatName(c.subject || [])) + '</span></div>';
             html += '<div class="text-sm"><span class="cert-label">Issuer:</span> <span class="cert-value">' + escapeHtml(formatName(c.issuer || [])) + '</span></div>';
             html += '<div class="text-sm"><span class="cert-label">Serial:</span> <span class="cert-value">' + escapeHtml(c.serialNumber || '') + '</span> <button class="btn btn-ghost btn-xs btn-square cert-copy-serial" data-idx="' + idx + '" title="Copy serial"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';

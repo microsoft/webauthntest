@@ -481,7 +481,6 @@ async function showMdsCertificatesDialog() {
 
         html += '<div class="card bg-base-100 border border-base-300 shadow-sm cert-card" style="margin-bottom:12px;">';
         html += '<div class="card-body p-4" style="display:flex; flex-direction:column; gap:8px;">';
-        html += '<div class="font-semibold">Certificate ' + (idx + 1) + '</div>';
 
         if (p.ok) {
             const c = p.cert;
