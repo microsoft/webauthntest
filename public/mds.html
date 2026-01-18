@@ -60,6 +60,11 @@
                                 <img id="selectedIconDark" alt="Authenticator icon (dark)" hidden>
                             </div>
                             <div id="selectedLabel" class="text-sm opacity-80" style="line-height:1.4;" hidden></div>
+                            <div class="mds-selected-actions" aria-label="Selected authenticator actions">
+                                <button type="button" class="btn btn-ghost btn-sm btn-circle" id="mdsViewCertsButton" title="View certificates" aria-label="View certificates" hidden>
+                                    <span class="material-symbols-outlined" aria-hidden="true">verified</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -72,6 +77,19 @@
             </div>
         </main>
     </div>
+
+    <dialog class="app-dialog" id="mdsCertsDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="mdsCertsDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <h3 class="app-dialog-title">Certificates</h3>
+        <div class="app-dialog-content" id="mdsCertsDialogBody"></div>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-primary btn-sm close" id="mdsCertsDialog_closeButton">Close</button>
+        </div>
+    </dialog>
 
     <script type="module" src="mds.js"></script>
 </body>
