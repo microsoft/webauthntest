@@ -710,7 +710,14 @@ dialog.app-dialog {
     header/title and actions keep their intrinsic size while the
     content area takes the remaining space and becomes scrollable. */
   margin: 24px auto;
+  /* Prefer safe-area aware margins when supported (iOS notch, etc.). */
+  margin: max(12px, env(safe-area-inset-top)) auto max(12px, env(safe-area-inset-bottom));
+  /* Mobile browsers (especially Chrome on Android) can report 100vh larger than
+     the visible viewport because the URL bar overlaps. Use newer viewport units
+     when available so the dialog always fits and the action buttons remain reachable. */
   max-height: calc(100vh - 48px);
+  max-height: calc(100svh - 48px);
+  max-height: calc(100dvh - 48px);
   flex-direction: column;
   overflow: hidden; /* clip outer overflow; inner content scrolls */
   border: 1px solid oklch(var(--b3));
