@@ -8,6 +8,7 @@ const els = {
     aaguidInput: document.getElementById('aaguidInput'),
     clearBtn: document.getElementById('clearBtn'),
     suggestions: document.getElementById('suggestions'),
+    selectedLabelCard: document.getElementById('selectedLabelCard'),
     detailsCard: document.getElementById('detailsCard'),
     selectedLabel: document.getElementById('selectedLabel'),
     entryDetails: document.getElementById('entryDetails')
@@ -27,11 +28,19 @@ function setDetailsCardVisible(visible) {
     els.detailsCard.style.display = v ? '' : 'none';
 }
 
+function setSelectedLabelCardVisible(visible) {
+    if (!els.selectedLabelCard) return;
+    const v = Boolean(visible);
+    // Use both to avoid any CSS/utility overrides.
+    els.selectedLabelCard.hidden = !v;
+    els.selectedLabelCard.style.display = v ? '' : 'none';
+}
+
 function updateDetailsCardVisibility() {
-    if (!els.detailsCard) return;
     const labelVisible = els.selectedLabel ? !els.selectedLabel.hidden : false;
     const detailsVisible = els.entryDetails ? !els.entryDetails.hidden : false;
-    setDetailsCardVisible(labelVisible || detailsVisible);
+    setSelectedLabelCardVisible(labelVisible);
+    setDetailsCardVisible(detailsVisible);
 }
 
 function getToastContainer() {
@@ -101,8 +110,7 @@ function renderSelectedLabel(entry) {
         return;
     }
     const name = entry && entry.name ? String(entry.name) : '(unknown)';
-    const aaguid = entry && entry.aaguid ? String(entry.aaguid) : '';
-    els.selectedLabel.textContent = `${name}${aaguid ? ` (${aaguid})` : ''}`;
+    els.selectedLabel.textContent = name;
     els.selectedLabel.hidden = false;
     updateDetailsCardVisibility();
 }
