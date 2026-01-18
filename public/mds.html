@@ -54,7 +54,13 @@
 
                 <div id="selectedLabelCard" class="card bg-base-100 shadow-xl border border-base-300" style="margin-top:18px;" hidden>
                     <div class="card-body" style="padding-top:12px; padding-bottom:12px;">
-                        <div id="selectedLabel" class="text-sm opacity-80" style="line-height:1.4;" hidden></div>
+                        <div class="mds-selected-label-row">
+                            <div class="mds-selected-icons" aria-label="Authenticator icons">
+                                <img id="selectedIconLight" alt="Authenticator icon (light)" hidden>
+                                <img id="selectedIconDark" alt="Authenticator icon (dark)" hidden>
+                            </div>
+                            <div id="selectedLabel" class="text-sm opacity-80" style="line-height:1.4;" hidden></div>
+                        </div>
                     </div>
                 </div>
 

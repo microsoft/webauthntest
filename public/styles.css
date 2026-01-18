@@ -1046,6 +1046,32 @@ body#signInPrompt .login-title {
   justify-content: center;
 }
 
+/* MDS: Selected authenticator header row (icons + name) */
+.mds-selected-label-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mds-selected-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mds-selected-icons img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Show the appropriate icon for the current theme */
+html[data-theme="dark"] #selectedIconDark { display: inline-block; }
+html[data-theme="dark"] #selectedIconLight { display: none; }
+
+html:not([data-theme="dark"]) #selectedIconLight { display: inline-block; }
+html:not([data-theme="dark"]) #selectedIconDark { display: none; }
+
 /* Icon buttons in the Credentials toolbar */
 .credentials-toolbar-actions .btn {
   width: 48px;

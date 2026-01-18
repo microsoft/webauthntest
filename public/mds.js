@@ -11,6 +11,8 @@ const els = {
     selectedLabelCard: document.getElementById('selectedLabelCard'),
     detailsCard: document.getElementById('detailsCard'),
     selectedLabel: document.getElementById('selectedLabel'),
+    selectedIconLight: document.getElementById('selectedIconLight'),
+    selectedIconDark: document.getElementById('selectedIconDark'),
     entryDetails: document.getElementById('entryDetails')
 };
 
@@ -89,6 +91,88 @@ async function fetchJson(url) {
     const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
     if (!resp.ok) throw new Error(`Fetch failed (${resp.status})`);
     return resp.json();
+}
+
+async function fetchText(url) {
+    const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if (!resp.ok) throw new Error(`Fetch failed (${resp.status})`);
+    return resp.text();
+}
+
+function looksLikeBase64(s) {
+    const t = String(s || '').trim();
+    if (!t || t.length < 16) return false;
+    return /^[A-Za-z0-9+/\s]+=*$/.test(t);
+}
+
+function toDataUrlFromText(text) {
+    const t = String(text || '').trim();
+    if (!t) return '';
+
+    if (/^data:/i.test(t)) return t;
+    if (/^https?:\/\//i.test(t)) return t;
+
+    // Inline SVG
+    if (/^<svg[\s>]/i.test(t)) {
+        return `data:image/svg+xml;utf8,${encodeURIComponent(t)}`;
+    }
+
+    // base64 (likely PNG/WebP/SVG)
+    if (looksLikeBase64(t)) {
+        const compact = t.replace(/\s+/g, '');
+        let mime = 'image/png';
+        if (compact.startsWith('iVBOR')) mime = 'image/png';
+        else if (compact.startsWith('/9j/')) mime = 'image/jpeg';
+        else if (compact.startsWith('R0lGOD')) mime = 'image/gif';
+        else if (compact.startsWith('UklGR')) mime = 'image/webp';
+        else if (compact.startsWith('PHN2Zy') || compact.startsWith('PD94bWw')) mime = 'image/svg+xml';
+
+        return `data:${mime};base64,${compact}`;
+    }
+
+    // Fallback: treat as a url-ish string
+    return t;
+}
+
+function clearSelectedIcons() {
+    const imgs = [els.selectedIconLight, els.selectedIconDark];
+    for (const img of imgs) {
+        if (!img) continue;
+        try { img.removeAttribute('src'); } catch { /* ignore */ }
+        try { img.hidden = true; } catch { /* ignore */ }
+    }
+}
+
+async function loadAndRenderSelectedIcons(aaguid) {
+    clearSelectedIcons();
+    const key = String(aaguid || '').toLowerCase();
+    if (!key) return;
+
+    // Per repo convention (as requested):
+    // - light icon is stored in icon_dark.txt
+    // - dark icon is stored in icon_light.txt
+    const lightUrl = `${RAW_BASE}/${encodeURIComponent(key)}/icon_dark.txt`;
+    const darkUrl = `${RAW_BASE}/${encodeURIComponent(key)}/icon_light.txt`;
+
+    async function tryLoad(url) {
+        try {
+            const txt = await fetchText(url);
+            return toDataUrlFromText(txt);
+        } catch {
+            return '';
+        }
+    }
+
+    const [lightSrc, darkSrc] = await Promise.all([tryLoad(lightUrl), tryLoad(darkUrl)]);
+
+    if (els.selectedIconLight && lightSrc) {
+        els.selectedIconLight.src = lightSrc;
+        els.selectedIconLight.hidden = false;
+    }
+    if (els.selectedIconDark && darkSrc) {
+        els.selectedIconDark.src = darkSrc;
+        els.selectedIconDark.hidden = false;
+    }
 }
 
 async function fetchMetadataJson(aaguid) {
@@ -288,6 +372,7 @@ async function selectEntry(entry) {
     updateClearButtonVisibility();
 
     renderSelectedLabel(entry);
+    loadAndRenderSelectedIcons(aaguid);
     renderEntry(null);
 
     try {
@@ -310,6 +395,7 @@ function clearSearchAndResults() {
     selectedAaguid = '';
     hideSuggestions();
     renderSelectedLabel(null);
+    clearSelectedIcons();
     renderEntry(null);
     updateClearButtonVisibility();
     try { els.aaguidInput && els.aaguidInput.focus(); } catch { /* ignore */ }
@@ -318,6 +404,7 @@ function clearSearchAndResults() {
 function clearSelectionDisplayOnly() {
     selectedAaguid = '';
     renderSelectedLabel(null);
+    clearSelectedIcons();
     renderEntry(null);
 }
 
@@ -520,6 +607,7 @@ function wireUi() {
             try {
                 const aaguid = String(q || initial).toLowerCase();
                 renderSelectedLabel({ aaguid, name: '' });
+                loadAndRenderSelectedIcons(aaguid);
                 renderEntry(null);
                 const metadata = await fetchMetadataJson(aaguid);
                 renderEntry(metadata);
