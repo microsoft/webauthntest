@@ -265,6 +265,38 @@ async function parseCertificateString(certString) {
     const extensions = {};
     try {
         if (Array.isArray(cert.extensions)) {
+            function formatKeyUsage(bitString) {
+                try {
+                    const vb = bitString && bitString.valueBlock ? bitString.valueBlock : null;
+                    const hex = vb && vb.valueHex ? vb.valueHex : null;
+                    const unused = vb && typeof vb.unusedBits === 'number' ? vb.unusedBits : 0;
+                    if (!hex) return '';
+                    const bytes = new Uint8Array(hex);
+                    const totalBits = (bytes.length * 8) - unused;
+                    const names = [
+                        'digitalSignature',
+                        'nonRepudiation',
+                        'keyEncipherment',
+                        'dataEncipherment',
+                        'keyAgreement',
+                        'keyCertSign',
+                        'cRLSign',
+                        'encipherOnly',
+                        'decipherOnly'
+                    ];
+                    const out = [];
+                    const max = Math.min(totalBits, names.length);
+                    for (let i = 0; i < max; i++) {
+                        const byteIndex = Math.floor(i / 8);
+                        const bitIndex = 7 - (i % 8);
+                        if ((bytes[byteIndex] & (1 << bitIndex)) !== 0) out.push(names[i]);
+                    }
+                    return out.join(', ');
+                } catch {
+                    return '';
+                }
+            }
+
             function formatGeneralName(n) {
                 try {
                     if (n.typeName && (n.typeName === 'dNSName' || n.typeName === 'uniformResourceIdentifier' || n.typeName === 'rfc822Name')) {
@@ -301,7 +333,7 @@ async function parseCertificateString(certString) {
                         extensions.basicConstraints = { cA: !!bc.cA, pathLenConstraint: bc.pathLenConstraint || null };
                     } else if (ext.extnID === '2.5.29.15') {
                         const ku = ext.parsedValue;
-                        extensions.keyUsage = ku.wBits ? ku.wBits.join(',') : Object.keys(ku).filter(k => ku[k]).join(',');
+                        extensions.keyUsage = formatKeyUsage(ku) || '';
                     } else if (ext.extnID === '2.5.29.37') {
                         const eku = ext.parsedValue;
                         if (Array.isArray(eku.keyPurposes)) {

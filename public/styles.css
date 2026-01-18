@@ -1734,6 +1734,7 @@ dialog#mdsCertsDialog {
   overflow: visible;
   padding-bottom: 8px;
   border: 1px solid rgba(0,0,0,0.08);
+  font-size: 13px; /* unify all rows to the same size */
 }
 .cert-card small { color: #555; display:block; }
 .cert-actions .material-symbols-outlined { color: #666; }
@@ -1749,7 +1750,7 @@ dialog#mdsCertsDialog {
 #certsDialog .cert-value,
 #mdsCertsDialog .cert-value {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
-  font-size: 13px;
+  font-size: inherit;
   font-weight: 400;
   color: #555;
   word-break: break-word;
@@ -1758,19 +1759,38 @@ dialog#mdsCertsDialog {
 }
 
 /* Main certificate fields (Subject/Issuer/Serial/Validity/etc.): keep labels same size as values */
-#certsDialog .cert-card .text-sm .cert-label {
-  font-size: 13px;
+#certsDialog .cert-card .text-sm .cert-label,
+#mdsCertsDialog .cert-card .text-sm .cert-label { font-size: inherit; }
+
+/* Force Tailwind/DaisyUI utility sizing to inherit our unified cert-card size */
+#certsDialog .cert-card .text-sm,
+#mdsCertsDialog .cert-card .text-sm {
+  font-size: inherit !important;
+  line-height: inherit !important;
 }
 
-/* Extension rows use <small>; don't upsize them via cert-value/cert-label rules */
+/* Extension rows: keep same size as main fields (override UA 'small') */
+#certsDialog .cert-card .cert-ext,
+#mdsCertsDialog .cert-card .cert-ext { font-size: inherit; }
+
+#certsDialog .cert-card small,
+#mdsCertsDialog .cert-card small {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
 #certsDialog .cert-card .cert-ext small .cert-label,
-#certsDialog .cert-card .cert-ext small .cert-value {
+#certsDialog .cert-card .cert-ext small .cert-value,
+#mdsCertsDialog .cert-card .cert-ext small .cert-label,
+#mdsCertsDialog .cert-card .cert-ext small .cert-value {
   font-size: inherit;
 }
 
 /* Force wrapping for long certificate fields so text doesn't overflow the card */
 #certsDialog .cert-card,
-#certsDialog .cert-card * {
+#certsDialog .cert-card *,
+#mdsCertsDialog .cert-card,
+#mdsCertsDialog .cert-card * {
   box-sizing: border-box;
 }
 
