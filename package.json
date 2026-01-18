@@ -1,6 +1,6 @@
 {
     "name": "webauthntest",
-    "description": "WebAuthn Playground",
+    "description": "Passkey Playground",
     "license": "MIT",
     "author": "Akshay Kumar",
     "version": "2026.01.16",

@@ -1060,7 +1060,7 @@ function updateClearButtonVisibility() {
     els.clearBtn.hidden = !hasText;
 }
 
-function clearSearchAndResults() {
+function clearSearchAndResults({ refocus = true } = {}) {
     if (els.aaguidInput) els.aaguidInput.value = '';
     selectedAaguid = '';
     hideSuggestions();
@@ -1069,7 +1069,9 @@ function clearSearchAndResults() {
     updateViewCertsButtonFromMetadata(null);
     renderEntry(null);
     updateClearButtonVisibility();
-    try { els.aaguidInput && els.aaguidInput.focus(); } catch { /* ignore */ }
+    if (refocus) {
+        try { els.aaguidInput && els.aaguidInput.focus(); } catch { /* ignore */ }
+    }
 }
 
 function clearSelectionDisplayOnly() {
@@ -1180,6 +1182,13 @@ function wireUi() {
         });
 
         els.aaguidInput.addEventListener('focus', () => {
+            // UX: if a previous AAGUID is selected/filled, tapping the box starts a fresh search
+            // (same behavior as pressing the Clear button).
+            const hasText = Boolean(String(els.aaguidInput.value || '').trim());
+            if (hasText) {
+                clearSearchAndResults({ refocus: false });
+                return;
+            }
             onQueryChange();
         });
 
