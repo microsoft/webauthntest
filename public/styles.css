@@ -948,10 +948,24 @@ header.navbar {
   padding: 12px 16px;
 }
 
+/* Prevent header titles from wrapping on mobile: allow shrink + ellipsis */
+header.navbar .navbar-start {
+  min-width: 0;
+}
+
 header.navbar .navbar-start h1 {
-  font-size: 32px;
+  /* Responsive sizing that still matches the desktop look */
+  font-size: clamp(20px, 6vw, 32px);
   font-weight: 400;
   margin: 0;
+  min-width: 0;
+}
+
+header.navbar .navbar-start h1 .title-link {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 header.navbar #signOutButton {
