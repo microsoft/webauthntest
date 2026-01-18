@@ -871,25 +871,6 @@ try {
             moreDialog.showModal();
         });
 
-        $('#cborButton').click(() => {
-            // Open CBOR Playground in a new tab so the app remains available
-            try {
-                window.open("./cbor.html", "_blank");
-            } catch (e) {
-                // Fallback to navigate in current tab if popup blocked
-                window.location.href = "./cbor.html";
-            }
-        });
-
-        $('#mdsButton').click(() => {
-            // Open the MDS viewer in a new tab so the app remains available
-            try {
-                window.open("./mds.html", "_blank");
-            } catch (e) {
-                window.location.href = "./mds.html";
-            }
-        });
-
         // AAGUID button may be removed; only attach handler if element exists
         const aaguidBtn = document.getElementById('aaguidButton');
         if (aaguidBtn) {
@@ -2859,6 +2840,38 @@ try {
                 // Extract some common extensions
                 const extensions = {};
                 if (Array.isArray(cert.extensions)) {
+                    function formatKeyUsage(bitString) {
+                        try {
+                            const vb = bitString && bitString.valueBlock ? bitString.valueBlock : null;
+                            const hex = vb && vb.valueHex ? vb.valueHex : null;
+                            const unused = vb && typeof vb.unusedBits === 'number' ? vb.unusedBits : 0;
+                            if (!hex) return '';
+                            const bytes = new Uint8Array(hex);
+                            const totalBits = (bytes.length * 8) - unused;
+                            const names = [
+                                'digitalSignature',
+                                'nonRepudiation',
+                                'keyEncipherment',
+                                'dataEncipherment',
+                                'keyAgreement',
+                                'keyCertSign',
+                                'cRLSign',
+                                'encipherOnly',
+                                'decipherOnly'
+                            ];
+                            const out = [];
+                            const max = Math.min(totalBits, names.length);
+                            for (let i = 0; i < max; i++) {
+                                const byteIndex = Math.floor(i / 8);
+                                const bitIndex = 7 - (i % 8);
+                                if ((bytes[byteIndex] & (1 << bitIndex)) !== 0) out.push(names[i]);
+                            }
+                            return out.join(', ');
+                        } catch (e) {
+                            return '';
+                        }
+                    }
+
                     // Helper to format GeneralName entries from PKIjs SubjectAltName parsing
                     function formatGeneralName(n) {
                         try {
@@ -2981,7 +2994,7 @@ try {
                                 extensions.basicConstraints = { cA: !!bc.cA, pathLenConstraint: bc.pathLenConstraint || null };
                             } else if (ext.extnID === '2.5.29.15') { // KeyUsage
                                 const ku = ext.parsedValue; // BitString
-                                extensions.keyUsage = ku.wBits ? ku.wBits.join(',') : Object.keys(ku).filter(k => ku[k]).join(',');
+                                extensions.keyUsage = formatKeyUsage(ku);
                             } else if (ext.extnID === '2.5.29.37') { // ExtKeyUsage
                                 const eku = ext.parsedValue; // array of OIDs
                                 if (Array.isArray(eku.keyPurposes)) {
@@ -3059,7 +3072,6 @@ try {
 
             html += '<div class="card bg-base-100 border border-base-300 shadow-sm cert-card" style="margin-bottom:12px;">';
             html += '<div class="card-body p-4" style="display:flex; flex-direction:column; gap:8px;">';
-            html += '<div class="font-semibold">Certificate ' + (idx+1) + '</div>';
             html += '<div class="text-sm"><span class="cert-label">Subject:</span> <span class="cert-value">' + escapeHtml(formatName(c.subject || [])) + '</span></div>';
             html += '<div class="text-sm"><span class="cert-label">Issuer:</span> <span class="cert-value">' + escapeHtml(formatName(c.issuer || [])) + '</span></div>';
             html += '<div class="text-sm"><span class="cert-label">Serial:</span> <span class="cert-value">' + escapeHtml(c.serialNumber || '') + '</span> <button class="btn btn-ghost btn-xs btn-square cert-copy-serial" data-idx="' + idx + '" title="Copy serial"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';

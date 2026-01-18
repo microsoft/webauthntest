@@ -215,20 +215,20 @@ input[type="reset"]:not(:disabled):focus-visible,
   border-color: rgba(0, 0, 0, 0.18) !important;
 }
 
-/* Header Sign out should match old action styling */
-#signOutButton {
+/* Header Sign out should match old action styling (scoped to the top navbar only) */
+.navbar #signOutButton {
   text-transform: uppercase;
   font-weight: 400;
   color: #fff !important;
 }
 
 /* Keep Sign out readable on the dark header (override global .btn:hover white background) */
-#signOutButton:not(.btn-disabled):not(:disabled):hover {
+.navbar #signOutButton:not(.btn-disabled):not(:disabled):hover {
   background: rgba(255,255,255,0.14) !important;
   box-shadow: none !important;
 }
 
-#signOutButton:not(.btn-disabled):not(:disabled):focus-visible {
+.navbar #signOutButton:not(.btn-disabled):not(:disabled):focus-visible {
   outline: 2px solid rgba(255,255,255,0.65) !important;
   outline-offset: 2px;
   background: rgba(255,255,255,0.14) !important;
@@ -601,7 +601,7 @@ dialog.app-dialog {
 }
 
 
-/* Hybrid layout for Get Credential dialog */
+/* Hybrid layout for Authenticate Options dialog */
 #getDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 40px); min-width: 0; }
 @media (max-width: 600px) {
   #getDialog { width: calc(100vw - 40px); max-width: 360px; }
@@ -718,7 +718,7 @@ dialog.app-dialog {
   background: oklch(var(--b1));
 }
 
-/* Create Credential Options dialog: square corners */
+/* Register a passkey dialog: square corners */
 #createDialog {
   border-radius: 0 !important;
 }
@@ -728,7 +728,7 @@ dialog.app-dialog {
   border-radius: 0 !important;
 }
 
-/* Get Credential Options dialog: square corners */
+/* Authenticate dialog: square corners */
 #getDialog {
   border-radius: 0 !important;
 }
@@ -1000,7 +1000,7 @@ body#signInPrompt .login-title {
 .credentials-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 0 16px;
   min-height: 56px;
@@ -1010,17 +1010,6 @@ body#signInPrompt .login-title {
   position: relative;
   overflow: hidden;
   border: none;
-}
-
-/* Pink accent strip under the Credentials bar (like the reference) */
-.credentials-toolbar::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
-  width: min(200px, 28%);
-  background: var(--fab-accent);
 }
 
 .credentials-title {
@@ -1035,8 +1024,60 @@ body#signInPrompt .login-title {
 .credentials-toolbar-actions {
   display: flex;
   align-items: center;
+  width: 100%;
   gap: 6px;
 }
+
+.credentials-toolbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+/* Keep the Sign out icon on the far right */
+.credentials-toolbar-actions #signOutButton {
+  margin-left: auto;
+}
+
+/* CBOR page: center the navigation icons in the toolbar */
+.cbor-page .cbor-nav-toolbar-actions {
+  justify-content: center;
+}
+
+/* MDS: Selected authenticator header row (icons + name) */
+.mds-selected-label-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.mds-selected-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.mds-selected-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mds-selected-icons img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Show the appropriate icon for the current theme */
+html[data-theme="dark"] #selectedIconDark { display: inline-block; }
+html[data-theme="dark"] #selectedIconLight { display: none; }
+
+html:not([data-theme="dark"]) #selectedIconLight { display: inline-block; }
+html:not([data-theme="dark"]) #selectedIconDark { display: none; }
 
 /* Icon buttons in the Credentials toolbar */
 .credentials-toolbar-actions .btn {
@@ -1442,7 +1483,8 @@ body#signInPrompt #signInButton {
 .cert-actions .material-symbols-outlined { vertical-align: middle; }
 
 /* Make per-cert action buttons visually consistent */
-#certsDialog .cert-actions .btn {
+#certsDialog .cert-actions .btn,
+#mdsCertsDialog .cert-actions .btn {
   display: inline-flex !important;
   align-items: center;
   gap: 8px;
@@ -1455,24 +1497,29 @@ body#signInPrompt #signInButton {
   min-width: 0 !important;
 }
 
-#certsDialog .cert-actions .btn .material-symbols-outlined {
+#certsDialog .cert-actions .btn .material-symbols-outlined,
+#mdsCertsDialog .cert-actions .btn .material-symbols-outlined {
   color: inherit !important;
   font-size: 20px !important;
   line-height: 20px !important;
 }
 
 /* hover effect to match other action links/buttons */
-#certsDialog .cert-actions .btn:hover {
+#certsDialog .cert-actions .btn:hover,
+#mdsCertsDialog .cert-actions .btn:hover {
   background: var(--btn-hover-bg) !important;
 }
 
 /* Icon-only copy buttons next to fingerprint/serial */
 /* Match per-cert action buttons */
 #certsDialog .cert-copy-fingerprint,
-#certsDialog .cert-copy-serial {
-  padding: 6px 8px !important;
-  min-width: 0 !important;
-  height: 36px;
+#certsDialog .cert-copy-serial,
+#mdsCertsDialog .cert-copy-fingerprint,
+#mdsCertsDialog .cert-copy-serial {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1481,13 +1528,17 @@ body#signInPrompt #signInButton {
   border: none !important;
 }
 #certsDialog .cert-copy-fingerprint .material-symbols-outlined,
-#certsDialog .cert-copy-serial .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
+#certsDialog .cert-copy-serial .material-symbols-outlined,
+#mdsCertsDialog .cert-copy-fingerprint .material-symbols-outlined,
+#mdsCertsDialog .cert-copy-serial .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
 
 /* Public key copy button: same style as other copy icons */
-#certsDialog .cert-copy-publickey {
-  padding: 6px 8px !important;
-  min-width: 0 !important;
-  height: 36px;
+#certsDialog .cert-copy-publickey,
+#mdsCertsDialog .cert-copy-publickey {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 8px !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1495,7 +1546,8 @@ body#signInPrompt #signInButton {
   color: #1a73e8 !important;
   border: none !important;
 }
-#certsDialog .cert-copy-publickey .material-symbols-outlined { font-size:18px !important; color: inherit !important; }
+#certsDialog .cert-copy-publickey .material-symbols-outlined,
+#mdsCertsDialog .cert-copy-publickey .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
 
 /* Responsive adjustments: allow per-cert action buttons to wrap and
    use a compact icon-first layout on narrow screens so label text doesn't
@@ -1509,7 +1561,8 @@ body#signInPrompt #signInButton {
   }
 
   /* Make each button a bit more compact and allow it to shrink */
-  #certsDialog .cert-actions .btn {
+    #certsDialog .cert-actions .btn,
+    #mdsCertsDialog .cert-actions .btn {
     padding: 6px 6px !important;
     font-size: 13px !important;
     gap: 6px !important;
@@ -1519,7 +1572,8 @@ body#signInPrompt #signInButton {
   /* When space is very narrow, show an icon-first style where label can wrap
      onto the next line; ensure icons remain left-aligned and visible. */
   @media (max-width: 380px) {
-    #certsDialog .cert-actions .btn {
+    #certsDialog .cert-actions .btn,
+    #mdsCertsDialog .cert-actions .btn {
       display: inline-flex !important;
       flex-direction: row !important;
       align-items: center !important;
@@ -1529,13 +1583,15 @@ body#signInPrompt #signInButton {
     /* If necessary, hide the text on ultra-narrow screens but keep title accessible
        via title attribute (handled in JS if desired). We prefer to keep text when possible,
        so only reduce visibility using a subtle technique: shrink text and allow wrapping. */
-    #certsDialog .cert-actions .btn { white-space: normal !important; }
+    #certsDialog .cert-actions .btn,
+    #mdsCertsDialog .cert-actions .btn { white-space: normal !important; }
   }
 }
 
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
-dialog#certsDialog {
+dialog#certsDialog,
+dialog#mdsCertsDialog {
   width: auto;
   max-width: 1100px;
   /* add bottom padding so footer buttons aren't flush to the dialog edge */
@@ -1545,7 +1601,8 @@ dialog#certsDialog {
 /* Layout certificate cards as a single column (top-to-bottom). Each card
    stretches to fill the dialog content width so available space on the right
    is used. This keeps the vertical flow but makes entries flexible. */
-#certsDialog .app-dialog-content {
+#certsDialog .app-dialog-content,
+#mdsCertsDialog .app-dialog-content {
   display: flex !important;
   flex-direction: column;
   gap: 16px;
@@ -1553,7 +1610,8 @@ dialog#certsDialog {
 }
 
 /* Ensure each cert card uses the full width of the dialog content area */
-#certsDialog .cert-card { width: 100%; box-sizing: border-box; }
+#certsDialog .cert-card,
+#mdsCertsDialog .cert-card { width: 100%; box-sizing: border-box; }
 
 .cert-dialog-actions { display:flex; gap:8px; align-items:center; }
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
@@ -1678,20 +1736,30 @@ dialog#certsDialog {
   overflow: visible;
   padding-bottom: 8px;
   border: 1px solid rgba(0,0,0,0.08);
+  font-size: 13px; /* unify all rows to the same size */
 }
 .cert-card small { color: #555; display:block; }
 .cert-actions .material-symbols-outlined { color: #666; }
 .cert-actions .btn { background: transparent; }
 
+/* In certificate dialogs, keep label emphasis consistent across all rows.
+   Let the row inherit base text color; .cert-value keeps its own grey. */
+#certsDialog .cert-card small,
+#mdsCertsDialog .cert-card small {
+  color: inherit !important;
+}
+
 /* Certificate dialog typography: values use the same font as public-key bytes */
-#certsDialog .cert-label {
+#certsDialog .cert-label,
+#mdsCertsDialog .cert-label {
   font-family: inherit;
   font-weight: 600;
 }
 
-#certsDialog .cert-value {
+#certsDialog .cert-value,
+#mdsCertsDialog .cert-value {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
-  font-size: 13px;
+  font-size: inherit;
   font-weight: 400;
   color: #555;
   word-break: break-word;
@@ -1700,19 +1768,38 @@ dialog#certsDialog {
 }
 
 /* Main certificate fields (Subject/Issuer/Serial/Validity/etc.): keep labels same size as values */
-#certsDialog .cert-card .text-sm .cert-label {
-  font-size: 13px;
+#certsDialog .cert-card .text-sm .cert-label,
+#mdsCertsDialog .cert-card .text-sm .cert-label { font-size: inherit; }
+
+/* Force Tailwind/DaisyUI utility sizing to inherit our unified cert-card size */
+#certsDialog .cert-card .text-sm,
+#mdsCertsDialog .cert-card .text-sm {
+  font-size: inherit !important;
+  line-height: inherit !important;
 }
 
-/* Extension rows use <small>; don't upsize them via cert-value/cert-label rules */
+/* Extension rows: keep same size as main fields (override UA 'small') */
+#certsDialog .cert-card .cert-ext,
+#mdsCertsDialog .cert-card .cert-ext { font-size: inherit; }
+
+#certsDialog .cert-card small,
+#mdsCertsDialog .cert-card small {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
 #certsDialog .cert-card .cert-ext small .cert-label,
-#certsDialog .cert-card .cert-ext small .cert-value {
+#certsDialog .cert-card .cert-ext small .cert-value,
+#mdsCertsDialog .cert-card .cert-ext small .cert-label,
+#mdsCertsDialog .cert-card .cert-ext small .cert-value {
   font-size: inherit;
 }
 
 /* Force wrapping for long certificate fields so text doesn't overflow the card */
 #certsDialog .cert-card,
-#certsDialog .cert-card * {
+#certsDialog .cert-card *,
+#mdsCertsDialog .cert-card,
+#mdsCertsDialog .cert-card * {
   box-sizing: border-box;
 }
 

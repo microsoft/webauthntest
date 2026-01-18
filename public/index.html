@@ -18,7 +18,7 @@
 <body class="min-h-screen bg-base-200 text-base-content cloak">
     <dialog class="app-dialog" id="createDialog">
         <div class="loading-indicator hidden"><progress class="progress progress-primary w-full"></progress></div>
-        <h3 class="app-dialog-title">Create Credential Options</h3>
+        <h3 class="app-dialog-title">Passkey Registration Options</h3>
         <div class="app-dialog-content">
             <span>
                 <span>RP Info</span>
@@ -348,14 +348,14 @@
         </div>
 
         <div class="app-dialog-actions">
-            <button type="button" class="btn btn-primary btn-sm" id="createDialog_createButton" autofocus>Create</button>
+            <button type="button" class="btn btn-primary btn-sm" id="createDialog_createButton" autofocus>Register</button>
             <button type="button" class="btn btn-ghost btn-sm close" id="createDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
 
     <dialog class="app-dialog" id="getDialog">
         <div class="loading-indicator hidden"><progress class="progress progress-primary w-full"></progress></div>
-        <h3 class="app-dialog-title">Get Credential Options</h3>
+        <h3 class="app-dialog-title">Passkey Authentication Options</h3>
         <div class="app-dialog-content">
             <span>
                 <span>AutoFill Credentials <br></span>
@@ -507,7 +507,7 @@
             <hr>
         </div>
         <div class="app-dialog-actions">
-            <button type="button" class="btn btn-primary btn-sm" id="getDialog_getButton" autofocus>Get</button>
+            <button type="button" class="btn btn-primary btn-sm" id="getDialog_getButton" autofocus>Authenticate</button>
             <button type="button" class="btn btn-ghost btn-sm close" id="getDialog_cancelButton">Cancel</button>
         </div>
     </dialog>
@@ -840,30 +840,31 @@
             <div class="navbar-start">
                 <h1 class="text-lg font-semibold"><a href="index.html" class="title-link">WebAuthn Playground</a></h1>
             </div>
-            <div class="navbar-end">
-                <button class="btn btn-ghost btn-sm" id="signOutButton">Sign out</button>
-            </div>
         </header>
 
         <main class="flex-1 p-4">
             <div class="max-w-7xl mx-auto">
                 <div class="credentials-toolbar">
-                    <h2 class="text-lg font-semibold credentials-title">Credentials</h2>
                     <div class="credentials-toolbar-actions" aria-label="Credential actions">
-                        <button class="btn btn-ghost btn-sm btn-circle" id="createButton" title="Create" aria-label="Create">
-                            <span class="material-symbols-outlined" aria-hidden="true">add</span>
-                        </button>
-                        <button class="btn btn-ghost btn-sm btn-circle" id="getButton" title="Get" aria-label="Get">
-                            <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
-                        </button>
-                        <button class="btn btn-ghost btn-sm btn-circle" id="mdsButton" title="Open FIDO Metadata Service (MDS) viewer" aria-label="Open FIDO Metadata Service (MDS) viewer">
-                            <span class="material-symbols-outlined" aria-hidden="true">badge</span>
-                        </button>
-                        <button class="btn btn-ghost btn-sm btn-circle" id="cborButton" title="Open CBOR Playground" aria-label="Open CBOR Playground">
-                            <span class="material-symbols-outlined" aria-hidden="true">code</span>
-                        </button>
-                        <button class="btn btn-ghost btn-sm btn-circle" id="moreButton" title="More" aria-label="More">
-                            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+                        <div class="credentials-toolbar-left" aria-label="Primary actions">
+                            <button class="btn btn-ghost btn-sm btn-circle" id="createButton" title="Create" aria-label="Register">
+                                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                            </button>
+                            <button class="btn btn-ghost btn-sm btn-circle" id="getButton" title="Get" aria-label="Authenticate">
+                                <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
+                            </button>
+                            <a class="btn btn-ghost btn-sm btn-circle" id="mdsButton" href="mds.html" title="Open FIDO Metadata Service (MDS) Viewer" aria-label="Open FIDO Metadata Service (MDS) viewer">
+                                <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+                            </a>
+                            <a class="btn btn-ghost btn-sm btn-circle" id="cborButton" href="cbor.html" title="Open CBOR Playground" aria-label="Open CBOR Playground">
+                                <span class="material-symbols-outlined" aria-hidden="true">code</span>
+                            </a>
+                            <button class="btn btn-ghost btn-sm btn-circle" id="moreButton" title="More" aria-label="More">
+                                <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+                            </button>
+                        </div>
+                        <button class="btn btn-ghost btn-sm btn-circle" id="signOutButton" title="Sign out" aria-label="Sign out">
+                            <span class="material-symbols-outlined" aria-hidden="true">logout</span>
                         </button>
                     </div>
                 </div>
