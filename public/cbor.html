@@ -36,12 +36,12 @@
             <div class="card-body gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="font-semibold">Decode CBOR to JSON</h2>
-                    <button id="decodeBtn" class="btn btn-primary btn-sm">Decode</button>
                 </div>
                 <textarea id="cborInput" class="textarea textarea-bordered w-full cbor-mono" placeholder="Example (hex or 0x-prefixed): a26161016162820203"></textarea>
                 <div class="flex items-center flex-wrap gap-2">
-                    <button id="clearBtn" class="btn btn-ghost btn-sm">Clear</button>
-                    <label class="btn btn-ghost btn-sm" for="importCborFile" style="cursor:pointer;">Import CBOR File</label>
+                    <button id="decodeBtn" class="btn btn-link btn-sm">Decode</button>
+                    <button id="clearBtn" class="btn btn-link btn-sm">Clear</button>
+                    <label class="btn btn-link btn-sm" for="importCborFile">Import CBOR File</label>
                     <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                     <span id="formatInfo" class="text-xs opacity-70"></span>
                 </div>
@@ -55,6 +55,7 @@
                     <div class="flex gap-1">
                         <button id="downloadDecodedJson" class="btn btn-ghost btn-sm btn-square" title="Download decoded JSON"><span class="material-symbols-outlined" aria-hidden="true">file_download</span></button>
                         <button id="copyDecoded" class="btn btn-ghost btn-sm btn-square" title="Copy decoded output"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
+                        <button id="sendDecodedToEncode" class="btn btn-ghost btn-sm btn-square" title="Send to encoder"><span class="material-symbols-outlined" aria-hidden="true">south</span></button>
                     </div>
                 </div>
                 <pre id="decodedJson" class="mono" aria-label="Decoded output" style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
@@ -68,12 +69,12 @@
             <div class="card-body gap-3">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="font-semibold">Encode JSON to CBOR</h2>
-                    <button id="encodeRun" class="btn btn-primary btn-sm">Encode</button>
                 </div>
                 <textarea id="jsonInput" class="textarea textarea-bordered w-full cbor-mono" placeholder="JSON example placeholder will load...\n(If you see this line only, JS failed to set multiline placeholder)"></textarea>
                 <div class="flex items-center flex-wrap gap-2">
-                    <button id="encodeClear" class="btn btn-ghost btn-sm">Clear</button>
-                    <label class="btn btn-ghost btn-sm" for="importJsonEncode" style="cursor:pointer;">Import JSON File</label>
+                    <button id="encodeRun" class="btn btn-link btn-sm">Encode</button>
+                    <button id="encodeClear" class="btn btn-link btn-sm">Clear</button>
+                    <label class="btn btn-link btn-sm" for="importJsonEncode">Import JSON File</label>
                     <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                     <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                         <input type="checkbox" id="canonicalOrder" class="checkbox checkbox-sm" checked>
@@ -91,6 +92,7 @@
                     <div class="flex gap-1">
                         <button id="downloadEncodedCbor" class="btn btn-ghost btn-sm btn-square" title="Download encoded CBOR (.cbor)"><span class="material-symbols-outlined" aria-hidden="true">file_download</span></button>
                         <button id="copyEncodedHex" class="btn btn-ghost btn-sm btn-square" title="Copy encoded hex"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>
+                        <button id="sendEncodedToDecode" class="btn btn-ghost btn-sm btn-square" title="Send to decoder"><span class="material-symbols-outlined" aria-hidden="true">north</span></button>
                     </div>
                 </div>
                 <pre id="encodedHex" class="mono" aria-label="Encoded CBOR hex output" style="white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;"></pre>
@@ -189,6 +191,25 @@
                 decodedJson.style.background='#e0ffe8';
                 setTimeout(()=> decodedJson.style.background='', 300);
             }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+        });
+
+        document.getElementById('sendDecodedToEncode').addEventListener('click', ()=>{
+            const decodedText = (decodedJson && decodedJson.textContent) ? decodedJson.textContent.trim() : '';
+            if(!decodedText) { errEl.textContent='Nothing to send.'; return; }
+            const jsonInputEl = document.getElementById('jsonInput');
+            if(!jsonInputEl) { errEl.textContent='Encode input not found.'; return; }
+            jsonInputEl.value = decodedText;
+            try { jsonInputEl.focus(); } catch(e) {}
+            try { jsonInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+            // Optional: auto-run encode so the user immediately sees the round-trip result
+            try {
+                if(typeof encodeJson === 'function') encodeJson(false);
+            } catch(e) {
+                // Ignore; user can click Encode if auto-run fails
+            }
+            // brief visual feedback
+            jsonInputEl.style.background = '#e0f0ff';
+            setTimeout(()=>{ jsonInputEl.style.background = ''; }, 300);
         });
         // Import CBOR file handling
         const importCborFileInput = document.getElementById('importCborFile');
@@ -373,6 +394,20 @@ Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"
             encodedHexEl.style.background='#e0ffe8';
             setTimeout(()=> encodedHexEl.style.background='', 300);
         }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+    });
+
+    document.getElementById('sendEncodedToDecode').addEventListener('click', ()=>{
+        const encodedText = (encodedHexEl && encodedHexEl.textContent) ? encodedHexEl.textContent.trim() : '';
+        if(!encodedText) { errEl.textContent='Nothing to send.'; return; }
+        inputEl.value = encodedText;
+        fmtEl.textContent = detectFormat(inputEl.value) || '';
+        try { inputEl.focus(); } catch(e) {}
+        try { inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+        // Auto-run decode so the user immediately sees the round-trip result
+        try { render(); } catch(e) {}
+        // brief visual feedback
+        inputEl.style.background = '#e0f0ff';
+        setTimeout(()=>{ inputEl.style.background = ''; }, 300);
     });
     // Download from output card icon
     document.getElementById('downloadEncodedCbor').addEventListener('click', ()=>{
