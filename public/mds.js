@@ -342,6 +342,60 @@ function closeDialog(dlg) {
     } catch { /* ignore */ }
 }
 
+function formatHexBytesForDisplay(hex, bytesPerLine) {
+    const raw = String(hex || '').replace(/\s+/g, '').toUpperCase();
+    if (!raw) return '';
+    const pairs = raw.match(/.{1,2}/g) || [];
+    const lines = [];
+    const bpl = Math.max(4, Number(bytesPerLine) || 16);
+    for (let i = 0; i < pairs.length; i += bpl) {
+        lines.push(pairs.slice(i, i + bpl).join(':'));
+    }
+    return lines.join('\n');
+}
+
+function attachResponsiveHexForElement(el, rawHex) {
+    if (!el) return;
+    const raw = String(rawHex || '').trim();
+    if (!raw) {
+        el.textContent = '';
+        return;
+    }
+
+    const render = () => {
+        const width = (el.getBoundingClientRect && el.getBoundingClientRect().width) ? el.getBoundingClientRect().width : 0;
+        // Match index.html behavior: 16-byte rows when narrow, 32-byte rows when wider.
+        const bytesPerLine = width && width < 520 ? 16 : 32;
+        el.textContent = formatHexBytesForDisplay(raw, bytesPerLine);
+    };
+
+    // Initial render
+    render();
+
+    // Cleanup any previous observers/listeners
+    try { if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; } } catch { /* ignore */ }
+    try { if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; } } catch { /* ignore */ }
+
+    // Prefer ResizeObserver (more accurate than window resize)
+    try {
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => {
+                try { render(); } catch { /* ignore */ }
+            });
+            ro.observe(el);
+            el._hexObserver = ro;
+            return;
+        }
+    } catch { /* ignore */ }
+
+    // Fallback: window resize
+    const onResize = () => {
+        try { render(); } catch { /* ignore */ }
+    };
+    window.addEventListener('resize', onResize);
+    el._hexResizeListener = onResize;
+}
+
 async function showMdsCertificatesDialog() {
     const dlg = els.certsDialog;
     const body = els.certsDialogBody;
@@ -594,11 +648,11 @@ async function showMdsCertificatesDialog() {
                 block.classList.remove('collapsed');
                 btn.setAttribute('aria-expanded', 'true');
                 btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">expand_less</span>&nbsp;Hide';
-                // Fill the code element lazily
+                // Fill and format the code element lazily (responsive hex rows)
                 const codeEl = block.querySelector('.public-key-hex');
-                if (codeEl && !codeEl.textContent) {
+                if (codeEl) {
                     const rawHex = codeEl.getAttribute('data-public-key-raw') || '';
-                    codeEl.textContent = rawHex;
+                    attachResponsiveHexForElement(codeEl, rawHex);
                 }
             }
         });
@@ -1170,6 +1224,17 @@ function wireUi() {
         }
         if (els.certsDialogXButton && els.certsDialog) {
             els.certsDialogXButton.addEventListener('click', () => closeDialog(els.certsDialog));
+        }
+        if (els.certsDialog) {
+            els.certsDialog.addEventListener('close', () => {
+                try {
+                    const nodes = els.certsDialog.querySelectorAll('.public-key-hex');
+                    nodes.forEach(n => {
+                        try { if (n._hexObserver) { n._hexObserver.disconnect(); delete n._hexObserver; } } catch { /* ignore */ }
+                        try { if (n._hexResizeListener) { window.removeEventListener('resize', n._hexResizeListener); delete n._hexResizeListener; } } catch { /* ignore */ }
+                    });
+                } catch { /* ignore */ }
+            });
         }
         // Start hidden until metadata is loaded
         updateViewCertsButtonFromMetadata(null);
