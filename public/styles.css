@@ -1740,6 +1740,13 @@ dialog#mdsCertsDialog {
 .cert-actions .material-symbols-outlined { color: #666; }
 .cert-actions .btn { background: transparent; }
 
+/* In certificate dialogs, keep label emphasis consistent across all rows.
+   Let the row inherit base text color; .cert-value keeps its own grey. */
+#certsDialog .cert-card small,
+#mdsCertsDialog .cert-card small {
+  color: inherit !important;
+}
+
 /* Certificate dialog typography: values use the same font as public-key bytes */
 #certsDialog .cert-label,
 #mdsCertsDialog .cert-label {
