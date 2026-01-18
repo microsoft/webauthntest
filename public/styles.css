@@ -215,20 +215,20 @@ input[type="reset"]:not(:disabled):focus-visible,
   border-color: rgba(0, 0, 0, 0.18) !important;
 }
 
-/* Header Sign out should match old action styling */
-#signOutButton {
+/* Header Sign out should match old action styling (scoped to the top navbar only) */
+.navbar #signOutButton {
   text-transform: uppercase;
   font-weight: 400;
   color: #fff !important;
 }
 
 /* Keep Sign out readable on the dark header (override global .btn:hover white background) */
-#signOutButton:not(.btn-disabled):not(:disabled):hover {
+.navbar #signOutButton:not(.btn-disabled):not(:disabled):hover {
   background: rgba(255,255,255,0.14) !important;
   box-shadow: none !important;
 }
 
-#signOutButton:not(.btn-disabled):not(:disabled):focus-visible {
+.navbar #signOutButton:not(.btn-disabled):not(:disabled):focus-visible {
   outline: 2px solid rgba(255,255,255,0.65) !important;
   outline-offset: 2px;
   background: rgba(255,255,255,0.14) !important;
@@ -601,7 +601,7 @@ dialog.app-dialog {
 }
 
 
-/* Hybrid layout for Get Credential dialog */
+/* Hybrid layout for Authenticate Options dialog */
 #getDialog { width: clamp(200px, 95vw, 400px); max-width:calc(100vw - 40px); min-width: 0; }
 @media (max-width: 600px) {
   #getDialog { width: calc(100vw - 40px); max-width: 360px; }
@@ -718,7 +718,7 @@ dialog.app-dialog {
   background: oklch(var(--b1));
 }
 
-/* Create Credential Options dialog: square corners */
+/* Register a passkey dialog: square corners */
 #createDialog {
   border-radius: 0 !important;
 }
@@ -728,7 +728,7 @@ dialog.app-dialog {
   border-radius: 0 !important;
 }
 
-/* Get Credential Options dialog: square corners */
+/* Authenticate dialog: square corners */
 #getDialog {
   border-radius: 0 !important;
 }
@@ -1000,7 +1000,7 @@ body#signInPrompt .login-title {
 .credentials-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 0 16px;
   min-height: 56px;
@@ -1010,17 +1010,6 @@ body#signInPrompt .login-title {
   position: relative;
   overflow: hidden;
   border: none;
-}
-
-/* Pink accent strip under the Credentials bar (like the reference) */
-.credentials-toolbar::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 3px;
-  width: min(200px, 28%);
-  background: var(--fab-accent);
 }
 
 .credentials-title {
@@ -1035,7 +1024,26 @@ body#signInPrompt .login-title {
 .credentials-toolbar-actions {
   display: flex;
   align-items: center;
+  width: 100%;
   gap: 6px;
+}
+
+.credentials-toolbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+/* Keep the Sign out icon on the far right */
+.credentials-toolbar-actions #signOutButton {
+  margin-left: auto;
+}
+
+/* CBOR page: center the navigation icons in the toolbar */
+.cbor-page .cbor-nav-toolbar-actions {
+  justify-content: center;
 }
 
 /* Icon buttons in the Credentials toolbar */
