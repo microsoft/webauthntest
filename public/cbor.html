@@ -43,7 +43,7 @@
                     <button id="clearBtn" class="btn btn-link btn-sm">Clear</button>
                     <label class="btn btn-link btn-sm" for="importCborFile">Import CBOR File</label>
                     <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
-                    <span id="formatInfo" class="text-xs opacity-70"></span>
+                    <span id="formatInfo" class="text-xs opacity-70" style="display:none;"></span>
                 </div>
             </div>
         </div>
@@ -80,7 +80,7 @@
                         <input type="checkbox" id="canonicalOrder" class="checkbox checkbox-sm" checked>
                         <span class="text-sm">Canonical</span>
                     </label>
-                    <span id="encodeInfo" class="text-xs opacity-70"></span>
+                    <span id="encodeInfo" class="text-xs opacity-70"  style="display:none;"></span>
                 </div>
             </div>
         </div>
@@ -104,7 +104,6 @@
         <div id="errorArea" class="text-error font-medium mt-4" role="alert"></div>
 
         <footer class="opacity-80" style="margin-top: 40px; font-size: 12px;">
-            Notes: duplicate map keys still overwrite previous (last wins); large integers (including bignum tags 2 & 3) decode to BigInt; common semantic tags decoded (date/time, epoch, embedded CBOR, URI, base64/url, regex, mime); other tags appear as {"@tag":N,"value":...}; simple values &lt; 32 shown as {"@simple":N}.
         </footer>
             </div>
         </main>
