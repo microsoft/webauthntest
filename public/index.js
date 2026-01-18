@@ -871,25 +871,6 @@ try {
             moreDialog.showModal();
         });
 
-        $('#cborButton').click(() => {
-            // Open CBOR Playground in a new tab so the app remains available
-            try {
-                window.open("./cbor.html", "_blank");
-            } catch (e) {
-                // Fallback to navigate in current tab if popup blocked
-                window.location.href = "./cbor.html";
-            }
-        });
-
-        $('#mdsButton').click(() => {
-            // Open the MDS viewer in a new tab so the app remains available
-            try {
-                window.open("./mds.html", "_blank");
-            } catch (e) {
-                window.location.href = "./mds.html";
-            }
-        });
-
         // AAGUID button may be removed; only attach handler if element exists
         const aaguidBtn = document.getElementById('aaguidButton');
         if (aaguidBtn) {
