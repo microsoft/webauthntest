@@ -6,15 +6,24 @@
     "version": "2026.01.16",
     "main": "app.js",
     "scripts": {
-        "start": "node app.js"
+        "start": "node app.js",
+        "dev:worker": "wrangler dev",
+        "db:apply": "wrangler d1 execute webauthntest --file=./schema.sql",
+        "db:apply:remote": "wrangler d1 execute webauthntest --file=./schema.sql --remote",
+        "deploy:worker": "wrangler deploy --name webauthntest",
+        "bootstrap:cf": "node scripts/bootstrap-cloudflare.mjs"
     },
     "dependencies": {
         "cbor": "^10.0.11",
+        "cbor-x": "^1.6.0",
         "cookie-parser": "^1.4.7",
         "express": "^5.2.1",
         "express-sslify": "^1.2.0",
         "mongoose": "^9.1.2",
         "uuid": "^13.0.0"
+    },
+    "devDependencies": {
+        "wrangler": "^4.59.2"
     },
     "engines": {
         "node": ">=24.11.0"

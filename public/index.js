@@ -811,7 +811,7 @@ try {
                             var id;
                             conditionalAuthOperationInProgress = true;
                             console.log("Starting Conditional Auth Operation");
-                            getChallenge(window.location.hostname).then(challenge => {
+                            getChallenge(window.location.hostname, 'webauthn.get').then(challenge => {
                                 return getAssertion(challenge, true)
                             }).then(credential => {
                                 id = credential.id;
@@ -888,7 +888,7 @@ try {
 
             disableControls();
 
-            getChallenge(window.location.hostname).then(challenge => {
+            getChallenge(window.location.hostname, 'webauthn.create').then(challenge => {
                 return createCredential(challenge)
             }).then(credential => {
                 id = credential.id;
@@ -932,7 +932,7 @@ try {
             var id;
 
             disableControls();
-            getChallenge(window.location.hostname).then(challenge => {
+            getChallenge(window.location.hostname, 'webauthn.get').then(challenge => {
                 return getAssertion(challenge, false)
             }).then(credential => {
                 id = credential.id;
@@ -1174,8 +1174,8 @@ try {
         updateMinimumState();
     }
 
-    function getChallenge(clientHostname) {
-        const params = new URLSearchParams({ clientHostname });
+    function getChallenge(clientHostname, type) {
+        const params = new URLSearchParams({ clientHostname, type: type || 'webauthn.get' });
         return rest_get(
             `/challenge?${params.toString()}`
         ).then(response => {
@@ -1913,7 +1913,7 @@ try {
         }
 
         // Get a fresh challenge from server
-        const challenge = await getChallenge(window.location.hostname);
+        const challenge = await getChallenge(window.location.hostname, 'webauthn.get');
 
         const getOptions = {
             challenge: challenge,
