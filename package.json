@@ -10,7 +10,7 @@
         "dev:worker": "wrangler dev",
         "db:apply": "wrangler d1 execute webauthntest --file=./schema.sql",
         "db:apply:remote": "wrangler d1 execute webauthntest --file=./schema.sql --remote",
-        "deploy:worker": "wrangler deploy",
+        "deploy:worker": "wrangler deploy --name webauthntest",
         "bootstrap:cf": "node scripts/bootstrap-cloudflare.mjs"
     },
     "dependencies": {
