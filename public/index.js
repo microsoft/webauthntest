@@ -37,6 +37,11 @@ try {
     var credentials = [];
     var conditionalAuthOperationInProgress = false;
     var ongoingAuth = null;
+    // Prefetched challenge promise for conditional mediation flow.
+    // We prefetch on "Passkey Authentication" click to avoid losing user-activation to network latency.
+    var pendingConditionalChallenge = null;
+    // Cache conditional-mediation support check (Promise<boolean>) so we only probe once per page load.
+    var conditionalMediationSupport = null;
     var selectedTransportCredentialId = null; // credential id currently being edited for transports
     // In-memory cache for AAGUID -> name lookups. Persisted mirror is stored in localStorage under 'aaguid_name_cache'.
     var aaguidNameCache = {};
@@ -801,40 +806,124 @@ try {
         });
 
         $('#getButton').click(async () => {
-            console.log("conditionalAuthOperationInProgress: ", conditionalAuthOperationInProgress);
-            if (!conditionalAuthOperationInProgress)
-            {
+            // Open dialog immediately.
+            getDialog.showModal();
+
+            // Prime focus to the autofill field (does not force a WebAuthn prompt by itself).
+            try {
+                var el = document.getElementById('get_conditionalUI');
+                if (el && typeof el.focus === 'function') el.focus();
+            } catch (e) { /* ignore */ }
+
+            // Prefetch challenge so the eventual conditional get() is not delayed by network.
+            // The actual conditional get() is started on focus/click of the autofill field.
+            try {
                 if (window.PublicKeyCredential) {
-                    try {
-                        const capabilities = await PublicKeyCredential.getClientCapabilities();
-                        if (capabilities.conditionalGet) {
-                            var id;
-                            conditionalAuthOperationInProgress = true;
-                            console.log("Starting Conditional Auth Operation");
-                            getChallenge(window.location.hostname, 'webauthn.get').then(challenge => {
-                                return getAssertion(challenge, true)
-                            }).then(credential => {
-                                id = credential.id;
-                                return updateCredentials(window.location.hostname);
-                            }).then(() => {
-                                conditionalAuthOperationInProgress = false;
-                                getDialog.close();
-                                setTimeout(() => {
-                                    highlightCredential(id);
-                                    toast("Successful AutoFill Assertion");
-                                }, 50);
-                            }).catch(e => {
-                                console.log(e);
-                            });
-                        }
-                    } catch (e) {
-                        console.error(e.message);
+                    if (!pendingConditionalChallenge) {
+                        pendingConditionalChallenge = getChallenge(window.location.hostname, 'webauthn.get');
                     }
+                }
+            } catch (e) {
+                // Non-fatal; the focus handler will try again.
+                pendingConditionalChallenge = null;
+            }
+        });
+
+        // Conditional mediation: start the pending WebAuthn get() when the user interacts
+        // with the dedicated autofill input. This matches expected browser behavior.
+        (function initConditionalMediationHandlers() {
+            var input = document.getElementById('get_conditionalUI');
+            if (!input) return;
+
+            async function isConditionalMediationSupported() {
+                if (!window.PublicKeyCredential) return false;
+                if (conditionalMediationSupport) return conditionalMediationSupport;
+
+                conditionalMediationSupport = (async () => {
+                    try {
+                        if (typeof PublicKeyCredential.isConditionalMediationAvailable === 'function') {
+                            return !!(await PublicKeyCredential.isConditionalMediationAvailable());
+                        }
+                    } catch (e) { /* fall through */ }
+
+                    try {
+                        if (typeof PublicKeyCredential.getClientCapabilities === 'function') {
+                            var caps = await PublicKeyCredential.getClientCapabilities();
+                            return !!(caps && caps.conditionalGet);
+                        }
+                    } catch (e) { /* ignore */ }
+
+                    return false;
+                })();
+
+                return conditionalMediationSupport;
+            }
+
+            async function ensureConditionalChallenge() {
+                if (!pendingConditionalChallenge) {
+                    pendingConditionalChallenge = getChallenge(window.location.hostname, 'webauthn.get');
+                }
+                return pendingConditionalChallenge;
+            }
+
+            async function startConditionalAuthIfNeeded() {
+                if (conditionalAuthOperationInProgress) return;
+
+                var supported = false;
+                try { supported = await isConditionalMediationSupported(); } catch (e) { supported = false; }
+                if (!supported) return;
+
+                conditionalAuthOperationInProgress = true;
+                var assertedId = null;
+
+                try {
+                    var challenge = await ensureConditionalChallenge();
+                    var credential = await getAssertion(challenge, true);
+                    assertedId = credential && credential.id ? credential.id : null;
+
+                    await updateCredentials(window.location.hostname);
+
+                    // Close dialog only on successful assertion.
+                    getDialog.close();
+                    setTimeout(() => {
+                        if (assertedId) highlightCredential(assertedId);
+                        toast('Successful AutoFill Assertion');
+                    }, 50);
+                } catch (e) {
+                    // NotAllowedError is common when user cancels/defocuses without selecting.
+                    try {
+                        if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) {
+                            return;
+                        }
+                    } catch (err) { /* ignore */ }
+                    console.log(e);
+                } finally {
+                    conditionalAuthOperationInProgress = false;
+                    // Challenge should be single-use; refresh next time.
+                    pendingConditionalChallenge = null;
                 }
             }
 
-            getDialog.showModal();
-        });
+            // Start on both focus and click (some browsers only trigger the picker on click).
+            input.addEventListener('focus', () => { startConditionalAuthIfNeeded(); }, { passive: true });
+            input.addEventListener('click', () => { startConditionalAuthIfNeeded(); }, { passive: true });
+
+            // If the dialog closes, ensure we don't leave a conditional request hanging.
+            try {
+                if (getDialog) {
+                    getDialog.addEventListener('close', function () {
+                        try {
+                            pendingConditionalChallenge = null;
+                            conditionalAuthOperationInProgress = false;
+                            if (ongoingAuth) {
+                                ongoingAuth.abort('Get dialog closed');
+                                ongoingAuth = null;
+                            }
+                        } catch (e) { /* ignore */ }
+                    });
+                }
+            } catch (e) { /* ignore */ }
+        })();
 
         $('#moreButton').click(async () => {
             if (!PublicKeyCredential || typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== "function") {
@@ -962,6 +1051,7 @@ try {
                 ongoingAuth.abort('User cancelled get dialog');
                 ongoingAuth = null;
             }
+            pendingConditionalChallenge = null;
             enableControls();
             getDialog.close();
         });
@@ -1610,6 +1700,12 @@ try {
             extensions: {}
         };
 
+        // For conditional mediation, sending an empty allowCredentials array can prevent
+        // browsers from showing the passkey picker. Omit allowCredentials entirely.
+        if (conditional === true) {
+            delete getAssertionOptions.allowCredentials;
+        }
+
         switch ($('#get_rpId').val()) {
             case "normal":
                 getAssertionOptions.rpId = window.location.hostname;
@@ -1742,8 +1838,7 @@ try {
                     getAssertionOptions.extensions.prf.eval = prfEval;
                 }
                 if ($('#get_prf_per_credential').is(":checked")) {
-                    if (getAssertionOptions.allowCredentials.length > 0)
-                    {
+                    if (getAssertionOptions.allowCredentials && getAssertionOptions.allowCredentials.length > 0) {
                         var evalByCredential = {};
                         for (const cred of getAssertionOptions.allowCredentials) {
                             var idBase64Url = byteArrayToBase64URL(cred.id);
@@ -1773,14 +1868,12 @@ try {
             getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
         }
 
-        if(ongoingAuth !== null) {
-            conditionalAuthOperationInProgress = false;
-            console.log("Cancelling ongoing authentication");
-            ongoingAuth.abort('Cancel ongoing authentication')
-        }
-        else
-        {
-            console.log("No ongoing authentication to cancel");
+        if (ongoingAuth !== null) {
+            console.log('Cancelling ongoing authentication');
+            try { ongoingAuth.abort('Cancel ongoing authentication'); } catch (e) { }
+            ongoingAuth = null;
+        } else {
+            console.log('No ongoing authentication to cancel');
         }
 
         ongoingAuth = new AbortController();
@@ -1854,12 +1947,16 @@ try {
         }).then(response => {
             return response.json();
         }).then(response => {
-            ongoingAuth = null;
             if (response.error) {
                 return Promise.reject(response.error);
             } else {
                 return Promise.resolve(response.result);
             }
+        }).catch(err => {
+            // Ensure caller can re-start after cancellation/error.
+            throw err;
+        }).finally(() => {
+            ongoingAuth = null;
         });
     }
 
