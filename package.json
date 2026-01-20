@@ -6,7 +6,8 @@
     "version": "2026.01.16",
     "main": "app.js",
     "scripts": {
-        "start": "node app.js",
+        "start": "wrangler dev",
+        "dev:node": "node app.js",
         "dev:worker": "wrangler dev",
         "db:apply": "wrangler d1 execute webauthntest --file=./schema.sql",
         "db:apply:remote": "wrangler d1 execute webauthntest --file=./schema.sql --remote",

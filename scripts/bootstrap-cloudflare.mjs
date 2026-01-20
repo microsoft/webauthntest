@@ -183,6 +183,31 @@ async function ensureSecret() {
   }
 }
 
+async function ensureUidHashSecret() {
+  // IMPORTANT: UID_HASH_SECRET affects how UIDs are derived.
+  // Overwriting it would effectively "move" users and break existing credentials.
+  // So: only set it if explicitly provided OR if it does not exist yet.
+
+  const provided = process.env.UID_HASH_SECRET;
+  if (provided) {
+    log('• Setting Worker secret UID_HASH_SECRET (from env)…');
+    await runWrangler(['secret', 'put', 'UID_HASH_SECRET', '--name', WORKER_NAME], { input: `${provided}\n` });
+    return;
+  }
+
+  const list = await runWrangler(['secret', 'list', '--name', WORKER_NAME], { allowFailure: true });
+  const existing = (list.stdout || '').toLowerCase().includes('"name": "uid_hash_secret"');
+  if (existing) {
+    log('• UID_HASH_SECRET already configured on Worker.');
+    return;
+  }
+
+  const generated = randomSecret();
+  log('• UID_HASH_SECRET not found; generating and setting Worker secret UID_HASH_SECRET…');
+  await runWrangler(['secret', 'put', 'UID_HASH_SECRET', '--name', WORKER_NAME], { input: `${generated}\n` });
+  log('  Generated UID_HASH_SECRET (saved only in Cloudflare).');
+}
+
 async function deploy() {
   log('• Deploying Worker…');
   const res = await runWrangler(['deploy', '--name', WORKER_NAME]);
@@ -193,7 +218,7 @@ async function main() {
   const argv = new Set(process.argv.slice(2));
   if (argv.has('--help') || argv.has('-h')) {
     log('Usage: npm run bootstrap:cf');
-    log('Environment: CF_WORKER_NAME, CF_D1_NAME, CHALLENGE_HMAC_SECRET');
+    log('Environment: CF_WORKER_NAME, CF_D1_NAME, CHALLENGE_HMAC_SECRET, UID_HASH_SECRET');
     process.exit(0);
   }
   const dryRun = argv.has('--dry-run');
@@ -207,6 +232,7 @@ async function main() {
   if (!dryRun) {
     await applySchemaRemote();
     await ensureSecret();
+    await ensureUidHashSecret();
     await deploy();
   } else {
     log('• Dry run: skipped schema/secret/deploy');
