@@ -10,6 +10,25 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Prevent FOUC - hide cards until JS determines visibility */
+        #selectedLabelCard[hidden],
+        #detailsCard[hidden] {
+            display: none !important;
+        }
+        /* Hide icon images completely until loaded - prevent alt text and broken icon */
+        #selectedIconLight[hidden],
+        #selectedIconDark[hidden] {
+            display: none !important;
+        }
+        /* Also hide icons that don't have a valid src yet */
+        #selectedIconLight:not([src]),
+        #selectedIconDark:not([src]),
+        #selectedIconLight[src=""],
+        #selectedIconDark[src=""] {
+            display: none !important;
+        }
+    </style>
 </head>
 
 <body class="min-h-screen bg-base-200 text-base-content cbor-page" style="--mono-max-height: none;">
@@ -22,11 +41,14 @@
 
         <div class="credentials-toolbar cbor-nav-toolbar">
             <div class="credentials-toolbar-actions cbor-nav-toolbar-actions" aria-label="Navigation actions">
-                <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Passkey Playground" aria-label="Passkey Playground">
+                <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Home" aria-label="Home">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>
                 </a>
                 <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
                     <span class="material-symbols-outlined" aria-hidden="true">code</span>
+                </a>
+                <a class="btn btn-ghost btn-sm btn-circle" href="mds.html" title="Authenticator Metadata" aria-label="Authenticator Metadata">
+                    <span class="material-symbols-outlined" aria-hidden="true">badge</span>
                 </a>
             </div>
         </div>
@@ -55,11 +77,11 @@
                 <div id="selectedLabelCard" class="card bg-base-100 shadow-xl border border-base-300" style="margin-top:18px;" hidden>
                     <div class="card-body" style="padding-top:12px; padding-bottom:12px;">
                         <div class="mds-selected-label-row">
-                            <div class="mds-selected-icons" aria-label="Authenticator icons">
-                                <img id="selectedIconLight" alt="Authenticator icon (light)" hidden>
-                                <img id="selectedIconDark" alt="Authenticator icon (dark)" hidden>
-                            </div>
                             <div id="selectedLabel" class="text-sm opacity-80" style="line-height:1.4;" hidden></div>
+                            <div class="mds-selected-icons" aria-label="Authenticator icons">
+                                <img id="selectedIconLight" hidden style="visibility:hidden;">
+                                <img id="selectedIconDark" hidden style="visibility:hidden;">
+                            </div>
                             <div class="mds-selected-actions" aria-label="Selected authenticator actions">
                                 <button type="button" class="btn btn-ghost btn-sm btn-circle" id="mdsViewCertsButton" title="View certificates" aria-label="View certificates" hidden>
                                     <span class="material-symbols-outlined" aria-hidden="true">verified</span>

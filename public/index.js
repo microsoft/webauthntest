@@ -835,6 +835,11 @@ try {
             var input = document.getElementById('get_conditionalUI');
             if (!input) return;
 
+            // Track if we've already started conditional auth for this focus session
+            var conditionalStarted = false;
+            // Delay timer to avoid interfering with keyboard on mobile
+            var conditionalDelayTimer = null;
+
             async function isConditionalMediationSupported() {
                 if (!window.PublicKeyCredential) return false;
                 if (conditionalMediationSupport) return conditionalMediationSupport;
@@ -868,11 +873,13 @@ try {
 
             async function startConditionalAuthIfNeeded() {
                 if (conditionalAuthOperationInProgress) return;
+                if (conditionalStarted) return; // Already started for this focus session
 
                 var supported = false;
                 try { supported = await isConditionalMediationSupported(); } catch (e) { supported = false; }
                 if (!supported) return;
 
+                conditionalStarted = true;
                 conditionalAuthOperationInProgress = true;
                 var assertedId = null;
 
@@ -904,15 +911,41 @@ try {
                 }
             }
 
-            // Start on both focus and click (some browsers only trigger the picker on click).
-            input.addEventListener('focus', () => { startConditionalAuthIfNeeded(); }, { passive: true });
-            input.addEventListener('click', () => { startConditionalAuthIfNeeded(); }, { passive: true });
+            // On focus, delay the conditional mediation start to allow the keyboard
+            // to fully appear on mobile devices. The browser's built-in autofill UI
+            // (via autocomplete="webauthn") typically handles showing passkey suggestions
+            // alongside the keyboard.
+            input.addEventListener('focus', () => {
+                // Clear any pending timer
+                if (conditionalDelayTimer) {
+                    clearTimeout(conditionalDelayTimer);
+                    conditionalDelayTimer = null;
+                }
+                // Delay conditional auth start to not interfere with keyboard on mobile
+                conditionalDelayTimer = setTimeout(() => {
+                    startConditionalAuthIfNeeded();
+                }, 300);
+            }, { passive: true });
+
+            // Reset the "started" flag when focus leaves so we can restart on next focus
+            input.addEventListener('blur', () => {
+                if (conditionalDelayTimer) {
+                    clearTimeout(conditionalDelayTimer);
+                    conditionalDelayTimer = null;
+                }
+                conditionalStarted = false;
+            }, { passive: true });
 
             // If the dialog closes, ensure we don't leave a conditional request hanging.
             try {
                 if (getDialog) {
                     getDialog.addEventListener('close', function () {
                         try {
+                            if (conditionalDelayTimer) {
+                                clearTimeout(conditionalDelayTimer);
+                                conditionalDelayTimer = null;
+                            }
+                            conditionalStarted = false;
                             pendingConditionalChallenge = null;
                             conditionalAuthOperationInProgress = false;
                             if (ongoingAuth) {
@@ -2141,11 +2174,43 @@ try {
                 return;
             }
 
-            const url = 'mds.html?aaguid=' + encodeURIComponent(formatted);
+            // Use postMessage handshake to transfer AAGUID to mds.html (similar to cbor.html)
             try {
-                window.open(url, '_blank', 'noopener');
-            } catch(err) {
-                window.location.href = url;
+                var nonce = Math.random().toString(36).slice(2, 12);
+                var child = window.open('./mds.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
+                if (!child) throw new Error('Popup blocked');
+                var handshakeDone = false;
+                var replyListener = function(ev) {
+                    try {
+                        if (ev.origin !== window.location.origin) return;
+                        if (ev.source !== child) return;
+                        var d = ev.data || {};
+                        if (d && d.type === 'mds-ready' && d.nonce === nonce) {
+                            try { child.postMessage({ type: 'mds-payload', nonce: nonce, aaguid: formatted }, window.location.origin); } catch(e) { console.warn('postMessage failed', e); }
+                            handshakeDone = true;
+                            window.removeEventListener('message', replyListener);
+                        }
+                    } catch(e) { console.warn('handshake listener error', e); }
+                };
+                window.addEventListener('message', replyListener);
+                // Fallback after timeout
+                setTimeout(function() {
+                    if (handshakeDone) return;
+                    try { window.removeEventListener('message', replyListener); } catch(e) {}
+                    // Fallback to query parameter if postMessage fails
+                    try {
+                        if (child && !child.closed) child.location.href = './mds.html?aaguid=' + encodeURIComponent(formatted);
+                        else window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank');
+                    } catch(navErr) { window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank'); }
+                }, 5000);
+                return;
+            } catch(pmErr) {
+                console.warn('postMessage/open failed, falling back to query param', pmErr);
+                try {
+                    window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank');
+                } catch(err) {
+                    window.location.href = './mds.html?aaguid=' + encodeURIComponent(formatted);
+                }
             }
         });
 
@@ -3507,8 +3572,13 @@ try {
 
         // Cleanup when dialog closes
         const cleanupPk = () => {
-            window.removeEventListener('resize', onPkResize);
-            clearTimeout(pkResizeTimer);
+            // Clean up any hex observers/resize listeners attached to public key elements
+            try {
+                dlg.querySelectorAll('.public-key-hex').forEach(el => {
+                    if (el._hexObserver) { el._hexObserver.disconnect(); delete el._hexObserver; }
+                    if (el._hexResizeListener) { window.removeEventListener('resize', el._hexResizeListener); delete el._hexResizeListener; }
+                });
+            } catch (e) { /* ignore */ }
         };
 
         if (!dlg.showModal) dialogPolyfill.registerDialog(dlg);
