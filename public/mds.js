@@ -807,7 +807,9 @@ function clearSelectedIcons() {
     for (const img of imgs) {
         if (!img) continue;
         try { img.removeAttribute('src'); } catch { /* ignore */ }
+        try { img.removeAttribute('alt'); } catch { /* ignore */ }
         try { img.hidden = true; } catch { /* ignore */ }
+        try { img.style.visibility = 'hidden'; } catch { /* ignore */ }
     }
 }
 
@@ -833,14 +835,31 @@ async function loadAndRenderSelectedIcons(aaguid) {
 
     const [lightSrc, darkSrc] = await Promise.all([tryLoad(lightUrl), tryLoad(darkUrl)]);
 
-    if (els.selectedIconLight && lightSrc) {
-        els.selectedIconLight.src = lightSrc;
-        els.selectedIconLight.hidden = false;
+    // Helper to set src and wait for image to load before showing
+    function setImageAndShow(imgEl, src, altText) {
+        if (!imgEl || !src) return Promise.resolve();
+        return new Promise((resolve) => {
+            const onLoad = () => {
+                imgEl.alt = altText;
+                imgEl.style.visibility = '';
+                imgEl.hidden = false;
+                resolve();
+            };
+            const onError = () => {
+                imgEl.hidden = true;
+                imgEl.style.visibility = 'hidden';
+                resolve();
+            };
+            imgEl.addEventListener('load', onLoad, { once: true });
+            imgEl.addEventListener('error', onError, { once: true });
+            imgEl.src = src;
+        });
     }
-    if (els.selectedIconDark && darkSrc) {
-        els.selectedIconDark.src = darkSrc;
-        els.selectedIconDark.hidden = false;
-    }
+
+    await Promise.all([
+        setImageAndShow(els.selectedIconLight, lightSrc, 'Authenticator icon (light)'),
+        setImageAndShow(els.selectedIconDark, darkSrc, 'Authenticator icon (dark)')
+    ]);
 }
 
 async function fetchMetadataJson(aaguid) {
@@ -1118,6 +1137,64 @@ function getInitialAaguidFromUrl() {
     }
 }
 
+// PostMessage-based AAGUID transfer (similar to cbor.html).
+// When opened with ?pm=1&nonce=..., we send 'mds-ready' to opener and wait for 'mds-payload'.
+let postMessageAaguidPromise = null;
+
+function setupPostMessageHandler() {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const pm = params.get('pm');
+        const nonceParam = params.get('nonce');
+        if (!pm || !window.opener) return;
+
+        // Create a promise that resolves when we receive the payload
+        postMessageAaguidPromise = new Promise((resolve) => {
+            let resolved = false;
+
+            // Listen for payload
+            function onMsg(ev) {
+                try {
+                    if (ev.origin !== window.location.origin) return;
+                    if (ev.source !== window.opener) return;
+                    const d = ev.data || {};
+                    if (d && d.type === 'mds-payload' && typeof d.aaguid === 'string') {
+                        // Verify nonce matches (if provided)
+                        if (nonceParam && d.nonce !== nonceParam) {
+                            console.warn('Received mds-payload with mismatched nonce');
+                            return;
+                        }
+                        resolved = true;
+                        resolve(d.aaguid);
+                        // Remove listener after receiving
+                        try { window.removeEventListener('message', onMsg); } catch (e) { }
+                    }
+                } catch (e) {
+                    console.warn('Error handling incoming mds-payload', e);
+                }
+            }
+            window.addEventListener('message', onMsg);
+
+            // Timeout after 2 seconds - resolve with null if no message received
+            setTimeout(() => {
+                if (!resolved) {
+                    try { window.removeEventListener('message', onMsg); } catch (e) { }
+                    resolve(null);
+                }
+            }, 2000);
+        });
+
+        // Send ready message to opener with nonce
+        try {
+            window.opener.postMessage({ type: 'mds-ready', nonce: nonceParam || null }, window.location.origin);
+        } catch (e) {
+            console.warn('Unable to post mds-ready to opener', e);
+        }
+    } catch (e) {
+        console.warn('setupPostMessageHandler error', e);
+    }
+}
+
 function wireUi() {
     let debounceTimer = null;
 
@@ -1280,6 +1357,9 @@ function wireUi() {
         updateViewCertsButtonFromMetadata(null);
     } catch { /* ignore */ }
 
+    // Setup postMessage handler early so we can receive payload from opener
+    setupPostMessageHandler();
+
     wireUi();
     // Put cursor in the search box on load.
     try {
@@ -1300,7 +1380,14 @@ function wireUi() {
     await loadDataset();
 
     // If launched from a credential card, preselect the provided AAGUID.
-    const initial = getInitialAaguidFromUrl();
+    // Check postMessage payload first (await the promise), then fall back to URL query parameter.
+    let postMessageAaguid = null;
+    if (postMessageAaguidPromise) {
+        try {
+            postMessageAaguid = await postMessageAaguidPromise;
+        } catch { /* ignore */ }
+    }
+    const initial = postMessageAaguid || getInitialAaguidFromUrl();
     if (initial) {
         const q = normalizeAaguid(initial);
         try {
