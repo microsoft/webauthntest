@@ -948,24 +948,25 @@ header.navbar {
   padding: 12px 16px;
 }
 
-/* Prevent header titles from wrapping on mobile: allow shrink + ellipsis */
+/* Allow header titles to display fully on mobile */
 header.navbar .navbar-start {
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 header.navbar .navbar-start h1 {
   /* Responsive sizing that still matches the desktop look */
-  font-size: clamp(20px, 6vw, 32px);
+  font-size: clamp(18px, 5vw, 32px);
   font-weight: 400;
   margin: 0;
   min-width: 0;
+  line-height: 1.2;
 }
 
 header.navbar .navbar-start h1 .title-link {
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Allow title to wrap if needed on very small screens */
+  white-space: normal;
+  word-break: break-word;
 }
 
 header.navbar #signOutButton {

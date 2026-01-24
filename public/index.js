@@ -835,10 +835,10 @@ try {
             var input = document.getElementById('get_conditionalUI');
             if (!input) return;
 
-            // Track if we've already started conditional auth for this focus session
+            // Track if we've already started conditional auth for this dialog session
             var conditionalStarted = false;
-            // Delay timer to avoid interfering with keyboard on mobile
-            var conditionalDelayTimer = null;
+            // Reference to getDialog for closing
+            var dialogEl = document.getElementById('getDialog');
 
             async function isConditionalMediationSupported() {
                 if (!window.PublicKeyCredential) return false;
@@ -871,9 +871,51 @@ try {
                 return pendingConditionalChallenge;
             }
 
+            function blurInput() {
+                // Blur the input to dismiss keyboard on mobile
+                try {
+                    if (input) {
+                        input.blur();
+                    }
+                    // Also blur any active element as a fallback
+                    if (document.activeElement && document.activeElement.blur) {
+                        document.activeElement.blur();
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            function closeDialog() {
+                // First blur input to dismiss keyboard
+                blurInput();
+                
+                // Small delay to let keyboard dismiss before closing dialog
+                setTimeout(function() {
+                    try {
+                        if (dialogEl && dialogEl.open) {
+                            dialogEl.close();
+                        }
+                    } catch (e) { /* ignore */ }
+                    
+                    // Fallback: try to click the close button if dialog is still open
+                    try {
+                        if (dialogEl && dialogEl.open) {
+                            var closeBtn = dialogEl.querySelector('button.close, .app-dialog-actions button.close');
+                            if (closeBtn) closeBtn.click();
+                        }
+                    } catch (e2) { /* ignore */ }
+                    
+                    // Final fallback: remove open attribute directly
+                    try {
+                        if (dialogEl && dialogEl.open) {
+                            dialogEl.removeAttribute('open');
+                        }
+                    } catch (e3) { /* ignore */ }
+                }, 100);
+            }
+
             async function startConditionalAuthIfNeeded() {
                 if (conditionalAuthOperationInProgress) return;
-                if (conditionalStarted) return; // Already started for this focus session
+                if (conditionalStarted) return; // Already started for this dialog session
 
                 var supported = false;
                 try { supported = await isConditionalMediationSupported(); } catch (e) { supported = false; }
@@ -890,16 +932,23 @@ try {
 
                     await updateCredentials(window.location.hostname);
 
-                    // Close dialog only on successful assertion.
-                    getDialog.close();
+                    // Blur input first to dismiss keyboard
+                    blurInput();
+
+                    // Close dialog after successful assertion (with delay for keyboard to dismiss)
+                    closeDialog();
+                    
+                    // Show toast after dialog has time to close
                     setTimeout(() => {
                         if (assertedId) highlightCredential(assertedId);
                         toast('Successful AutoFill Assertion');
-                    }, 50);
+                    }, 250);
                 } catch (e) {
                     // NotAllowedError is common when user cancels/defocuses without selecting.
                     try {
                         if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) {
+                            // Still blur input on cancel to dismiss keyboard
+                            blurInput();
                             return;
                         }
                     } catch (err) { /* ignore */ }
@@ -911,51 +960,45 @@ try {
                 }
             }
 
-            // On focus, delay the conditional mediation start to allow the keyboard
-            // to fully appear on mobile devices. The browser's built-in autofill UI
-            // (via autocomplete="webauthn") typically handles showing passkey suggestions
-            // alongside the keyboard.
-            input.addEventListener('focus', () => {
-                // Clear any pending timer
-                if (conditionalDelayTimer) {
-                    clearTimeout(conditionalDelayTimer);
-                    conditionalDelayTimer = null;
-                }
-                // Delay conditional auth start to not interfere with keyboard on mobile
-                conditionalDelayTimer = setTimeout(() => {
-                    startConditionalAuthIfNeeded();
-                }, 300);
-            }, { passive: true });
+            // Start conditional auth when dialog opens (not on input focus).
+            // This avoids interfering with keyboard on mobile browsers.
+            // The browser's built-in autofill UI (via autocomplete="webauthn")
+            // will show passkey suggestions when the input is focused.
+            if (dialogEl) {
+                dialogEl.addEventListener('DOMAttrModified', function(e) {
+                    if (e.attrName === 'open' && dialogEl.open && !conditionalStarted) {
+                        // Small delay to let dialog fully render
+                        setTimeout(() => startConditionalAuthIfNeeded(), 100);
+                    }
+                }, false);
 
-            // Reset the "started" flag when focus leaves so we can restart on next focus
-            input.addEventListener('blur', () => {
-                if (conditionalDelayTimer) {
-                    clearTimeout(conditionalDelayTimer);
-                    conditionalDelayTimer = null;
-                }
-                conditionalStarted = false;
-            }, { passive: true });
-
-            // If the dialog closes, ensure we don't leave a conditional request hanging.
-            try {
-                if (getDialog) {
-                    getDialog.addEventListener('close', function () {
-                        try {
-                            if (conditionalDelayTimer) {
-                                clearTimeout(conditionalDelayTimer);
-                                conditionalDelayTimer = null;
+                // MutationObserver fallback for browsers that don't support DOMAttrModified
+                try {
+                    var observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            if (mutation.attributeName === 'open' && dialogEl.open && !conditionalStarted) {
+                                setTimeout(() => startConditionalAuthIfNeeded(), 100);
                             }
-                            conditionalStarted = false;
-                            pendingConditionalChallenge = null;
-                            conditionalAuthOperationInProgress = false;
-                            if (ongoingAuth) {
-                                ongoingAuth.abort('Get dialog closed');
-                                ongoingAuth = null;
-                            }
-                        } catch (e) { /* ignore */ }
+                        });
                     });
-                }
-            } catch (e) { /* ignore */ }
+                    observer.observe(dialogEl, { attributes: true, attributeFilter: ['open'] });
+                } catch (e) { /* ignore */ }
+            }
+
+            // Reset the "started" flag when dialog closes so we can restart next time
+            if (dialogEl) {
+                dialogEl.addEventListener('close', function () {
+                    try {
+                        conditionalStarted = false;
+                        pendingConditionalChallenge = null;
+                        conditionalAuthOperationInProgress = false;
+                        if (ongoingAuth) {
+                            ongoingAuth.abort('Get dialog closed');
+                            ongoingAuth = null;
+                        }
+                    } catch (e) { /* ignore */ }
+                });
+            }
         })();
 
         $('#moreButton').click(async () => {
