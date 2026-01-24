@@ -1,4 +1,4 @@
-import { decode as cborDecode, encode as cborEncode } from 'cbor-x';
+import { decode as cborDecode, decodeMultiple as cborDecodeMultiple, encode as cborEncode } from 'cbor-x';
 import {
   base64UrlToBytes,
   base64ToBytes,
@@ -36,7 +36,9 @@ function formatUuidFromBytes(u8) {
 function coseToJwk(coseKeyBytes) {
   // COSE_Key is a CBOR map. Depending on decoder/runtime it may decode to a Map
   // or to a plain object with stringified integer keys.
-  const key = cborDecode(coseKeyBytes);
+  // Use decodeMultiple to handle cases where extra bytes (e.g., extension data) follow the COSE key
+  const decoded = cborDecodeMultiple(coseKeyBytes);
+  const key = decoded && decoded.length > 0 ? decoded[0] : cborDecode(coseKeyBytes);
 
   const get = (label) => {
     if (key && typeof key.get === 'function') return key.get(label);
