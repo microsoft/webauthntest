@@ -2337,6 +2337,31 @@ try {
     }
 
     /**
+     * Determines if a credential is device-bound or synced based on the BS (Backup State) flag.
+     * If BS=0, the credential is device-bound. If BS=1, it's synced.
+     * @param {string} authenticatorDataSummary - The authenticator data summary string containing flags
+     * @returns {{isDeviceBound: boolean, label: string}}
+     */
+    function getDeviceBoundStatus(authenticatorDataSummary) {
+        if (!authenticatorDataSummary) {
+            return { isDeviceBound: null, label: 'Unknown' };
+        }
+        // Parse BS flag from summary string like "UP=1, UV=1, BE=1, BS=0, AT=1, ED=0, SignCount=0"
+        var bsMatch = authenticatorDataSummary.match(/BS=(\d)/);
+        if (bsMatch) {
+            var bsValue = parseInt(bsMatch[1], 10);
+            // BS=0 means credential is device-bound (not backed up)
+            // BS=1 means credential is synced (backed up)
+            if (bsValue === 0) {
+                return { isDeviceBound: true, label: 'Device Bound' };
+            } else {
+                return { isDeviceBound: false, label: 'Synced' };
+            }
+        }
+        return { isDeviceBound: null, label: 'Unknown' };
+    }
+
+    /**
      * UI: Renders a single credential
      * @param {Credential} credential 
      */
@@ -2374,6 +2399,9 @@ try {
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
+    // Device Bound status inferred from BS flag in authenticator data
+    var deviceBoundStatus = getDeviceBoundStatus(credential.creationData.authenticatorDataSummary);
+    html += '             <dt>Synced vs Device Bound</dt><dd><span class="mono">' + escapeHtml(deviceBoundStatus.label) + '</span></dd>';
     // RP ID and PRF Enabled moved to the Registration Details dialog
     html += '             <dt>Authenticator Data</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorDataSummary || '') + '</span></dd>';
         if (credential.hasOwnProperty('transports')) {
