@@ -19,12 +19,6 @@
             "port": 9229,
             "restart": true,
             "timeout": 30000
-        },
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Legacy: Node app.js",
-            "program": "${workspaceFolder}/app.js"
         }
     ],
     "compounds": [

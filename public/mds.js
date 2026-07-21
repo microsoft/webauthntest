@@ -64,12 +64,43 @@ function oidToName(oid) {
         '2.5.29.37': 'Extended Key Usage',
         '1.2.840.113549.1.1.1': 'RSA Encryption',
         '1.2.840.10045.2.1': 'EC Public Key',
+        '1.3.101.112': 'Ed25519',
+        '2.16.840.1.101.3.4.3.17': 'ML-DSA-44',
+        '2.16.840.1.101.3.4.3.18': 'ML-DSA-65',
+        '2.16.840.1.101.3.4.3.19': 'ML-DSA-87',
         '2.5.4.3': 'Common Name',
         '2.5.4.6': 'Country',
         '2.5.4.10': 'Organization',
         '2.5.4.11': 'Organizational Unit'
     };
     return map[oid] || oid;
+}
+
+// Resolves a certificate public-key OID (plus EC named-curve OID) to the COSE
+// algorithm name and numeric identifier, e.g. { name: 'ES384', num: -35 }.
+// Returns null when no COSE mapping applies (e.g. RSA).
+function certPublicKeyCose(oid, curveOid) {
+    const coseNames = {
+        '-7': 'ES256', '-35': 'ES384', '-36': 'ES512',
+        '-8': 'EdDSA',
+        '-48': 'ML-DSA-44', '-49': 'ML-DSA-65', '-50': 'ML-DSA-87',
+    };
+    const ecCurveCose = {
+        '1.2.840.10045.3.1.7': -7,
+        '1.3.132.0.34': -35,
+        '1.3.132.0.35': -36,
+    };
+    const directCose = {
+        '1.3.101.112': -8,
+        '2.16.840.1.101.3.4.3.17': -48,
+        '2.16.840.1.101.3.4.3.18': -49,
+        '2.16.840.1.101.3.4.3.19': -50,
+    };
+    let cose = null;
+    if (oid === '1.2.840.10045.2.1') cose = (curveOid in ecCurveCose) ? ecCurveCose[curveOid] : null;
+    else if (oid in directCose) cose = directCose[oid];
+    if (cose === null || cose === undefined) return null;
+    return { name: coseNames[String(cose)] || ('COSE ' + cose), num: cose };
 }
 
 function escapeHtml(s) {
@@ -258,6 +289,14 @@ async function parseCertificateString(certString) {
                 const modHex = pvtsutils.Convert.ToHex(rsaPub.modulus.valueBlock.valueHex);
                 publicKey.size = (modHex.length / 2) * 8;
             }
+        } else if (alg === '1.2.840.10045.2.1') { // ecPublicKey
+            // Named curve OID is carried in the algorithm parameters.
+            const params = cert.subjectPublicKeyInfo.algorithm.algorithmParams;
+            try {
+                if (params && params.valueBlock && typeof params.valueBlock.toString === 'function') {
+                    publicKey.curveOid = params.valueBlock.toString();
+                }
+            } catch { /* ignore curve parse errors */ }
         }
     } catch { /* ignore */ }
 
@@ -494,10 +533,24 @@ async function showMdsCertificatesDialog() {
             }
 
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
-                const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
+                const oid = c.publicKey.algorithm || '';
+                const algName = oid ? oidToName(oid) : '';
+                // Resolve the COSE algorithm name/number from the key OID (+ EC curve).
+                const cose = certPublicKeyCose(oid, c.publicKey.curveOid);
+                // Build label: friendly name, then (OID[, size]), then COSE.
+                let label = algName || oid || '';
+                const parenParts = [];
+                if (algName && algName !== oid && oid) parenParts.push(oid);
+                if (c.publicKey.size) parenParts.push(c.publicKey.size + ' bits');
+                if (parenParts.length) label += ' (' + parenParts.join(', ') + ')';
+                if (cose) {
+                    label += (algName && algName.indexOf(cose.name) !== -1)
+                        ? ' (COSE ' + cose.num + ')'
+                        : ' \u00b7 ' + cose.name + ' (' + cose.num + ')';
+                }
                 const copyBtn = c.publicKeyHex ? '<button class="btn btn-ghost btn-xs btn-square cert-copy-publickey" data-idx="' + idx + '" title="Copy public key (hex)"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>' : '';
                 const toggleBtn = c.publicKeyHex ? '<button class="btn btn-link btn-sm public-key-toggle" aria-expanded="false" title="Show public key"><span class="material-symbols-outlined" aria-hidden="true">expand_more</span>&nbsp;Show</button>' : '';
-                html += '<div class="text-sm"><span class="cert-label">Public Key:</span> <span class="cert-value">' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</span> ' + copyBtn + ' ' + toggleBtn + '</div>';
+                html += '<div class="text-sm"><span class="cert-label">Public Key:</span> <span class="cert-value">' + escapeHtml(label) + '</span> ' + copyBtn + ' ' + toggleBtn + '</div>';
                 if (c.publicKeyHex) {
                     html += '<div class="public-key-block collapsed"><code class="public-key-hex" data-public-key-raw="' + escapeHtml(c.publicKeyHex) + '"></code></div>';
                 }

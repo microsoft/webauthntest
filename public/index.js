@@ -1077,6 +1077,16 @@ try {
             createDialog.close();
         });
 
+        $('#createDialog_previewButton').click(() => {
+            try {
+                var challenge = window.crypto.getRandomValues(new Uint8Array(16)).buffer;
+                var options = buildCreateCredentialOptions(challenge);
+                showRequestPreview('Credential Creation Request (navigator.credentials.create)', { publicKey: options });
+            } catch (e) {
+                toast("ERROR: " + (e && e.message ? e.message : e));
+            }
+        });
+
         // Overflow menu forwarding: trigger the corresponding button
         try{
             const menuItems = document.querySelectorAll('#fabOverflowMenu [data-target]');
@@ -1130,6 +1140,21 @@ try {
             pendingConditionalChallenge = null;
             enableControls();
             getDialog.close();
+        });
+
+        $('#getDialog_previewButton').click(() => {
+            try {
+                var challenge = window.crypto.getRandomValues(new Uint8Array(16)).buffer;
+                var options = buildGetAssertionOptions(challenge, false);
+                showRequestPreview('Assertion Request (navigator.credentials.get)', { publicKey: options, mediation: 'optional' });
+            } catch (e) {
+                toast("ERROR: " + (e && e.message ? e.message : e));
+            }
+        });
+
+        $('#requestPreviewDialog_closeButton, #requestPreviewDialog_xButton').click(() => {
+            var previewDialog = document.getElementById('requestPreviewDialog');
+            if (previewDialog) previewDialog.close();
         });
 
         $('#creationDataDialog_closeButton').click(() => {
@@ -1385,9 +1410,14 @@ try {
      * @param {ArrayBuffer} challenge challenge to use
      * @return {Promise<Credential>} server response object
      */
-    function createCredential(challenge) {
+    /**
+     * Builds the PublicKeyCredentialCreationOptions object from the current create dialog inputs.
+     * @param {ArrayBuffer} challenge challenge to use
+     * @return {Object} the createCredentialOptions object (with binary fields as ArrayBuffer/TypedArray)
+     */
+    function buildCreateCredentialOptions(challenge) {
         if (!PublicKeyCredential)
-            return Promise.reject("Error: WebAuthn APIs are not present on this device");
+            throw new Error("Error: WebAuthn APIs are not present on this device");
 
         var createCredentialOptions = {
             rp: {
@@ -1471,7 +1501,7 @@ try {
             }
         });
         if (createCredentialOptions.pubKeyCredParams.length === 0) {
-            return Promise.reject("No algorithms selected. Select at least one algorithm.");
+            throw new Error("No algorithms selected. Select at least one algorithm.");
         }
 
         // Collect prioritized hints (optional)
@@ -1660,6 +1690,22 @@ try {
             createCredentialOptions.extensions.largeBlob.support = $('#create_largeBlob').val();
         }
 
+        return createCredentialOptions;
+    }
+
+    /**
+     * Calls the .create() webauthn APIs and sends returns to server
+     * @param {ArrayBuffer} challenge challenge to use
+     * @return {Promise<Credential>} server response object
+     */
+    function createCredential(challenge) {
+        var createCredentialOptions;
+        try {
+            createCredentialOptions = buildCreateCredentialOptions(challenge);
+        } catch (e) {
+            return Promise.reject(e && e.message ? e.message : String(e));
+        }
+
         return navigator.credentials.create({
             publicKey: createCredentialOptions
         }).then(attestation => {
@@ -1761,11 +1807,17 @@ try {
     * @param {boolean} conditional Set to `true` if this is for a conditional UI.
     * @return {any} server response object
     */
-    function getAssertion(challenge, conditional = false) {
+    /**
+    * Builds the PublicKeyCredentialRequestOptions object from the current get dialog inputs.
+    * @param {ArrayBuffer} challenge
+    * @param {boolean} conditional Set to `true` if this is for a conditional UI.
+    * @return {Object} the getAssertionOptions object (with binary fields as ArrayBuffer/TypedArray)
+    */
+    function buildGetAssertionOptions(challenge, conditional = false) {
         var largeBlobPresent = false;
 
         if (typeof(PublicKeyCredential) === "undefined")
-            return Promise.reject("Error: WebAuthn APIs are not present on this device");
+            throw new Error("Error: WebAuthn APIs are not present on this device");
 
         var getAssertionOptions = {
             rpId: undefined,
@@ -1942,6 +1994,23 @@ try {
                 getAssertionOptions.extensions.largeBlob = {};
             }
             getAssertionOptions.extensions.largeBlob.write = stringToArrayBuffer($('#get_largeBlobText').val());
+        }
+
+        return getAssertionOptions;
+    }
+
+    /**
+    * Calls the .get() API and sends result to server to verify
+    * @param {ArrayBuffer} challenge
+    * @param {boolean} conditional Set to `true` if this is for a conditional UI.
+    * @return {any} server response object
+    */
+    function getAssertion(challenge, conditional = false) {
+        var getAssertionOptions;
+        try {
+            getAssertionOptions = buildGetAssertionOptions(challenge, conditional);
+        } catch (e) {
+            return Promise.reject(e && e.message ? e.message : String(e));
         }
 
         if (ongoingAuth !== null) {
@@ -2172,15 +2241,7 @@ try {
 
         $(".deleteCredentialButton").click(e => {
             const id = $(e.currentTarget).attr("data-value");
-            // show confirmation dialog
-            try {
-                const dlg = document.querySelector('#confirmDeleteDialog');
-                dlg._deleteId = id;
-                dlg.showModal();
-            } catch(err) {
-                // fallback: delete immediately
-                deleteCredential(id).catch(err=> toast('Delete failed: '+(err && err.message?err.message:err)));
-            }
+            deleteCredential(id).catch(err=> toast('Delete failed: '+(err && err.message?err.message:err)));
         });
 
         $(".creationDataDetails").click(e => {
@@ -2743,14 +2804,31 @@ try {
             }
         } catch (e) { /* non-fatal */ }
     $("#creationData_residentKey").text(sanitizeForDisplay(credential.metadata.residentKey));
-    $("#creationData_PRF_First").text(sanitizeForDisplay(credential.creationData.prfFirst));
-    $("#creationData_PRF_Second").text(sanitizeForDisplay(credential.creationData.prfSecond));
+    try {
+        attachResponsiveHex('creationData_PRF_First', credential.creationData.prfFirst);
+        attachResponsiveHex('creationData_PRF_Second', credential.creationData.prfSecond);
+    } catch (e) {
+        $("#creationData_PRF_First").text(sanitizeForDisplay(credential.creationData.prfFirst));
+        $("#creationData_PRF_Second").text(sanitizeForDisplay(credential.creationData.prfSecond));
+    }
 
         // Show/hide copy buttons depending on whether the corresponding field has content
         try {
             ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
     // Populate RP ID and PRF Enabled moved into the dialog
     $("#creationData_rpId").text(sanitizeForDisplay(credential.metadata.rpId));
+    // Attestation Verification (edge deployment populates these fields; absent on Node).
+    try {
+        var attEl = document.getElementById('creationData_attestationVerification');
+        if (attEl) {
+            if (typeof credential.creationData.attestationVerification !== 'undefined') {
+                var attVerif = credential.creationData.attestationVerification || '';
+                attEl.innerHTML = '<span class="mono">' + escapeHtml(attVerif) + '</span>';
+            } else {
+                attEl.innerHTML = '<span class="mono">n/a</span>';
+            }
+        }
+    } catch (e) { /* non-fatal */ }
     $("#creationData_prfEnabled").text(sanitizeForDisplay(String(credential.creationData.prfEnabled || '')));
         } catch (e) { /* non-fatal */ }
 
@@ -2976,12 +3054,44 @@ try {
             '2.5.29.37': 'Extended Key Usage',
             '1.2.840.113549.1.1.1': 'RSA Encryption',
             '1.2.840.10045.2.1': 'EC Public Key',
+            '1.3.101.112': 'Ed25519',
+            '2.16.840.1.101.3.4.3.17': 'ML-DSA-44',
+            '2.16.840.1.101.3.4.3.18': 'ML-DSA-65',
+            '2.16.840.1.101.3.4.3.19': 'ML-DSA-87',
             '2.5.4.3': 'Common Name',
             '2.5.4.6': 'Country',
             '2.5.4.10': 'Organization',
             '2.5.4.11': 'Organizational Unit'
         };
         return map[oid] || oid;
+    }
+
+    // Resolves a certificate public-key OID (plus EC named-curve OID) to the COSE
+    // algorithm name and numeric identifier, e.g. { name: 'ES384', num: -35 }.
+    // Returns null when no COSE mapping applies (e.g. RSA, whose signature scheme
+    // is not encoded by the key OID).
+    function certPublicKeyCose(oid, curveOid) {
+        const coseNames = {
+            '-7': 'ES256', '-35': 'ES384', '-36': 'ES512',
+            '-8': 'EdDSA',
+            '-48': 'ML-DSA-44', '-49': 'ML-DSA-65', '-50': 'ML-DSA-87',
+        };
+        const ecCurveCose = {
+            '1.2.840.10045.3.1.7': -7,
+            '1.3.132.0.34': -35,
+            '1.3.132.0.35': -36,
+        };
+        const directCose = {
+            '1.3.101.112': -8,
+            '2.16.840.1.101.3.4.3.17': -48,
+            '2.16.840.1.101.3.4.3.18': -49,
+            '2.16.840.1.101.3.4.3.19': -50,
+        };
+        let cose = null;
+        if (oid === '1.2.840.10045.2.1') cose = (curveOid in ecCurveCose) ? ecCurveCose[curveOid] : null;
+        else if (oid in directCose) cose = directCose[oid];
+        if (cose === null || cose === undefined) return null;
+        return { name: coseNames[String(cose)] || ('COSE ' + cose), num: cose };
     }
 
     /**
@@ -3034,11 +3144,13 @@ try {
                             publicKey.size = (modHex.length / 2) * 8; // bits
                         }
                     } else if (alg === '1.2.840.10045.2.1') { // ecPublicKey
-                        // Try to get named curve OID
+                        // Named curve OID is carried in the algorithm parameters.
                         const params = cert.subjectPublicKeyInfo.algorithm.algorithmParams;
-                        if (params && params.valueBlock && params.valueBlock.toString) {
-                            publicKey.size = null; // curve name unknown here; keep null
-                        }
+                        try {
+                            if (params && params.valueBlock && typeof params.valueBlock.toString === 'function') {
+                                publicKey.curveOid = params.valueBlock.toString();
+                            }
+                        } catch (e) { /* ignore curve parse errors */ }
                     }
                 } catch (e) { /* ignore public key parse errors */ }
 
@@ -3283,11 +3395,25 @@ try {
             html += '<div class="text-sm"><span class="cert-label">Validity:</span> <span class="cert-value">' + escapeHtml(c.notBefore || '') + ' → ' + escapeHtml(c.notAfter || '') + '</span></div>';
             if (c.fingerprintSHA256) html += '<div class="text-sm"><span class="cert-label">Fingerprint (SHA-256):</span> <span class="cert-value">' + escapeHtml((c.fingerprintSHA256Colon || c.fingerprintSHA256)) + '</span> <button class="btn btn-ghost btn-xs btn-square cert-copy-fingerprint" data-idx="' + idx + '" title="Copy fingerprint"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
             if (c.publicKey && (c.publicKey.algorithm || c.publicKey.size)) {
-                const algName = c.publicKey.algorithm ? oidToName(c.publicKey.algorithm) : '';
+                const oid = c.publicKey.algorithm || '';
+                const algName = oid ? oidToName(oid) : '';
+                // Resolve the COSE algorithm name/number from the key OID (+ EC curve).
+                const cose = certPublicKeyCose(oid, c.publicKey.curveOid);
+                // Build label: friendly name, then (OID[, size]), then COSE.
+                let label = algName || oid || '';
+                const parenParts = [];
+                if (algName && algName !== oid && oid) parenParts.push(oid);
+                if (c.publicKey.size) parenParts.push(c.publicKey.size + ' bits');
+                if (parenParts.length) label += ' (' + parenParts.join(', ') + ')';
+                if (cose) {
+                    label += (algName && algName.indexOf(cose.name) !== -1)
+                        ? ' (COSE ' + cose.num + ')'
+                        : ' \u00b7 ' + cose.name + ' (' + cose.num + ')';
+                }
                 // Build inline Public Key line: label, summary, copy button and toggle
                 let copyBtn = c.publicKeyHex ? '<button class="btn btn-ghost btn-xs btn-square cert-copy-publickey" data-idx="' + idx + '" title="Copy public key (hex)"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button>' : '';
                 let toggleBtn = c.publicKeyHex ? '<button class="btn btn-link btn-sm public-key-toggle" aria-expanded="false" title="Show public key"><span class="material-symbols-outlined" aria-hidden="true">expand_more</span>&nbsp;Show</button>' : '';
-                html += '<div class="text-sm"><span class="cert-label">Public Key:</span> <span class="cert-value">' + escapeHtml((algName || c.publicKey.algorithm || '') + (c.publicKey.size ? ' (' + c.publicKey.size + ' bits)' : '')) + '</span> ' + copyBtn + ' ' + toggleBtn + '</div>';
+                html += '<div class="text-sm"><span class="cert-label">Public Key:</span> <span class="cert-value">' + escapeHtml(label) + '</span> ' + copyBtn + ' ' + toggleBtn + '</div>';
                 // Public key block (collapsed by default) contains only the code element
                 if (c.publicKeyHex) {
                     html += '<div class="public-key-block collapsed"><code class="public-key-hex" data-public-key-raw="' + escapeHtml(c.publicKeyHex) + '"></code></div>';
@@ -4200,6 +4326,54 @@ try {
      */
     function arrayBufferToHexString(arrayBuffer) {
         return Array.from(new Uint8Array(arrayBuffer)).map(n => n.toString(16).toUpperCase().padStart(2, "0")).join("");
+    }
+
+    /**
+     * Helper: Recursively clones a value for preview display, converting binary
+     * fields (ArrayBuffer / TypedArray) to lowercase hex strings so the request
+     * can be serialized to readable JSON.
+     * @param {*} value
+     * @returns {*}
+     */
+    function toPreviewSafe(value) {
+        if (value === null || value === undefined) return value;
+        if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+            return arrayBufferToHexString(value).toLowerCase();
+        }
+        if (Array.isArray(value)) {
+            return value.map(toPreviewSafe);
+        }
+        if (typeof value === 'object') {
+            var out = {};
+            for (var k in value) {
+                if (Object.prototype.hasOwnProperty.call(value, k)) {
+                    out[k] = toPreviewSafe(value[k]);
+                }
+            }
+            return out;
+        }
+        return value;
+    }
+
+    /**
+     * Helper: Displays a JSON preview of a WebAuthn request in the preview dialog.
+     * @param {string} title dialog title
+     * @param {Object} requestObject the request object passed to navigator.credentials.*
+     */
+    function showRequestPreview(title, requestObject) {
+        var safe = toPreviewSafe(requestObject);
+        var json = JSON.stringify(safe, null, 2);
+        var titleEl = document.getElementById('requestPreviewDialog_title');
+        var contentEl = document.getElementById('requestPreviewDialog_content');
+        if (titleEl) titleEl.textContent = title;
+        if (contentEl) contentEl.textContent = json;
+        var previewDialog = document.getElementById('requestPreviewDialog');
+        if (previewDialog) {
+            if (!previewDialog.showModal) {
+                try { dialogPolyfill.registerDialog(previewDialog); } catch (e) { }
+            }
+            previewDialog.showModal();
+        }
     }
 
     /**
