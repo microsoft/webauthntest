@@ -1,11 +1,6 @@
 {
     "git.ignoreLimitWarning": true,
     "javascript.implicitProjectConfig.checkJs": true,
-    "appService.zipIgnorePattern": [
-        "node_modules{,/**}",
-        ".vscode{,/**}",
-        ".env"
-    ],
     "files.insertFinalNewline": false,
     "sarif-viewer.connectToGithubCodeScanning": "off"
 }
