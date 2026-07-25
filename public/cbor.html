@@ -22,6 +22,9 @@
                 <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Home" aria-label="Home">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>
                 </a>
+                <a class="btn btn-ghost btn-sm btn-circle" href="decode.html" title="WebAuthn Decoder" aria-label="WebAuthn Decoder">
+                    <span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>
+                </a>
                 <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
                     <span class="material-symbols-outlined" aria-hidden="true">code</span>
                 </a>
@@ -44,6 +47,8 @@
                 <div class="flex items-center flex-wrap gap-2">
                     <button id="decodeBtn" class="btn btn-link btn-sm">Decode</button>
                     <button id="clearBtn" class="btn btn-link btn-sm">Clear</button>
+                    <button id="copyCborInput" class="btn btn-link btn-sm">Copy</button>
+                    <button id="webauthnDecodeCbor" class="btn btn-link btn-sm">WebAuthn Decode</button>
                     <label class="btn btn-link btn-sm" for="importCborFile">Import CBOR File</label>
                     <input type="file" id="importCborFile" accept="application/cbor,.cbor" style="display:none;" />
                     <span id="formatInfo" class="text-xs opacity-70" style="display:none;"></span>
@@ -77,6 +82,7 @@
                 <div class="flex items-center flex-wrap gap-2">
                     <button id="encodeRun" class="btn btn-link btn-sm">Encode</button>
                     <button id="encodeClear" class="btn btn-link btn-sm">Clear</button>
+                    <button id="copyJsonInput" class="btn btn-link btn-sm">Copy</button>
                     <label class="btn btn-link btn-sm" for="importJsonEncode">Import JSON File</label>
                     <input type="file" id="importJsonEncode" accept="application/json,.json" style="display:none;" />
                     <label class="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -169,6 +175,28 @@
 
         document.getElementById('decodeBtn').addEventListener('click', render);
         document.getElementById('clearBtn').addEventListener('click', ()=>{ inputEl.value=''; render(); });
+        document.getElementById('copyCborInput').addEventListener('click', ()=>{
+            const val = inputEl.value || '';
+            if(!val.trim()){ errEl.textContent='Nothing to copy.'; return; }
+            navigator.clipboard.writeText(val).then(()=>{
+                errEl.textContent='';
+                inputEl.style.background='#e0ffe8';
+                setTimeout(()=> inputEl.style.background='', 300);
+            }).catch(err=>{ errEl.textContent='Copy failed: '+err; });
+        });
+        document.getElementById('webauthnDecodeCbor').addEventListener('click', ()=>{
+            const val = (inputEl.value || '').trim();
+            if(!val){ errEl.textContent='Nothing to decode.'; return; }
+            errEl.textContent='';
+            try {
+                const key = 'decode_payload_' + Math.random().toString(36).slice(2,10);
+                sessionStorage.setItem(key, val);
+                window.open('./decode.html?key=' + encodeURIComponent(key), '_blank');
+            } catch(e){
+                try { window.open('./decode.html?input=' + encodeURIComponent(val), '_blank'); }
+                catch(e2){ errEl.textContent='Failed to open WebAuthn decoder.'; }
+            }
+        });
         inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
 
         document.getElementById('downloadDecodedJson').addEventListener('click', ()=>{
@@ -373,6 +401,15 @@ Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"
 
     document.getElementById('encodeRun').addEventListener('click', ()=> encodeJson(true));
     document.getElementById('encodeClear').addEventListener('click', ()=>{ jsonInput.value=''; encodedHexEl.textContent=''; encodeInfoEl.textContent=''; document.getElementById('encodedCard').style.display='none'; });
+    document.getElementById('copyJsonInput').addEventListener('click', ()=>{
+        const val = jsonInput.value || '';
+        if(!val.trim()){ encodeInfoEl.textContent='Nothing to copy.'; encodeInfoEl.style.display=''; return; }
+        navigator.clipboard.writeText(val).then(()=>{
+            encodeInfoEl.textContent='';
+            jsonInput.style.background='#e0ffe8';
+            setTimeout(()=> jsonInput.style.background='', 300);
+        }).catch(err=>{ encodeInfoEl.textContent='Copy failed: '+err; encodeInfoEl.style.display=''; });
+    });
     // Import JSON for encoding
     const importJsonEncodeInput = document.getElementById('importJsonEncode');
     importJsonEncodeInput.addEventListener('change', (e)=>{

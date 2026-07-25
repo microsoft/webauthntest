@@ -136,9 +136,18 @@ function parseAuthenticatorData(authDataBytes) {
     const aaguid = formatUuidFromBytes(aaguidBytes);
     const credentialIdLength = (authData[53] << 8) | authData[54];
     const credentialId = authData.slice(55, 55 + credentialIdLength);
-    const publicKeyBytes = authData.slice(55 + credentialIdLength);
-    const publicKeyHex = coseToHex(publicKeyBytes);
-    const publicKey = coseToJwk(publicKeyBytes);
+    const rest = authData.slice(55 + credentialIdLength);
+
+    // The attested credential public key is a CBOR COSE_Key. When the ED flag
+    // is set, a CBOR extensions map follows it. Find the exact COSE key length so
+    // the public key bytes exclude any trailing extension data.
+    let coseLen = rest.length;
+    for (let n = 1; n <= rest.length; n++) {
+      try { cborDecode(rest.slice(0, n)); coseLen = n; break; } catch { /* truncated: keep growing */ }
+    }
+    const coseKeyBytes = rest.slice(0, coseLen);
+    const publicKeyHex = coseToHex(coseKeyBytes);
+    const publicKey = coseToJwk(coseKeyBytes);
 
     out.attestedCredentialData = {
       aaguid,
@@ -147,17 +156,16 @@ function parseAuthenticatorData(authDataBytes) {
       publicKeyHex,
       publicKey,
     };
-  }
 
-  // Extension parsing is optional in this playground; keep hex if present.
-  if (flags & 128) {
-    try {
-      const extensionData = cborDecode(authData.slice(37));
-      const encoded = new TextEncoder().encode(JSON.stringify(extensionData));
-      out.extensionDataHex = bytesToHex(encoded);
-    } catch {
+    // Extensions (if present) are the CBOR bytes after the COSE key.
+    if ((flags & 128) && coseLen < rest.length) {
+      out.extensionDataHex = bytesToHex(rest.slice(coseLen));
+    } else {
       out.extensionDataHex = 'No extension data';
     }
+  } else if (flags & 128) {
+    // ED flag without AT: the extension map immediately follows signCount.
+    out.extensionDataHex = bytesToHex(authData.slice(37));
   } else {
     out.extensionDataHex = 'No extension data';
   }
@@ -990,6 +998,7 @@ export async function makeCredential(uid, attestation, hostname) {
       authenticatorDataSummary: summarizeAuthenticatorData(authenticatorData),
       authenticatorDataHex: bytesToHex(authDataBytes),
       extensionDataHex: authenticatorData.extensionDataHex,
+      fullResponseJSON: (attestation && typeof attestation.fullResponseJSON !== 'undefined') ? attestation.fullResponseJSON : null,
       authenticatorData: attestation.authenticatorData,
       attestationObject: attestation.attestationObjectHex,
       clientDataJSON: attestation.clientDataJSON,
@@ -1078,6 +1087,7 @@ export async function verifyAssertion(credential, assertion, hostname) {
     signatureHex: bytesToHex(sig),
     extensionDataHex: authenticatorData.extensionDataHex,
     authenticatorAttachment: assertion.authenticatorAttachment,
+    fullResponseJSON: (assertion && typeof assertion.fullResponseJSON !== 'undefined') ? assertion.fullResponseJSON : null,
     prfFirst: assertion.prfFirst,
     prfSecond: assertion.prfSecond,
   };

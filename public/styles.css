@@ -1481,7 +1481,8 @@ body#signInPrompt #signInButton {
 
 /* Left-column placement for DECODE action: sit under dt label in the left column */
 .decode-action-left { margin-top:6px; }
-.decode-action-left .btn { padding: 4px 6px !important; min-width: 0 !important; height: 28px; font-size: 12px; }
+.decode-action-left .btn { padding: 4px 6px !important; min-width: 0 !important; height: 28px; font-size: 12px; margin-left: 0 !important; }
+.decode-action-left .btn + .btn { margin-left: 8px !important; }
 
 /* Responsive adjustments for credential cards and registration summary on narrow screens */
 @media (max-width: 760px) {
@@ -2021,3 +2022,137 @@ textarea {
 dialog.modal {
   min-width: 0 !important;
 }
+/* --------------------------------------------------------------------------
+   WebAuthn Decoder page (decode.html)
+   -------------------------------------------------------------------------- */
+.decode-result { display: flex; flex-direction: column; gap: 2px; }
+.decode-detected { margin-bottom: 8px; }
+.decode-heading {
+  font-weight: 600;
+  font-size: 15px;
+  margin: 12px 0 6px;
+}
+.decode-subheading {
+  font-weight: 600;
+  font-size: 13px;
+  margin: 10px 0 4px;
+  opacity: 0.85;
+}
+.decode-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  align-items: start;
+  font-size: 14px;
+}
+.decode-label {
+  font-weight: 600;
+  text-align: right;
+  color: #444;
+  word-break: break-word;
+}
+.decode-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.decode-value-content { flex: 1 1 auto; min-width: 0; }
+.decode-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+.decode-value .btn { vertical-align: middle; }
+/* Inline hex / mono values: plain text, no box — lighter, matches block style. */
+.decode-mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace;
+  font-weight: 400;
+  font-size: 12.5px;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+/* Multi-line JSON / CBOR blocks: plain preformatted mono, no border/box. */
+.decode-block {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace;
+  color: #555;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12.5px;
+}
+/* Hex block with a copy button pinned to the top-right (first-line aligned). */
+.decode-hexblock {
+  position: relative;
+  padding-right: 30px;
+}
+.decode-hexblock .decode-hex { margin-top: 0; }
+.decode-hexcopy {
+  position: absolute;
+  top: -2px;
+  right: 0;
+}
+.decode-value .btn.btn-square { color: #2563eb; }
+.decode-pre {
+  background: #f6f6f6;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0;
+  max-height: 320px;
+  overflow: auto !important;
+  white-space: pre !important;
+  font-size: 12.5px;
+}
+.decode-cert {
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.decode-cert-index { font-weight: 600; margin: 6px 0 2px; }
+.decode-raw-pre {
+  background: #f6f6f6;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  max-height: 260px;
+  overflow: auto !important;
+}
+.decode-copy .material-symbols-outlined { font-size: 16px; vertical-align: middle; }
+
+@media (max-width: 640px) {
+  .decode-row { grid-template-columns: 1fr; gap: 2px; }
+  .decode-label { text-align: left; }
+}
+
+/* OpenSSL-style full certificate dump */
+.cert-dump-toolbar { margin: 0 0 8px; display: flex; justify-content: flex-end; }
+.cert-dump {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
+  font-size: 12px;
+  line-height: 1.7;
+  background: #f6f6f6;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 12px;
+  overflow-x: auto;
+}
+.cert-inline-copy {
+  vertical-align: middle;
+  height: 20px !important;
+  min-height: 20px !important;
+  width: 20px !important;
+  min-width: 20px !important;
+}
+.cert-inline-copy .material-symbols-outlined { font-size: 15px; color: #2563eb; }
