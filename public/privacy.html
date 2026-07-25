@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>Privacy &amp; Cookie Policy - Passkey Playground</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="min-h-screen bg-base-200 text-base-content">
+    <main class="min-h-screen flex justify-center p-4">
+        <div class="w-full max-w-3xl">
+            <div class="card bg-base-100 shadow-xl border border-base-300">
+                <div class="card-body prose max-w-none">
+                    <h1 class="text-2xl font-bold">Privacy &amp; Cookie Policy</h1>
+                    <p class="text-sm opacity-70">Passkey Playground — a public testing tool for the WebAuthn / passkey APIs.</p>
+
+                    <h2 class="text-lg font-semibold mt-4">What this tool is</h2>
+                    <p>
+                        This site lets developers experiment with the WebAuthn / FIDO2 passkey APIs. It is provided for
+                        testing and educational purposes only. <strong>Please do not enter personal data or real names</strong>
+                        — choose a nickname as your username.
+                    </p>
+
+                    <h2 class="text-lg font-semibold mt-4">Cookies we use</h2>
+                    <p>We only use <strong>strictly necessary</strong> cookies required for the site to function:</p>
+                    <table class="table table-sm mt-2">
+                        <thead>
+                            <tr>
+                                <th>Cookie</th>
+                                <th>Purpose</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>uid</code></td>
+                                <td>Stores the username you choose so you stay signed in across visits.</td>
+                                <td>1 year</td>
+                            </tr>
+                            <tr>
+                                <td><code>webauthn_chal</code></td>
+                                <td>A signed, one-time challenge token set during passkey registration and
+                                    authentication to secure the operation. Set by the server as an HttpOnly cookie.</td>
+                                <td>~5 minutes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="mt-2">
+                        We do <strong>not</strong> use cookies or similar technologies for tracking, analytics,
+                        profiling, or advertising, and we do not share data with third parties for those purposes.
+                    </p>
+
+                    <h2 class="text-lg font-semibold mt-4">Data we store</h2>
+                    <p>
+                        When you register or authenticate a passkey, the credential details (such as the public key,
+                        credential ID, and authenticator metadata) are stored against your chosen username so the tool
+                        can display and reuse them. Your username is stored in hashed form on the server. No passwords or
+                        private keys ever leave your authenticator.
+                    </p>
+
+                    <h2 class="text-lg font-semibold mt-4">Your choices</h2>
+                    <ul class="list-disc pl-6">
+                        <li>These cookies are strictly necessary for the sign-in and passkey flows to work. By
+                            continuing to browse and sign in, you consent to their use.</li>
+                        <li>You can withdraw consent at any time by clearing this site's cookies and site data in your
+                            browser, or by using your browser settings to block cookies for this site.</li>
+                        <li>You can delete your stored credentials at any time using the <em>Delete</em> and
+                            <em>Delete all credentials</em> controls in the app.</li>
+                    </ul>
+
+                    <div class="card-actions mt-6">
+                        <a href="login.html" class="btn btn-primary btn-sm">Back to sign in</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

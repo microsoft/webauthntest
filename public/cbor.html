@@ -125,6 +125,14 @@
         const errEl = document.getElementById('errorArea');
         const fmtEl = document.getElementById('formatInfo');
 
+        // Returns the first 12 hex chars of SHA-256(bytes), for content-based filenames.
+        async function sha256Hex12(bytes){
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', bytes);
+                return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,12);
+            } catch(e){ return ''; }
+        }
+
         function detectFormat(text){
             const t = text.trim();
             if(!t) return '';
@@ -199,15 +207,16 @@
         });
         inputEl.addEventListener('input', ()=>{ fmtEl.textContent = detectFormat(inputEl.value) || ''; });
 
-        document.getElementById('downloadDecodedJson').addEventListener('click', ()=>{
+        document.getElementById('downloadDecodedJson').addEventListener('click', async ()=>{
             if(!lastRoots){ errEl.textContent='Nothing decoded to download.'; return; }
             try {
                 const exported = lastRoots.map(r=> CBORPlayground.exportValue(r.value));
                 const jsonOut = JSON.stringify(exported.length===1? exported[0] : exported, null, 2);
                 const blob = new Blob([jsonOut], {type:'application/json'});
                 const url = URL.createObjectURL(blob);
+                const hash = await sha256Hex12(new TextEncoder().encode(jsonOut));
                 const a = document.createElement('a');
-                a.href = url; a.download = 'decoded.json'; a.click();
+                a.href = url; a.download = hash ? ('cbor-decoded_' + hash + '.json') : 'decoded.json'; a.click();
                 URL.revokeObjectURL(url);
                 decodedJson.style.background='#e0f0ff';
                 setTimeout(()=> decodedJson.style.background='', 300);
@@ -449,12 +458,13 @@ Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"
         setTimeout(()=>{ inputEl.style.background = ''; }, 300);
     });
     // Download from output card icon
-    document.getElementById('downloadEncodedCbor').addEventListener('click', ()=>{
+    document.getElementById('downloadEncodedCbor').addEventListener('click', async ()=>{
         if(!lastEncodedBytes){ errEl.textContent='Nothing encoded to download.'; return; }
         const blob = new Blob([lastEncodedBytes], {type:'application/cbor'});
         const url = URL.createObjectURL(blob);
+        const hash = await sha256Hex12(lastEncodedBytes);
         const a = document.createElement('a');
-        a.href = url; a.download = 'data.cbor'; a.click();
+        a.href = url; a.download = hash ? ('cbor-encoded_' + hash + '.cbor') : 'data.cbor'; a.click();
         URL.revokeObjectURL(url);
         // visual feedback flash
         encodedHexEl.style.background='#e0f0ff';

@@ -880,6 +880,22 @@
         </div>
     </dialog>
 
+    <dialog class="app-dialog" id="confirmDeleteAllDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="confirmDeleteAllDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <h3 class="app-dialog-title">Delete All Credentials</h3>
+        <div class="app-dialog-content">
+            <p id="confirmDeleteAllDialog_message">Are you sure you want to delete all credentials? This action cannot be undone.</p>
+        </div>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-error btn-sm" id="confirmDeleteAllDialog_confirm">Delete All</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="confirmDeleteAllDialog_cancel">Cancel</button>
+        </div>
+    </dialog>
+
     <dialog class="app-dialog" id="moreDialog">
         <h3 class="app-dialog-title">More Options</h3>
         <div class="app-dialog-content">
@@ -935,6 +951,9 @@
                             </button>
                             <button class="btn btn-ghost btn-sm btn-circle" id="getButton" title="Get" aria-label="Authenticate">
                                 <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
+                            </button>
+                            <button class="btn btn-ghost btn-sm btn-circle" id="deleteAllButton" title="Delete all credentials" aria-label="Delete all credentials">
+                                <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
                             </button>
                             <button class="btn btn-ghost btn-sm btn-circle" id="moreButton" title="More" aria-label="More">
                                 <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>

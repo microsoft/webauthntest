@@ -805,6 +805,23 @@ try {
             createDialog.showModal();
         });
 
+        $('#deleteAllButton').click(() => {
+            const dlg = document.getElementById('confirmDeleteAllDialog');
+            if (!dlg) return;
+            const count = (credentials || []).length;
+            const msgEl = document.getElementById('confirmDeleteAllDialog_message');
+            const confirmBtn = document.getElementById('confirmDeleteAllDialog_confirm');
+            if (count === 0) {
+                if (msgEl) msgEl.textContent = 'There are no credentials to delete.';
+                if (confirmBtn) confirmBtn.style.display = 'none';
+            } else {
+                if (msgEl) msgEl.textContent = 'Are you sure you want to delete all ' + count + ' credential' + (count === 1 ? '' : 's') + '? This action cannot be undone.';
+                if (confirmBtn) confirmBtn.style.display = '';
+            }
+            if (!dlg.showModal) { try { dialogPolyfill.registerDialog(dlg); } catch (e) { /* ignore */ } }
+            dlg.showModal();
+        });
+
         $('#getButton').click(async () => {
             // Open dialog immediately.
             getDialog.showModal();
@@ -1201,6 +1218,25 @@ try {
                 });
                 $('#confirmDeleteDialog_cancel').click(() => { confirmDeleteDialog.close(); });
                 $('#confirmDeleteDialog_xButton').click(() => { confirmDeleteDialog.close(); });
+            }
+
+            // Confirm Delete All dialog handlers
+            const confirmDeleteAllDialog = document.getElementById('confirmDeleteAllDialog');
+            if (confirmDeleteAllDialog) {
+                $('#confirmDeleteAllDialog_confirm').click(() => {
+                    const btn = document.getElementById('confirmDeleteAllDialog_confirm');
+                    if (btn) btn.disabled = true;
+                    deleteAllCredentials().then(() => {
+                        toast('All credentials deleted');
+                    }).catch(err => {
+                        toast('Delete all failed: ' + (err && err.message ? err.message : err));
+                    }).finally(() => {
+                        if (btn) btn.disabled = false;
+                        confirmDeleteAllDialog.close();
+                    });
+                });
+                $('#confirmDeleteAllDialog_cancel').click(() => { confirmDeleteAllDialog.close(); });
+                $('#confirmDeleteAllDialog_xButton').click(() => { confirmDeleteAllDialog.close(); });
             }
             $('#updateTransportsDialog_selectAllButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => setTransportCheckbox(t, true));
@@ -2127,6 +2163,27 @@ try {
             else {
                 return updateCredentials(window.location.hostname);
             }
+        });
+    }
+
+    /**
+     * Deletes all credentials for the current user, then refreshes the list once.
+     * @return {Promise<void>}
+     */
+    function deleteAllCredentials() {
+        var ids = (credentials || []).map(function (c) { return c.id; }).filter(Boolean);
+        if (ids.length === 0) {
+            return updateCredentials(window.location.hostname);
+        }
+        return Promise.all(ids.map(function (id) {
+            return rest_delete("/credentials", { id: id })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) {
+                    if (resp && resp.error) return Promise.reject(resp.error);
+                    return resp;
+                });
+        })).then(function () {
+            return updateCredentials(window.location.hostname);
         });
     }
 
@@ -3599,7 +3656,8 @@ try {
         downloadChainBtn.addEventListener('click', () => {
             const allPem = certs.map(c => c.pem).join('\n');
             const blob = new Blob([allPem], { type: 'application/x-pem-file' });
-            downloadBlob('certificate-chain.pem', blob);
+            const leafFp = (certs[0] && certs[0].fingerprintSHA256) ? certs[0].fingerprintSHA256.slice(0, 16) : '';
+            downloadBlob(leafFp ? ('CertificateChain_' + leafFp + '.pem') : 'certificate-chain.pem', blob);
         });
     }
 
@@ -3615,6 +3673,13 @@ try {
                 URL.revokeObjectURL(url);
                 a.remove();
             }, 1000);
+        }
+
+        // Build a stable, unique filename base for a certificate using the first 16
+        // hex chars of its SHA-256 fingerprint. Falls back to the 1-based index.
+        function certFileBase(cert, idx) {
+            if (cert && cert.fingerprintSHA256) return 'Certificate_' + cert.fingerprintSHA256.slice(0, 16);
+            return 'certificate-' + (idx + 1);
         }
 
         // no MDL upgrade required
@@ -3644,7 +3709,7 @@ try {
                 if (!cert) return;
                 const pem = cert.pem;
                 const blob = new Blob([pem], { type: 'application/x-pem-file' });
-                downloadBlob('certificate-' + (idx+1) + '.pem', blob);
+                downloadBlob(certFileBase(cert, idx) + '.pem', blob);
             });
         });
 
@@ -3656,7 +3721,7 @@ try {
                 const ab = cert.raw || null;
                 if (!ab) return toast('DER data not available');
                 const blob = new Blob([ab], { type: 'application/octet-stream' });
-                downloadBlob('certificate-' + (idx+1) + '.der', blob);
+                downloadBlob(certFileBase(cert, idx) + '.der', blob);
             });
         });
 

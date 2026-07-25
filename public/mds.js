@@ -645,6 +645,12 @@ async function showMdsCertificatesDialog() {
     }
 
     // Per-cert actions
+    // Stable, unique filename base from the first 16 hex chars of the SHA-256
+    // fingerprint; falls back to the 1-based index.
+    function certFileBase(cert, idx) {
+        if (cert && cert.fingerprintSHA256) return 'Certificate_' + cert.fingerprintSHA256.slice(0, 16);
+        return 'certificate-' + (idx + 1);
+    }
     body.querySelectorAll('.cert-download-pem').forEach(btn => {
         btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
@@ -652,7 +658,7 @@ async function showMdsCertificatesDialog() {
             if (!p || !p.ok) return;
             const pem = p.cert.pem || '';
             const blob = new Blob([pem], { type: 'application/x-pem-file' });
-            downloadBlob('certificate-' + (idx + 1) + '.pem', blob);
+            downloadBlob(certFileBase(p.cert, idx) + '.pem', blob);
         });
     });
 
@@ -664,7 +670,7 @@ async function showMdsCertificatesDialog() {
             const ab = p.cert.raw;
             if (!ab) return;
             const blob = new Blob([ab], { type: 'application/octet-stream' });
-            downloadBlob('certificate-' + (idx + 1) + '.der', blob);
+            downloadBlob(certFileBase(p.cert, idx) + '.der', blob);
         });
     });
 

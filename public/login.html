@@ -32,16 +32,47 @@
             </div>
         </div>
     </main>
+
+    <!-- Cookie consent banner (implied consent) -->
+    <div id="cookieConsent" class="cookie-consent" role="note" aria-label="Cookie notice" hidden>
+        <div class="cookie-consent-bar">
+            <p class="cookie-consent-text">
+                By browsing this site without restricting the use of cookies, you consent to our use of cookies as set
+                out in our <a href="privacy.html" target="_blank" rel="noopener">Cookie Notice</a>.
+            </p>
+            <button type="button" class="cookie-consent-ok" id="cookieAccept">OK</button>
+        </div>
+    </div>
 </body>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
     integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
 <script>
+    var CONSENT_KEY = 'cookieConsent';
+
+    function consentAcknowledged() {
+        try { return localStorage.getItem(CONSENT_KEY) === 'acknowledged'; } catch (e) { return false; }
+    }
+    function acknowledgeConsent() {
+        try { localStorage.setItem(CONSENT_KEY, 'acknowledged'); } catch (e) { /* ignore */ }
+    }
+
     $(window).on('load', function () {
+        // Implied-consent banner: shown until the user acknowledges it.
+        if (!consentAcknowledged()) {
+            var el = document.getElementById('cookieConsent');
+            if (el) el.hidden = false;
+        }
+
         $('#signInButton').click(() => {
             handleSubmit();
         });
 
+        $('#cookieAccept').click(() => {
+            acknowledgeConsent();
+            var el = document.getElementById('cookieConsent');
+            if (el) el.hidden = true;
+        });
     });
 
     function handleSubmit() {
