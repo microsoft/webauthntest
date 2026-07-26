@@ -811,18 +811,194 @@ try {
     // ------------------------------------------------------------------ wiring
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('decodeInput');
-        document.getElementById('decodeBtn').addEventListener('click', runDecode);
-        document.getElementById('clearBtn').addEventListener('click', () => {
+        const cborEncodeBtn = document.getElementById('cborEncodeBtn');
+        const decodeBtn = document.getElementById('decodeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const copyBtn = document.getElementById('copyInputBtn');
+        const pasteBtn = document.getElementById('pasteInputBtn');
+        const saveBtn = document.getElementById('saveInputBtn');
+
+        // Returns the trimmed input if it parses as JSON, else null.
+        function inputAsJsonText() {
+            const trimmed = (input.value || '').trim();
+            if (!trimmed || (trimmed.charAt(0) !== '{' && trimmed.charAt(0) !== '[')) return null;
+            try { JSON.parse(trimmed); return trimmed; } catch (e) { return null; }
+        }
+
+        // Toggle button visibility based on whether the input has content. Decode /
+        // Clear / Copy (and CBOR Encode) only make sense with content; Paste only
+        // when empty.
+        // Clipboard-read permission: when denied, disable the Paste button.
+        let pasteDenied = false;
+        function applyPasteDenied() {
+            if (!pasteBtn) return;
+            pasteBtn.disabled = pasteDenied;
+            pasteBtn.classList.toggle('btn-disabled', pasteDenied);
+            pasteBtn.title = pasteDenied ? 'Clipboard read is blocked for this site — paste manually (Ctrl+V)' : '';
+        }
+        (function watchClipboardPermission() {
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    navigator.permissions.query({ name: 'clipboard-read' }).then((status) => {
+                        pasteDenied = (status.state === 'denied');
+                        applyPasteDenied();
+                        status.onchange = () => { pasteDenied = (status.state === 'denied'); applyPasteDenied(); };
+                    }).catch(() => { /* permission name unsupported; leave enabled */ });
+                }
+            } catch (e) { /* ignore */ }
+        })();
+
+        function updateButtons() {
+            const hasContent = !!(input.value || '').trim();
+            if (decodeBtn) decodeBtn.style.display = hasContent ? '' : 'none';
+            if (clearBtn) clearBtn.style.display = hasContent ? '' : 'none';
+            if (copyBtn) copyBtn.style.display = hasContent ? '' : 'none';
+            if (saveBtn) saveBtn.style.display = hasContent ? '' : 'none';
+            if (pasteBtn) { pasteBtn.style.display = hasContent ? 'none' : ''; applyPasteDenied(); }
+            if (cborEncodeBtn) cborEncodeBtn.style.display = (hasContent && inputAsJsonText()) ? '' : 'none';
+        }
+
+        // Grow/shrink the input textarea to fit its content (bounded).
+        function autoResize() {
+            input.style.height = 'auto';
+            const max = Math.max(200, Math.floor(window.innerHeight * 0.6));
+            input.style.height = Math.min(input.scrollHeight + 2, max) + 'px';
+        }
+
+        // Set the textarea content: pretty-print JSON when possible, then resize.
+        function setInputContent(val) {
+            let text = String(val == null ? '' : val);
+            const trimmed = text.trim();
+            if (trimmed && (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[')) {
+                try { text = JSON.stringify(JSON.parse(trimmed), null, 2); } catch (e) { /* keep as-is */ }
+            }
+            input.value = text;
+            autoResize();
+            updateButtons();
+        }
+
+        input.addEventListener('input', () => { autoResize(); updateButtons(); });
+        window.addEventListener('resize', autoResize);
+        autoResize();
+        updateButtons();
+
+        decodeBtn.addEventListener('click', runDecode);
+        clearBtn.addEventListener('click', () => {
             input.value = '';
+            autoResize();
+            updateButtons();
             document.getElementById('decodeResultCard').style.display = 'none';
             document.getElementById('decodeError').style.display = 'none';
         });
-        input.addEventListener('paste', () => setTimeout(runDecode, 0));
-        document.getElementById('copyInputBtn').addEventListener('click', () => {
+        input.addEventListener('paste', () => setTimeout(() => { autoResize(); updateButtons(); runDecode(); }, 0));
+        copyBtn.addEventListener('click', () => {
             const val = input.value || '';
             if (!val) { toast('Nothing to copy'); return; }
             navigator.clipboard.writeText(val).then(() => toast('Copied to clipboard')).catch(() => toast('Copy failed'));
         });
+        if (pasteBtn) {
+            pasteBtn.addEventListener('click', async () => {
+                try {
+                    if (!navigator.clipboard || !navigator.clipboard.readText) {
+                        toast('Clipboard read not supported; paste manually (Ctrl+V)');
+                        input.focus();
+                        return;
+                    }
+                    const text = await navigator.clipboard.readText();
+                    if (!text) { toast('Clipboard is empty'); return; }
+                    setInputContent(text);
+                    runDecode();
+                } catch (e) {
+                    // If the read was blocked, reflect that by disabling the button.
+                    if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+                        pasteDenied = true;
+                        applyPasteDenied();
+                    }
+                    toast('Paste failed; paste manually (Ctrl+V)');
+                    input.focus();
+                }
+            });
+        }
+
+        // Open the CBOR Playground to encode the current JSON input into CBOR.
+        if (cborEncodeBtn) {
+            cborEncodeBtn.addEventListener('click', () => {
+                const jsonText = inputAsJsonText();
+                if (!jsonText) { toast('Input is not valid JSON'); return; }
+                try {
+                    const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
+                    sessionStorage.setItem(key, jsonText);
+                    window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
+                } catch (e) {
+                    try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(jsonText), '_blank'); }
+                    catch (e2) { toast('Failed to open CBOR encoder'); }
+                }
+            });
+        }
+
+        // ---- Save: write the input to a file in a format matching its content ----
+        async function sha256Hex(bytesOrText) {
+            const data = (bytesOrText instanceof Uint8Array) ? bytesOrText : new TextEncoder().encode(String(bytesOrText));
+            const buf = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        function triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { try { URL.revokeObjectURL(url); a.remove(); } catch (e) { /* ignore */ } }, 1000);
+        }
+
+        async function saveInput() {
+            const raw = input.value || '';
+            const trimmed = raw.trim();
+            if (!trimmed) { toast('Nothing to save'); return; }
+            try {
+                // 1. JSON → pretty-printed .json
+                const jsonText = inputAsJsonText();
+                if (jsonText) {
+                    const pretty = JSON.stringify(JSON.parse(jsonText), null, 2);
+                    const hash = (await sha256Hex(pretty)).slice(0, 12);
+                    triggerDownload(new Blob([pretty], { type: 'application/json' }), 'WebAuthn_' + hash + '.json');
+                    return;
+                }
+                // 2. PEM certificate → .pem (named by fingerprint)
+                const pemMatch = trimmed.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/);
+                if (pemMatch) {
+                    try {
+                        const der = CBOR.base64ToBytes(pemMatch[0].replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
+                        const fp = (await sha256Hex(der)).slice(0, 16).toUpperCase();
+                        triggerDownload(new Blob([trimmed + '\n'], { type: 'application/x-pem-file' }), 'Certificate_' + fp + '.pem');
+                        return;
+                    } catch (e) { /* fall through to text */ }
+                }
+                // 3. Parse to bytes and classify.
+                let bytes = null;
+                try { bytes = parseInput(raw); } catch (e) { bytes = null; }
+                if (!bytes) {
+                    const hash = (await sha256Hex(raw)).slice(0, 12);
+                    triggerDownload(new Blob([raw], { type: 'text/plain' }), 'Decoded_' + hash + '.txt');
+                    return;
+                }
+                let det = null;
+                try { det = detect(bytes); } catch (e) { det = null; }
+                const type = det ? det.type : 'bytes';
+                if (type === 'certificate') {
+                    const fp = (await sha256Hex(bytes)).slice(0, 16).toUpperCase();
+                    triggerDownload(new Blob([bytes], { type: 'application/octet-stream' }), 'Certificate_' + fp + '.der');
+                } else if (type === 'attestationObject' || type === 'cbor') {
+                    const hash = (await sha256Hex(bytes)).slice(0, 12);
+                    triggerDownload(new Blob([bytes], { type: 'application/cbor' }), 'CBOR_' + hash + '.cbor');
+                } else {
+                    const hash = (await sha256Hex(bytes)).slice(0, 12);
+                    triggerDownload(new Blob([bytes], { type: 'application/octet-stream' }), 'Bytes_' + hash + '.bin');
+                }
+            } catch (e) {
+                toast('Save failed: ' + (e && e.message ? e.message : e));
+            }
+        }
+        if (saveBtn) saveBtn.addEventListener('click', saveInput);
 
         // Import a file: text-like files (JSON / PEM / hex / base64) are used as-is;
         // binary files (CBOR / DER / raw bytes) are converted to hex. Then decoded.
@@ -842,9 +1018,9 @@ try {
                     }
                     const isBinary = bytes.length > 0 && (controlCount / bytes.length) > 0.01;
                     if (isBinary) {
-                        input.value = bytesToHex(bytes).toUpperCase();
+                        setInputContent(bytesToHex(bytes).toUpperCase());
                     } else {
-                        input.value = new TextDecoder('utf-8', { fatal: false }).decode(bytes).trim();
+                        setInputContent(new TextDecoder('utf-8', { fatal: false }).decode(bytes).trim());
                     }
                     runDecode();
                 } catch (err) {
@@ -867,7 +1043,7 @@ try {
                 const params = new URLSearchParams(window.location.search);
                 const decodeWith = (val) => {
                     if (typeof val !== 'string') return;
-                    input.value = val;
+                    setInputContent(val);
                     setTimeout(runDecode, 50);
                 };
                 const pm = params.get('pm');

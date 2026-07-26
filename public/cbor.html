@@ -277,6 +277,8 @@
     (function(){
         try {
             const params = new URLSearchParams(window.location.search);
+            // When mode=encode, the payload is handled by the encode receiver below.
+            if(params.get('mode') === 'encode') return;
             const pm = params.get('pm');
             const nonceParam = params.get('nonce');
             if(pm && window.opener){
@@ -486,6 +488,29 @@ Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"
         encodeDebounceTimer = setTimeout(()=> encodeJson(false), 300);
     });
     jsonInput.addEventListener('paste', ()=>{ setTimeout(()=> encodeJson(false), 0); });
+
+    // Encode receiver: when opened with ?mode=encode&key=... or &input=..., prefill
+    // the JSON encoder with the incoming payload and run encoding automatically.
+    (function(){
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if(params.get('mode') !== 'encode') return;
+            let payload = null;
+            const key = params.get('key');
+            if(key){
+                try { payload = sessionStorage.getItem(key); sessionStorage.removeItem(key); } catch(e){ payload = null; }
+            }
+            if(payload == null){
+                const inp = params.get('input');
+                if(inp){ try { payload = decodeURIComponent(inp); } catch(e){ payload = inp; } }
+            }
+            if(payload != null){
+                jsonInput.value = payload;
+                setTimeout(()=> encodeJson(true), 50);
+                try { jsonInput.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(e){ /* ignore */ }
+            }
+        } catch(e){ /* ignore */ }
+    })();
 
     </script>
 </body>
