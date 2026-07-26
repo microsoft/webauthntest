@@ -620,9 +620,9 @@ try {
         return buf instanceof Uint8Array ? buf : new Uint8Array(buf);
     }
 
-    // Wrap bytes as colon-separated uppercase hex, 18 bytes per line, indented.
+    // Wrap bytes as colon-separated uppercase hex, 32 bytes per line, indented.
     function wrapHexColon(u8, indent) {
-        const per = 18;
+        const per = 32;
         const out = [];
         for (let i = 0; i < u8.length; i += per) {
             const slice = Array.from(u8.slice(i, i + per)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
@@ -1192,12 +1192,52 @@ try {
             clone.querySelectorAll('.material-symbols-outlined, button, .decode-copy, .decode-actions, .decode-hexcopy, .cert-inline-copy, .cert-dump-toolbar').forEach(el => el.remove());
             return clone.textContent.replace(/\u00a0/g, ' ');
         }
-        // Reformat plain hex to uppercase colon-separated, `perLine` bytes per line.
-        function formatHexColon(hex, perLine) {
+        // Reformat plain hex to uppercase space-separated (no colons), `perLine`
+        // bytes per line. Used for value-cell hex in the exported PDF.
+        function formatHexSpaced(hex, perLine) {
             const pairs = (String(hex || '').match(/.{1,2}/g) || []);
             const lines = [];
-            for (let i = 0; i < pairs.length; i += perLine) lines.push(pairs.slice(i, i + perLine).join(':').toUpperCase());
+            for (let i = 0; i < pairs.length; i += perLine) lines.push(pairs.slice(i, i + perLine).join(' ').toUpperCase());
             return lines.join('\n');
+        }
+        // Reformat the colon-separated hex runs inside an OpenSSL-style certificate
+        // dump into space-separated, `perLine` bytes-per-row hex (preserving each
+        // block's indentation). Non-hex lines (labels, fingerprints) are untouched.
+        function reformatCertDumpHex(text, perLine) {
+            perLine = perLine || 32;
+            const lines = String(text || '').split('\n');
+            const hexLineRe = /^(\s+)((?:[0-9A-Fa-f]{2}:)*[0-9A-Fa-f]{2}:?)\s*$/;
+            // Inline labeled hex on one line, e.g. "        SHA256: AA:BB:CC".
+            const inlineHexRe = /^(.*?:[ \t]*)((?:[0-9A-Fa-f]{2}:)+[0-9A-Fa-f]{2})[ \t]*$/;
+            const out = [];
+            let i = 0;
+            while (i < lines.length) {
+                const m = lines[i].match(hexLineRe);
+                if (m) {
+                    const indent = m[1];
+                    const bytes = [];
+                    while (i < lines.length) {
+                        const mm = lines[i].match(hexLineRe);
+                        if (!mm || mm[1] !== indent) break;
+                        mm[2].replace(/:$/, '').split(':').forEach(b => bytes.push(b.toUpperCase()));
+                        i++;
+                    }
+                    for (let j = 0; j < bytes.length; j += perLine) {
+                        out.push(indent + bytes.slice(j, j + perLine).join(' '));
+                    }
+                    continue;
+                }
+                const inl = lines[i].match(inlineHexRe);
+                if (inl) {
+                    const spaced = inl[2].split(':').map(b => b.toUpperCase()).join(' ');
+                    out.push(inl[1] + spaced);
+                    i++;
+                    continue;
+                }
+                out.push(lines[i]);
+                i++;
+            }
+            return out.join('\n');
         }
         // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
         // 32 bytes/line (from their raw data-hex) so they align and fill the column;
@@ -1212,7 +1252,7 @@ try {
                 if (ch.classList && ch.classList.contains('decode-hexblock')) hexPre = ch.querySelector('.decode-hex[data-hex]');
                 else if (ch.matches && ch.matches('.decode-hex[data-hex]')) hexPre = ch;
                 if (hexPre) {
-                    parts.push(formatHexColon(hexPre.getAttribute('data-hex') || '', 32));
+                    parts.push(formatHexSpaced(hexPre.getAttribute('data-hex') || '', 32));
                 } else {
                     const t = cleanText(ch);
                     if (t.replace(/\s+$/, '')) parts.push(t.replace(/\s+$/, ''));
@@ -1270,7 +1310,7 @@ try {
                 } else if (cls.contains('decode-cert-index')) {
                     out.push({ text: cleanText(node).trim(), bold: true, margin: [0, 4, 0, 2] });
                 } else if (cls.contains('cert-dump')) {
-                    out.push({ text: hardWrap(cleanText(node).replace(/\s+$/, ''), 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
+                    out.push({ text: hardWrap(reformatCertDumpHex(cleanText(node).replace(/\s+$/, ''), 32), 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
                 } else if (cls.contains('decode-value')) {
                     out.push({ text: hardWrap(cleanText(node), 114), style: 'monoBlock', preserveLeadingSpaces: true });
                 } else {
