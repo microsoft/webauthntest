@@ -772,6 +772,7 @@ try {
             //user is signed out
             // Remove cookie using the same path used when setting it so it is actually cleared
             Cookies.remove('uid', { path: '/' });
+            Cookies.remove('uidDisplay', { path: '/' });
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -789,8 +790,14 @@ try {
         }, 100);
 
         $('#signOutButton').click(() => {
+            // Remember the current username (original casing) so the login page can prefill it.
+            try {
+                var currentUid = Cookies.get('uidDisplay') || Cookies.get('uid');
+                if (currentUid) localStorage.setItem('prefillUid', currentUid);
+            } catch (e) { /* ignore */ }
             // Ensure the persistent cookie is removed by specifying the path
             Cookies.remove('uid', { path: '/' });
+            Cookies.remove('uidDisplay', { path: '/' });
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -801,8 +808,40 @@ try {
             window.location.href = "./login.html";
         });
 
+        $('#showUserButton').click(() => {
+            var uid = Cookies.get('uidDisplay') || Cookies.get('uid');
+            if (uid) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(uid)
+                        .then(() => toast('Signed in as: ' + uid + ' (copied to clipboard)'))
+                        .catch(() => toast('Signed in as: ' + uid));
+                } else {
+                    toast('Signed in as: ' + uid);
+                }
+            } else {
+                toast('No signed-in user');
+            }
+        });
+
         $('#createButton').click(() => {
             createDialog.showModal();
+        });
+
+        $('#deleteAllButton').click(() => {
+            const dlg = document.getElementById('confirmDeleteAllDialog');
+            if (!dlg) return;
+            const count = (credentials || []).length;
+            const msgEl = document.getElementById('confirmDeleteAllDialog_message');
+            const confirmBtn = document.getElementById('confirmDeleteAllDialog_confirm');
+            if (count === 0) {
+                if (msgEl) msgEl.textContent = 'There are no credentials to delete.';
+                if (confirmBtn) confirmBtn.style.display = 'none';
+            } else {
+                if (msgEl) msgEl.textContent = 'Are you sure you want to delete all ' + count + ' credential' + (count === 1 ? '' : 's') + '? This action cannot be undone.';
+                if (confirmBtn) confirmBtn.style.display = '';
+            }
+            if (!dlg.showModal) { try { dialogPolyfill.registerDialog(dlg); } catch (e) { /* ignore */ } }
+            dlg.showModal();
         });
 
         $('#getButton').click(async () => {
@@ -1201,6 +1240,25 @@ try {
                 });
                 $('#confirmDeleteDialog_cancel').click(() => { confirmDeleteDialog.close(); });
                 $('#confirmDeleteDialog_xButton').click(() => { confirmDeleteDialog.close(); });
+            }
+
+            // Confirm Delete All dialog handlers
+            const confirmDeleteAllDialog = document.getElementById('confirmDeleteAllDialog');
+            if (confirmDeleteAllDialog) {
+                $('#confirmDeleteAllDialog_confirm').click(() => {
+                    const btn = document.getElementById('confirmDeleteAllDialog_confirm');
+                    if (btn) btn.disabled = true;
+                    deleteAllCredentials().then(() => {
+                        toast('All credentials deleted');
+                    }).catch(err => {
+                        toast('Delete all failed: ' + (err && err.message ? err.message : err));
+                    }).finally(() => {
+                        if (btn) btn.disabled = false;
+                        confirmDeleteAllDialog.close();
+                    });
+                });
+                $('#confirmDeleteAllDialog_cancel').click(() => { confirmDeleteAllDialog.close(); });
+                $('#confirmDeleteAllDialog_xButton').click(() => { confirmDeleteAllDialog.close(); });
             }
             $('#updateTransportsDialog_selectAllButton').click(() => {
                 ['internal','usb','nfc','ble','hybrid'].forEach(t => setTransportCheckbox(t, true));
@@ -1779,6 +1837,7 @@ try {
                 prfEnabled: prfEnabled,
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
+                fullResponseJSON: getFullCredentialJSON(attestation),
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -2060,6 +2119,7 @@ try {
                 authenticatorAttachment: assertion.authenticatorAttachment,
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
+                fullResponseJSON: getFullCredentialJSON(assertion),
                 metadata: {
                     rpId: getAssertionOptions.rpId
                 }
@@ -2125,6 +2185,27 @@ try {
             else {
                 return updateCredentials(window.location.hostname);
             }
+        });
+    }
+
+    /**
+     * Deletes all credentials for the current user, then refreshes the list once.
+     * @return {Promise<void>}
+     */
+    function deleteAllCredentials() {
+        var ids = (credentials || []).map(function (c) { return c.id; }).filter(Boolean);
+        if (ids.length === 0) {
+            return updateCredentials(window.location.hostname);
+        }
+        return Promise.all(ids.map(function (id) {
+            return rest_delete("/credentials", { id: id })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) {
+                    if (resp && resp.error) return Promise.reject(resp.error);
+                    return resp;
+                });
+        })).then(function () {
+            return updateCredentials(window.location.hostname);
         });
     }
 
@@ -2195,6 +2276,7 @@ try {
             authenticatorAttachment: assertion.authenticatorAttachment,
             prfFirst: prfFirstHex,
             prfSecond: prfSecondHex,
+            fullResponseJSON: getFullCredentialJSON(assertion),
             metadata: { rpId: getOptions.rpId }
         };
 
@@ -2805,6 +2887,19 @@ try {
         } catch (e) { /* non-fatal */ }
     $("#creationData_residentKey").text(sanitizeForDisplay(credential.metadata.residentKey));
     try {
+        var creationFullJson = credential.creationData.fullResponseJSON;
+        var creationFullJsonStr = creationFullJson ? JSON.stringify(creationFullJson, null, 2) : 'No data';
+        var creationFullEl = document.getElementById('creationData_fullResponseJSON');
+        if (creationFullEl) {
+            creationFullEl.textContent = sanitizeForDisplay(creationFullJsonStr);
+            try { creationFullEl.setAttribute('data-raw', creationFullJson ? JSON.stringify(creationFullJson) : ''); } catch (e) { /* ignore */ }
+        }
+        // Filename: WebAuthn_<CredId16>.json (stable per credential).
+        var regCredId16 = (credential.idHex || '').toString().slice(0, 16);
+        var regDlBtn = document.querySelector('.downloadJsonButton[data-target-span="creationData_fullResponseJSON"]');
+        if (regDlBtn && regCredId16) regDlBtn.setAttribute('data-filename', 'WebAuthn_' + regCredId16 + '.json');
+    } catch (e) { /* non-fatal */ }
+    try {
         attachResponsiveHex('creationData_PRF_First', credential.creationData.prfFirst);
         attachResponsiveHex('creationData_PRF_Second', credential.creationData.prfSecond);
     } catch (e) {
@@ -2881,6 +2976,47 @@ try {
             ['creationData_clientDataJSON','creationData_authenticatorDataHex','creationData_extensionData','creationData_publicKeyCbor','creationData_attestationObject','creationData_PRF_First','creationData_PRF_Second'].forEach(id => updateCopyButtonVisibility(id));
         } catch (e) { /* ignore */ }
     }
+
+    // Open the WebAuthn Decoder in a new tab with the target span's hex value.
+    $(document).on('click', '.openDecoderButton', function(e){
+        e.preventDefault();
+        try {
+            var targetSpan = $(this).attr('data-target-span');
+            if(!targetSpan) return;
+            var el = document.getElementById(targetSpan);
+            if(!el){ toast('No data to open'); return; }
+            var raw = null;
+            try { raw = el.getAttribute && el.getAttribute('data-raw'); } catch (e) { raw = null; }
+            if(!raw) raw = el.textContent || el.innerText || '';
+            if(!raw || !raw.trim()){ toast('No data to open'); return; }
+            openInDecoder(raw.trim());
+        } catch (err) {
+            console.error('Failed to open decoder', err);
+            toast('Failed to open decoder');
+        }
+    });
+
+    // Download the target span's content as a JSON file.
+    $(document).on('click', '.downloadJsonButton', function(e){
+        e.preventDefault();
+        try {
+            var targetSpan = $(this).attr('data-target-span');
+            var filename = $(this).attr('data-filename') || 'response.json';
+            var el = targetSpan ? document.getElementById(targetSpan) : null;
+            if(!el){ toast('No data to download'); return; }
+            var text = el.textContent || '';
+            if(!text.trim() || text.trim() === 'No data'){ toast('No data to download'); return; }
+            var blob = new Blob([text], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click();
+            setTimeout(function(){ try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1000);
+        } catch (err) {
+            console.error('Download failed', err);
+            toast('Download failed');
+        }
+    });
 
     // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
     $(document).on('click', '.openCborButton', function(e){
@@ -3360,6 +3496,56 @@ try {
     }
 
     /**
+     * Opens decode.html in a new tab and passes a payload (e.g. a certificate PEM)
+     * to be auto-decoded there. Uses a postMessage handshake with a sessionStorage
+     * fallback, mirroring the CBOR playground opener.
+     * @param {string} payload text to decode (PEM / hex / base64)
+     */
+    function openInDecoder(payload) {
+        var raw = String(payload || '').trim();
+        if (!raw) { toast('No data to decode'); return; }
+        try {
+            var nonce = Math.random().toString(36).slice(2, 12);
+            var child = window.open('./decode.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
+            if (!child) throw new Error('Popup blocked');
+            var done = false;
+            var listener = function (ev) {
+                try {
+                    if (ev.origin !== window.location.origin) return;
+                    if (ev.source !== child) return;
+                    var d = ev.data || {};
+                    if (d && d.type === 'decode-ready' && d.nonce === nonce) {
+                        try { child.postMessage({ type: 'decode-payload', nonce: nonce, payload: raw }, window.location.origin); } catch (e) { /* ignore */ }
+                        done = true;
+                        window.removeEventListener('message', listener);
+                    }
+                } catch (e) { /* ignore */ }
+            };
+            window.addEventListener('message', listener);
+            setTimeout(function () {
+                if (done) return;
+                try { window.removeEventListener('message', listener); } catch (e) { /* ignore */ }
+                try {
+                    var key = 'decode_payload_' + Math.random().toString(36).slice(2, 10);
+                    sessionStorage.setItem(key, raw);
+                    if (child && !child.closed) child.location.href = './decode.html?key=' + encodeURIComponent(key);
+                    else window.open('./decode.html?key=' + encodeURIComponent(key), '_blank');
+                } catch (err) {
+                    try { window.open('./decode.html?input=' + encodeURIComponent(raw), '_blank'); } catch (e) { toast('Failed to open decoder'); }
+                }
+            }, 3000);
+        } catch (pmErr) {
+            try {
+                var key2 = 'decode_payload_' + Math.random().toString(36).slice(2, 10);
+                sessionStorage.setItem(key2, raw);
+                window.open('./decode.html?key=' + encodeURIComponent(key2), '_blank');
+            } catch (e) {
+                try { window.open('./decode.html?input=' + encodeURIComponent(raw), '_blank'); } catch (e2) { toast('Failed to open decoder'); }
+            }
+        }
+    }
+
+    /**
      * Renders a modal dialog with certificate details
      * @param {Array<Object>} certs
      */
@@ -3462,6 +3648,7 @@ try {
                 html += '<button class="btn btn-outline btn-sm cert-download-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">file_download</span>&nbsp;Download PEM</button>';
                 html += '<button class="btn btn-outline btn-sm cert-download-der" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>&nbsp;Download DER</button>';
                 html += '<button class="btn btn-ghost btn-sm cert-copy-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span>&nbsp;Copy PEM</button>';
+                html += '<button class="btn btn-ghost btn-sm cert-view-details" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>&nbsp;View Details</button>';
             html += '</div>';
 
             html += '</div>'; // end body
@@ -3491,7 +3678,8 @@ try {
         downloadChainBtn.addEventListener('click', () => {
             const allPem = certs.map(c => c.pem).join('\n');
             const blob = new Blob([allPem], { type: 'application/x-pem-file' });
-            downloadBlob('certificate-chain.pem', blob);
+            const leafFp = (certs[0] && certs[0].fingerprintSHA256) ? certs[0].fingerprintSHA256.slice(0, 16) : '';
+            downloadBlob(leafFp ? ('CertificateChain_' + leafFp + '.pem') : 'certificate-chain.pem', blob);
         });
     }
 
@@ -3507,6 +3695,13 @@ try {
                 URL.revokeObjectURL(url);
                 a.remove();
             }, 1000);
+        }
+
+        // Build a stable, unique filename base for a certificate using the first 16
+        // hex chars of its SHA-256 fingerprint. Falls back to the 1-based index.
+        function certFileBase(cert, idx) {
+            if (cert && cert.fingerprintSHA256) return 'Certificate_' + cert.fingerprintSHA256.slice(0, 16);
+            return 'certificate-' + (idx + 1);
         }
 
         // no MDL upgrade required
@@ -3536,7 +3731,7 @@ try {
                 if (!cert) return;
                 const pem = cert.pem;
                 const blob = new Blob([pem], { type: 'application/x-pem-file' });
-                downloadBlob('certificate-' + (idx+1) + '.pem', blob);
+                downloadBlob(certFileBase(cert, idx) + '.pem', blob);
             });
         });
 
@@ -3548,7 +3743,7 @@ try {
                 const ab = cert.raw || null;
                 if (!ab) return toast('DER data not available');
                 const blob = new Blob([ab], { type: 'application/octet-stream' });
-                downloadBlob('certificate-' + (idx+1) + '.der', blob);
+                downloadBlob(certFileBase(cert, idx) + '.der', blob);
             });
         });
 
@@ -3576,6 +3771,15 @@ try {
                         toast('Copy failed; please download the PEM');
                     }
                 }
+            });
+        });
+
+        dlg.querySelectorAll('.cert-view-details').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                const cert = certs[idx];
+                if (!cert || !cert.pem) { toast('Certificate data not available'); return; }
+                openInDecoder(cert.pem);
             });
         });
 
@@ -4144,6 +4348,26 @@ try {
                 attachResponsiveHex('authenticationData_signatureHex', credential.authenticationData.signatureHex);
                 attachResponsiveHex('authenticationData_PRF_First', credential.authenticationData.prfFirst);
                 attachResponsiveHex('authenticationData_PRF_Second', credential.authenticationData.prfSecond);
+                try {
+                    var authFullJson = credential.authenticationData.fullResponseJSON;
+                    var authFullEl = document.getElementById('authenticationData_fullResponseJSON');
+                    if (authFullEl) {
+                        authFullEl.textContent = sanitizeForDisplay(authFullJson ? JSON.stringify(authFullJson, null, 2) : 'No data');
+                        try { authFullEl.setAttribute('data-raw', authFullJson ? JSON.stringify(authFullJson) : ''); } catch (e) { /* ignore */ }
+                    }
+                    // Filename: WebAuthn_<CredId16>_<AuthHash12>.json where AuthHash12
+                    // is SHA-256(signature) first 12 hex chars (unique per authentication).
+                    var authCredId16 = (credential.idHex || '').toString().slice(0, 16);
+                    var authSigHex = (credential.authenticationData.signatureHex || '').toString().trim();
+                    var authDlBtn = document.querySelector('.downloadJsonButton[data-target-span="authenticationData_fullResponseJSON"]');
+                    if (authDlBtn && authCredId16 && authSigHex && /^[0-9a-fA-F]+$/.test(authSigHex) && authSigHex.length % 2 === 0 && window.crypto && window.crypto.subtle) {
+                        var sigBytes = new Uint8Array(authSigHex.match(/.{1,2}/g).map(function (h) { return parseInt(h, 16); }));
+                        window.crypto.subtle.digest('SHA-256', sigBytes).then(function (buf) {
+                            var hashHex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                            authDlBtn.setAttribute('data-filename', 'WebAuthn_' + authCredId16 + '_' + hashHex.slice(0, 12) + '.json');
+                        }).catch(function () { /* keep default filename */ });
+                    }
+                } catch (e) { /* non-fatal */ }
             } catch (e) {
                 // Don't clobber fields that may have been formatted by attachResponsiveHex.
                 // Log the error for diagnostics instead.
@@ -4383,6 +4607,54 @@ try {
         return btoa(Array.from(new Uint8Array(byteArray)).map(val => {
           return String.fromCharCode(val);
         }).join('')).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=/g, '');
+    }
+
+    /**
+     * Helper: Serializes a PublicKeyCredential (from create() or get()) into a
+     * fully-detailed plain object for persistence. Prefers the standard WebAuthn
+     * Level 3 toJSON() serialization; falls back to a manual serialization for
+     * browsers where toJSON() is unavailable or buggy (e.g. some macOS/iOS).
+     * @param {PublicKeyCredential} cred
+     * @returns {Object|null}
+     */
+    function getFullCredentialJSON(cred) {
+        if (!cred) return null;
+        try {
+            if (typeof cred.toJSON === 'function') {
+                var j = cred.toJSON();
+                if (j) return j;
+            }
+        } catch (e) {
+            console.warn('PublicKeyCredential.toJSON() failed; using manual serialization', e);
+        }
+        function b64url(buf) { try { return byteArrayToBase64URL(new Uint8Array(buf)); } catch (e) { return null; } }
+        var out = {
+            id: cred.id,
+            rawId: cred.rawId ? b64url(cred.rawId) : null,
+            type: cred.type,
+            authenticatorAttachment: cred.authenticatorAttachment || null,
+            clientExtensionResults: {}
+        };
+        try { out.clientExtensionResults = (typeof cred.getClientExtensionResults === 'function') ? cred.getClientExtensionResults() : {}; } catch (e) { out.clientExtensionResults = {}; }
+        var r = cred.response || {};
+        var resp = {};
+        try { if (r.clientDataJSON) resp.clientDataJSON = b64url(r.clientDataJSON); } catch (e) { /* ignore */ }
+        // Registration (AuthenticatorAttestationResponse) fields
+        if (typeof r.attestationObject !== 'undefined') {
+            try { resp.attestationObject = b64url(r.attestationObject); } catch (e) { /* ignore */ }
+            try { if (typeof r.getTransports === 'function') resp.transports = r.getTransports(); } catch (e) { /* ignore */ }
+            try { if (typeof r.getAuthenticatorData === 'function') resp.authenticatorData = b64url(r.getAuthenticatorData()); } catch (e) { /* ignore */ }
+            try { if (typeof r.getPublicKey === 'function') { var pk = r.getPublicKey(); resp.publicKey = pk ? b64url(pk) : null; } } catch (e) { /* ignore */ }
+            try { if (typeof r.getPublicKeyAlgorithm === 'function') resp.publicKeyAlgorithm = r.getPublicKeyAlgorithm(); } catch (e) { /* ignore */ }
+        }
+        // Assertion (AuthenticatorAssertionResponse) fields
+        if (typeof r.signature !== 'undefined') {
+            try { resp.authenticatorData = b64url(r.authenticatorData); } catch (e) { /* ignore */ }
+            try { resp.signature = b64url(r.signature); } catch (e) { /* ignore */ }
+            try { resp.userHandle = r.userHandle ? b64url(r.userHandle) : null; } catch (e) { /* ignore */ }
+        }
+        out.response = resp;
+        return out;
     }
 
     /**

@@ -559,7 +559,7 @@
 
                         <dt>Public Key (CBOR)
                             <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">CBOR DECODE</a>
                             </div>
                         </dt>
                         <dd>
@@ -585,7 +585,11 @@
                             </div>
                         </dd>
 
-                        <dt>Authenticator Data</dt>
+                        <dt>Authenticator Data
+                            <div class="decode-action-left">
+                                <a href="#" class="btn btn-link btn-xs openDecoderButton" data-target-span="creationData_authenticatorDataHex" title="Open in WebAuthn Decoder">VIEW DETAILS</a>
+                            </div>
+                        </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_authenticatorDataHex"></pre>
@@ -599,7 +603,7 @@
 
                         <dt>Extensions
                             <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">CBOR DECODE</a>
                             </div>
                         </dt>
                         <dd>
@@ -615,7 +619,7 @@
 
                         <dt>Attestation Object
                             <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_attestationObject" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openDecoderButton" data-target-span="creationData_attestationObject" title="Open in WebAuthn Decoder">VIEW DETAILS</a>
                             </div>
                         </dt>
                         <dd>
@@ -650,6 +654,23 @@
                                 <pre class="mono hex-mono" id="creationData_PRF_Second"></pre>
                                 <div class="mono-actions">
                                     <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Full Response JSON
+                            <div class="decode-action-left">
+                                <a href="#" class="btn btn-link btn-xs openDecoderButton" data-target-span="creationData_fullResponseJSON" title="Open in WebAuthn Decoder">VIEW DETAILS</a>
+                                <a href="#" class="btn btn-link btn-xs downloadJsonButton" data-target-span="creationData_fullResponseJSON" data-filename="registration-response.json" title="Download Full Response JSON">DOWNLOAD</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono hex-mono" id="creationData_fullResponseJSON"></pre>
+                                <div class="mono-actions">
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="creationData_fullResponseJSON" data-copy-label="Full Response JSON" title="Copy Full Response JSON">
                                         <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
@@ -705,7 +726,11 @@
                             </div>
                         </dd>
 
-                        <dt>Authenticator Data</dt>
+                        <dt>Authenticator Data
+                            <div class="decode-action-left">
+                                <a href="#" class="btn btn-link btn-xs openDecoderButton" data-target-span="authenticationData_authenticatorDataHex" title="Open in WebAuthn Decoder">VIEW DETAILS</a>
+                            </div>
+                        </dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_authenticatorDataHex"></pre>
@@ -719,7 +744,7 @@
 
                         <dt>Extensions
                             <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">DECODE</a>
+                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">CBOR DECODE</a>
                             </div>
                         </dt>
                         <dd>
@@ -763,6 +788,23 @@
                                 <pre class="mono hex-mono" id="authenticationData_PRF_Second"></pre>
                                 <div class="mono-actions">
                                     <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_PRF_Second" data-copy-label="PRF Second" title="Copy PRF Second">
+                                        <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </dd>
+
+                        <dt>Full Response JSON
+                            <div class="decode-action-left">
+                                <a href="#" class="btn btn-link btn-xs openDecoderButton" data-target-span="authenticationData_fullResponseJSON" title="Open in WebAuthn Decoder">VIEW DETAILS</a>
+                                <a href="#" class="btn btn-link btn-xs downloadJsonButton" data-target-span="authenticationData_fullResponseJSON" data-filename="authentication-response.json" title="Download Full Response JSON">DOWNLOAD</a>
+                            </div>
+                        </dt>
+                        <dd>
+                            <div class="mono-block">
+                                <pre class="mono hex-mono" id="authenticationData_fullResponseJSON"></pre>
+                                <div class="mono-actions">
+                                    <button class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="authenticationData_fullResponseJSON" data-copy-label="Full Response JSON" title="Copy Full Response JSON">
                                         <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                                     </button>
                                 </div>
@@ -838,6 +880,22 @@
         </div>
     </dialog>
 
+    <dialog class="app-dialog" id="confirmDeleteAllDialog">
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-sm btn-circle btn-ghost close" id="confirmDeleteAllDialog_xButton" aria-label="Close">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        </div>
+        <h3 class="app-dialog-title">Delete All Credentials</h3>
+        <div class="app-dialog-content">
+            <p id="confirmDeleteAllDialog_message">Are you sure you want to delete all credentials? This action cannot be undone.</p>
+        </div>
+        <div class="app-dialog-actions">
+            <button type="button" class="btn btn-error btn-sm" id="confirmDeleteAllDialog_confirm">Delete All</button>
+            <button type="button" class="btn btn-ghost btn-sm close" id="confirmDeleteAllDialog_cancel">Cancel</button>
+        </div>
+    </dialog>
+
     <dialog class="app-dialog" id="moreDialog">
         <h3 class="app-dialog-title">More Options</h3>
         <div class="app-dialog-content">
@@ -878,6 +936,9 @@
                             <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Home" aria-label="Home">
                                 <span class="material-symbols-outlined" aria-hidden="true">home</span>
                             </a>
+                            <a class="btn btn-ghost btn-sm btn-circle" href="decode.html" title="WebAuthn Decoder" aria-label="WebAuthn Decoder">
+                                <span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>
+                            </a>
                             <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
                                 <span class="material-symbols-outlined" aria-hidden="true">code</span>
                             </a>
@@ -891,13 +952,21 @@
                             <button class="btn btn-ghost btn-sm btn-circle" id="getButton" title="Get" aria-label="Authenticate">
                                 <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
                             </button>
+                            <button class="btn btn-ghost btn-sm btn-circle" id="deleteAllButton" title="Delete all credentials" aria-label="Delete all credentials">
+                                <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
+                            </button>
                             <button class="btn btn-ghost btn-sm btn-circle" id="moreButton" title="More" aria-label="More">
                                 <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
                             </button>
                         </div>
-                        <button class="btn btn-ghost btn-sm btn-circle" id="signOutButton" title="Sign out" aria-label="Sign out">
-                            <span class="material-symbols-outlined" aria-hidden="true">logout</span>
-                        </button>
+                        <div class="credentials-toolbar-right" aria-label="Session actions">
+                            <button class="btn btn-ghost btn-sm btn-circle" id="showUserButton" title="Show username" aria-label="Show username">
+                                <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+                            </button>
+                            <button class="btn btn-ghost btn-sm btn-circle" id="signOutButton" title="Sign out" aria-label="Sign out">
+                                <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div id="credentialsContainer" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"></div>

@@ -596,6 +596,7 @@ async function showMdsCertificatesDialog() {
             html += '<button class="btn btn-outline btn-sm cert-download-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">file_download</span>&nbsp;Download PEM</button>';
             html += '<button class="btn btn-outline btn-sm cert-download-der" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">cloud_download</span>&nbsp;Download DER</button>';
             html += '<button class="btn btn-ghost btn-sm cert-copy-pem" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span>&nbsp;Copy PEM</button>';
+            html += '<button class="btn btn-ghost btn-sm cert-view-details" data-idx="' + idx + '"><span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>&nbsp;View Details</button>';
             html += '</div>';
         } else {
             html += '<div class="text-sm text-error">Failed to parse: ' + escapeHtml(p.error) + '</div>';
@@ -644,6 +645,12 @@ async function showMdsCertificatesDialog() {
     }
 
     // Per-cert actions
+    // Stable, unique filename base from the first 16 hex chars of the SHA-256
+    // fingerprint; falls back to the 1-based index.
+    function certFileBase(cert, idx) {
+        if (cert && cert.fingerprintSHA256) return 'Certificate_' + cert.fingerprintSHA256.slice(0, 16);
+        return 'certificate-' + (idx + 1);
+    }
     body.querySelectorAll('.cert-download-pem').forEach(btn => {
         btn.addEventListener('click', () => {
             const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
@@ -651,7 +658,7 @@ async function showMdsCertificatesDialog() {
             if (!p || !p.ok) return;
             const pem = p.cert.pem || '';
             const blob = new Blob([pem], { type: 'application/x-pem-file' });
-            downloadBlob('certificate-' + (idx + 1) + '.pem', blob);
+            downloadBlob(certFileBase(p.cert, idx) + '.pem', blob);
         });
     });
 
@@ -663,7 +670,7 @@ async function showMdsCertificatesDialog() {
             const ab = p.cert.raw;
             if (!ab) return;
             const blob = new Blob([ab], { type: 'application/octet-stream' });
-            downloadBlob('certificate-' + (idx + 1) + '.der', blob);
+            downloadBlob(certFileBase(p.cert, idx) + '.der', blob);
         });
     });
 
@@ -674,6 +681,15 @@ async function showMdsCertificatesDialog() {
             if (!p || !p.ok) return;
             const ok = await copyTextWithFallback(p.cert.pem || '');
             showToast(ok ? 'info' : 'warning', ok ? 'PEM copied to clipboard' : 'Copy failed; use Download PEM');
+        });
+    });
+
+    body.querySelectorAll('.cert-view-details').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-idx') || '0', 10);
+            const p = parsed[idx];
+            if (!p || !p.ok || !p.cert || !p.cert.pem) { showToast('warning', 'Certificate data not available'); return; }
+            openInDecoder(p.cert.pem);
         });
     });
 
@@ -794,6 +810,55 @@ function showToast(kind, message, timeoutMs = 6000) {
     window.setTimeout(() => {
         try { alert.remove(); } catch { /* ignore */ }
     }, timeoutMs);
+}
+
+/**
+ * Opens decode.html in a new tab and passes a payload (e.g. a certificate PEM)
+ * to be auto-decoded. Uses a postMessage handshake with a sessionStorage fallback.
+ * @param {string} payload text to decode (PEM / hex / base64)
+ */
+function openInDecoder(payload) {
+    var raw = String(payload || '').trim();
+    if (!raw) { showToast('warning', 'No data to decode'); return; }
+    try {
+        var nonce = Math.random().toString(36).slice(2, 12);
+        var child = window.open('./decode.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
+        if (!child) throw new Error('Popup blocked');
+        var done = false;
+        var listener = function (ev) {
+            try {
+                if (ev.origin !== window.location.origin) return;
+                if (ev.source !== child) return;
+                var d = ev.data || {};
+                if (d && d.type === 'decode-ready' && d.nonce === nonce) {
+                    try { child.postMessage({ type: 'decode-payload', nonce: nonce, payload: raw }, window.location.origin); } catch (e) { /* ignore */ }
+                    done = true;
+                    window.removeEventListener('message', listener);
+                }
+            } catch (e) { /* ignore */ }
+        };
+        window.addEventListener('message', listener);
+        setTimeout(function () {
+            if (done) return;
+            try { window.removeEventListener('message', listener); } catch (e) { /* ignore */ }
+            try {
+                var key = 'decode_payload_' + Math.random().toString(36).slice(2, 10);
+                sessionStorage.setItem(key, raw);
+                if (child && !child.closed) child.location.href = './decode.html?key=' + encodeURIComponent(key);
+                else window.open('./decode.html?key=' + encodeURIComponent(key), '_blank');
+            } catch (err) {
+                try { window.open('./decode.html?input=' + encodeURIComponent(raw), '_blank'); } catch (e) { showToast('warning', 'Failed to open decoder'); }
+            }
+        }, 3000);
+    } catch (pmErr) {
+        try {
+            var key2 = 'decode_payload_' + Math.random().toString(36).slice(2, 10);
+            sessionStorage.setItem(key2, raw);
+            window.open('./decode.html?key=' + encodeURIComponent(key2), '_blank');
+        } catch (e) {
+            try { window.open('./decode.html?input=' + encodeURIComponent(raw), '_blank'); } catch (e2) { showToast('warning', 'Failed to open decoder'); }
+        }
+    }
 }
 
 function normalizeAaguid(input) {
