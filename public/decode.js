@@ -1259,12 +1259,26 @@ try {
             }
             return out.join('\n');
         }
-        // Break up long continuous hex runs (e.g. COSE key values in pretty JSON)
-        // into space-separated bytes so pdfmake can wrap them like a hex block
-        // instead of treating them as one over-wide unbreakable token (which
-        // renders with enlarged line spacing).
-        function spaceOutLongHex(text) {
-            return String(text == null ? '' : text).replace(/[0-9A-Fa-f]{64,}/g, run => (run.match(/.{1,2}/g) || []).join(' '));
+        // Reformat long continuous hex runs (e.g. COSE key values in pretty JSON)
+        // into aligned, fixed 32-bytes-per-row space-separated hex. The JSON key
+        // and opening quote stay on their own line; the bytes then start fresh on
+        // the next line (indented to the JSON nesting) so a full 32 bytes fit per
+        // row and every row aligns. Avoids both the enlarged line spacing of an
+        // over-wide unbreakable token and pdfmake's ragged re-wrapping.
+        function wrapLongHexInJson(text, perRow) {
+            perRow = perRow || 32;
+            return String(text == null ? '' : text).split('\n').map(line => {
+                const m = line.match(/[0-9A-Fa-f]{64,}/);
+                if (!m) return line;
+                const before = line.slice(0, m.index);          // e.g. '  "-1": "'
+                const after = line.slice(m.index + m[0].length); // e.g. '",'
+                const bytes = m[0].toUpperCase().match(/.{1,2}/g) || [];
+                const indent = (line.match(/^\s*/) || [''])[0] + '  ';
+                const rows = [];
+                for (let i = 0; i < bytes.length; i += perRow) rows.push(indent + bytes.slice(i, i + perRow).join(' '));
+                if (rows.length) rows[rows.length - 1] += after;
+                return before + '\n' + rows.join('\n');
+            }).join('\n');
         }
         // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
         // 32 bytes/line (from their raw data-hex) so they align and fill the column;
@@ -1281,7 +1295,7 @@ try {
                 if (hexPre) {
                     parts.push(formatHexSpaced(hexPre.getAttribute('data-hex') || '', 32));
                 } else {
-                    const t = spaceOutLongHex(cleanText(ch));
+                    const t = wrapLongHexInJson(cleanText(ch));
                     if (t.replace(/\s+$/, '')) parts.push(t.replace(/\s+$/, ''));
                 }
             });
@@ -1299,7 +1313,7 @@ try {
         };
         function kvTable(rows) {
             return {
-                table: { widths: [112, '*'], body: rows },
+                table: { widths: [88, '*'], body: rows },
                 layout: kvLayout,
                 margin: [0, 2, 0, 6]
             };
@@ -1324,7 +1338,7 @@ try {
                     const valContent = node.querySelector('.decode-value-content') || node.querySelector('.decode-value');
                     kvBuffer.push([
                         { text: label ? label.textContent.trim() : '', style: 'label' },
-                        { text: hardWrap(valueToPdfText(valContent), 96), style: 'mono', preserveLeadingSpaces: true }
+                        { text: hardWrap(valueToPdfText(valContent), 100), style: 'mono', preserveLeadingSpaces: true }
                     ]);
                     return;
                 }
@@ -1468,7 +1482,7 @@ try {
                         meta: { fontSize: 8, color: '#9ca3af' },
                         h2: { fontSize: 12.5, bold: true, color: '#4f46e5' },
                         h3: { fontSize: 10, bold: true, color: '#374151' },
-                        label: { fontSize: 8.5, bold: true, color: '#374151' },
+                        label: { fontSize: 8, bold: true, color: '#374151' },
                         mono: { fontSize: 7, font: monoFont, color: '#1f2937' },
                         monoBlock: { fontSize: 7.5, font: monoFont, color: '#374151' }
                     },
