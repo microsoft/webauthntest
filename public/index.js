@@ -1838,6 +1838,7 @@ try {
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
                 fullResponseJSON: getFullCredentialJSON(attestation),
+                fullRequestJSON: toPreviewSafe({ publicKey: createCredentialOptions }),
                 metadata: {
                     rpId: createCredentialOptions.rp.id,
                     userName: createCredentialOptions.user.name,
@@ -2120,6 +2121,7 @@ try {
                 prfFirst: prfFirstHex,
                 prfSecond: prfSecondHex,
                 fullResponseJSON: getFullCredentialJSON(assertion),
+                fullRequestJSON: toPreviewSafe({ publicKey: getAssertionOptions, mediation: mediationOption }),
                 metadata: {
                     rpId: getAssertionOptions.rpId
                 }
@@ -2277,6 +2279,7 @@ try {
             prfFirst: prfFirstHex,
             prfSecond: prfSecondHex,
             fullResponseJSON: getFullCredentialJSON(assertion),
+            fullRequestJSON: toPreviewSafe({ publicKey: getOptions, mediation: 'optional' }),
             metadata: { rpId: getOptions.rpId }
         };
 
@@ -2898,6 +2901,18 @@ try {
         var regCredId16 = (credential.idHex || '').toString().slice(0, 16);
         var regDlBtn = document.querySelector('.downloadJsonButton[data-target-span="creationData_fullResponseJSON"]');
         if (regDlBtn && regCredId16) regDlBtn.setAttribute('data-filename', 'WebAuthn_' + regCredId16 + '.json');
+    } catch (e) { /* non-fatal */ }
+    try {
+        var creationReqJson = credential.creationData.fullRequestJSON;
+        var creationReqJsonStr = creationReqJson ? JSON.stringify(creationReqJson, null, 2) : 'No data';
+        var creationReqEl = document.getElementById('creationData_fullRequestJSON');
+        if (creationReqEl) {
+            creationReqEl.textContent = sanitizeForDisplay(creationReqJsonStr);
+            try { creationReqEl.setAttribute('data-raw', creationReqJson ? JSON.stringify(creationReqJson) : ''); } catch (e) { /* ignore */ }
+        }
+        var regReqCredId16 = (credential.idHex || '').toString().slice(0, 16);
+        var regReqDlBtn = document.querySelector('.downloadJsonButton[data-target-span="creationData_fullRequestJSON"]');
+        if (regReqDlBtn && regReqCredId16) regReqDlBtn.setAttribute('data-filename', 'WebAuthn_' + regReqCredId16 + '_request.json');
     } catch (e) { /* non-fatal */ }
     try {
         attachResponsiveHex('creationData_PRF_First', credential.creationData.prfFirst);
@@ -4365,6 +4380,24 @@ try {
                         window.crypto.subtle.digest('SHA-256', sigBytes).then(function (buf) {
                             var hashHex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
                             authDlBtn.setAttribute('data-filename', 'WebAuthn_' + authCredId16 + '_' + hashHex.slice(0, 12) + '.json');
+                        }).catch(function () { /* keep default filename */ });
+                    }
+                } catch (e) { /* non-fatal */ }
+                try {
+                    var authReqJson = credential.authenticationData.fullRequestJSON;
+                    var authReqEl = document.getElementById('authenticationData_fullRequestJSON');
+                    if (authReqEl) {
+                        authReqEl.textContent = sanitizeForDisplay(authReqJson ? JSON.stringify(authReqJson, null, 2) : 'No data');
+                        try { authReqEl.setAttribute('data-raw', authReqJson ? JSON.stringify(authReqJson) : ''); } catch (e) { /* ignore */ }
+                    }
+                    var authReqCredId16 = (credential.idHex || '').toString().slice(0, 16);
+                    var authReqSigHex = (credential.authenticationData.signatureHex || '').toString().trim();
+                    var authReqDlBtn = document.querySelector('.downloadJsonButton[data-target-span="authenticationData_fullRequestJSON"]');
+                    if (authReqDlBtn && authReqCredId16 && authReqSigHex && /^[0-9a-fA-F]+$/.test(authReqSigHex) && authReqSigHex.length % 2 === 0 && window.crypto && window.crypto.subtle) {
+                        var reqSigBytes = new Uint8Array(authReqSigHex.match(/.{1,2}/g).map(function (h) { return parseInt(h, 16); }));
+                        window.crypto.subtle.digest('SHA-256', reqSigBytes).then(function (buf) {
+                            var hashHex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+                            authReqDlBtn.setAttribute('data-filename', 'WebAuthn_' + authReqCredId16 + '_' + hashHex.slice(0, 12) + '_request.json');
                         }).catch(function () { /* keep default filename */ });
                     }
                 } catch (e) { /* non-fatal */ }

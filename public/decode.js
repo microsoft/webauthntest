@@ -438,6 +438,87 @@ try {
         return { html, raw: bytesToHex(bytes) };
     }
 
+    // Is this parsed JSON a WebAuthn request-options object (the argument passed to
+    // navigator.credentials.create()/get(), as captured for the request preview)?
+    function isWebAuthnRequestOptions(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+        const pk = obj.publicKey;
+        if (!pk || typeof pk !== 'object' || Array.isArray(pk)) return false;
+        return typeof pk.challenge === 'string' && pk.challenge.length > 0;
+    }
+
+    // Render a hex string as a hex block, falling back to mono text if not valid hex.
+    function hexStringBlock(hexStr) {
+        try {
+            const s = String(hexStr || '').trim();
+            if (s && /^[0-9a-fA-F]*$/.test(s) && s.length % 2 === 0) {
+                return hexBlock(CBOR.hexToBytes(s));
+            }
+        } catch (e) { /* fall through */ }
+        return mono(String(hexStr));
+    }
+
+    // Render a list of PublicKeyCredentialDescriptors (exclude/allow credentials).
+    function credentialDescriptorsHtml(label, list) {
+        if (!Array.isArray(list) || list.length === 0) return '';
+        let html = '';
+        list.forEach((d, i) => {
+            const id = d && typeof d.id === 'string' ? d.id : '';
+            const transports = d && Array.isArray(d.transports) && d.transports.length ? ' [' + d.transports.join(', ') + ']' : '';
+            html += kvRow(label + ' #' + (i + 1) + transports, id ? hexStringBlock(id) : mono('(no id)'));
+        });
+        return html;
+    }
+
+    // Renders a WebAuthn request-options object (create() or get() argument).
+    async function renderWebAuthnRequestOptions(obj) {
+        const pk = obj.publicKey || {};
+        const isCreate = !!(pk.pubKeyCredParams || pk.user || pk.rp);
+        let html = '<div class="decode-heading">' + (isCreate
+            ? 'PublicKeyCredential Creation Request'
+            : 'PublicKeyCredential Request (Assertion)') + '</div>';
+
+        html += kvRow('Operation', mono(isCreate ? 'navigator.credentials.create()' : 'navigator.credentials.get()'));
+        if (typeof obj.mediation === 'string') html += kvRow('Mediation', mono(obj.mediation));
+        if (typeof pk.challenge === 'string') html += kvRow('Challenge', hexStringBlock(pk.challenge));
+
+        if (isCreate) {
+            if (pk.rp && typeof pk.rp === 'object') {
+                if (pk.rp.id) html += kvRow('RP ID', mono(String(pk.rp.id)));
+                if (pk.rp.name) html += kvRow('RP Name', mono(String(pk.rp.name)));
+            }
+            if (pk.user && typeof pk.user === 'object') {
+                if (typeof pk.user.id === 'string') html += kvRow('User ID', hexStringBlock(pk.user.id));
+                if (pk.user.name) html += kvRow('User Name', mono(String(pk.user.name)));
+                if (pk.user.displayName) html += kvRow('User Display Name', mono(String(pk.user.displayName)));
+            }
+            if (Array.isArray(pk.pubKeyCredParams) && pk.pubKeyCredParams.length) {
+                const lines = pk.pubKeyCredParams.map(p => {
+                    const alg = p && typeof p.alg === 'number' ? p.alg : null;
+                    const nm = alg !== null ? coseAlgName(alg) : null;
+                    return nm ? `${nm} (${alg})` : (alg !== null ? `alg ${alg}` : 'unknown');
+                });
+                html += kvRow('Pub Key Cred Params', preBlock(lines.join('\n')));
+            }
+            if (pk.authenticatorSelection && typeof pk.authenticatorSelection === 'object') {
+                html += kvRow('Authenticator Selection', preBlock(JSON.stringify(pk.authenticatorSelection, null, 2)));
+            }
+            if (typeof pk.attestation === 'string') html += kvRow('Attestation', mono(pk.attestation));
+            html += credentialDescriptorsHtml('Exclude Credentials', pk.excludeCredentials);
+        } else {
+            if (typeof pk.rpId === 'string') html += kvRow('RP ID', mono(pk.rpId));
+            if (typeof pk.userVerification === 'string') html += kvRow('User Verification', mono(pk.userVerification));
+            html += credentialDescriptorsHtml('Allow Credentials', pk.allowCredentials);
+        }
+
+        if (typeof pk.timeout === 'number') html += kvRow('Timeout', mono(String(pk.timeout) + ' ms'));
+        if (pk.extensions && typeof pk.extensions === 'object' && Object.keys(pk.extensions).length) {
+            html += kvRow('Extensions', preBlock(JSON.stringify(pk.extensions, null, 2)));
+        }
+
+        return { html };
+    }
+
     // -------------------------------------------------------- certificate
     function oidToName(oid) {
         const map = {
@@ -783,6 +864,18 @@ try {
             if (obj && isPublicKeyCredentialJSON(obj)) {
                 try {
                     const rendered = await renderPublicKeyCredentialJSON(obj);
+                    result.innerHTML = rendered.html;
+                    card.style.display = 'block';
+                    formatHexBlocks(result);
+                } catch (e) {
+                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+                    card.style.display = 'none';
+                }
+                return;
+            }
+            if (obj && isWebAuthnRequestOptions(obj)) {
+                try {
+                    const rendered = await renderWebAuthnRequestOptions(obj);
                     result.innerHTML = rendered.html;
                     card.style.display = 'block';
                     formatHexBlocks(result);

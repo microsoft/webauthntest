@@ -999,6 +999,7 @@ export async function makeCredential(uid, attestation, hostname) {
       authenticatorDataHex: bytesToHex(authDataBytes),
       extensionDataHex: authenticatorData.extensionDataHex,
       fullResponseJSON: (attestation && typeof attestation.fullResponseJSON !== 'undefined') ? attestation.fullResponseJSON : null,
+      fullRequestJSON: (attestation && typeof attestation.fullRequestJSON !== 'undefined') ? attestation.fullRequestJSON : null,
       authenticatorData: attestation.authenticatorData,
       attestationObject: attestation.attestationObjectHex,
       clientDataJSON: attestation.clientDataJSON,
@@ -1020,6 +1021,7 @@ export async function makeCredential(uid, attestation, hostname) {
       signatureHex: 'none',
       extensionDataHex: 'No extension data',
       authenticatorAttachment: 'none',
+      fullRequestJSON: null,
       prfFirst: 'none',
       prfSecond: 'none',
     },
@@ -1088,6 +1090,7 @@ export async function verifyAssertion(credential, assertion, hostname) {
     extensionDataHex: authenticatorData.extensionDataHex,
     authenticatorAttachment: assertion.authenticatorAttachment,
     fullResponseJSON: (assertion && typeof assertion.fullResponseJSON !== 'undefined') ? assertion.fullResponseJSON : null,
+    fullRequestJSON: (assertion && typeof assertion.fullRequestJSON !== 'undefined') ? assertion.fullRequestJSON : null,
     prfFirst: assertion.prfFirst,
     prfSecond: assertion.prfSecond,
   };
