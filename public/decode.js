@@ -1175,15 +1175,35 @@ try {
             }
             return monoFontReady;
         }
-        // Hard-wrap long unbreakable lines so pdfmake doesn't clip them.
+        // Wrap long lines for pdfmake. Breaks at word boundaries (spaces) when
+        // possible so URLs/words aren't split mid-token; falls back to a hard
+        // character break only for single tokens longer than the available width.
+        // Leading indentation is preserved on continuation lines.
         function hardWrap(text, width) {
             width = width || 95;
-            return String(text == null ? '' : text).split('\n').map(line => {
+            const wrapLine = (line) => {
                 if (line.length <= width) return line;
-                const parts = [];
-                for (let i = 0; i < line.length; i += width) parts.push(line.slice(i, i + width));
-                return parts.join('\n');
-            }).join('\n');
+                const indent = (line.match(/^[ \t]*/) || [''])[0];
+                const avail = Math.max(8, width - indent.length);
+                const words = line.slice(indent.length).split(' ');
+                const lines = [];
+                let cur = '';
+                const flush = () => { lines.push(indent + cur); cur = ''; };
+                for (let word of words) {
+                    while (word.length > avail) {
+                        if (cur.length > 0) flush();
+                        cur = word.slice(0, avail);
+                        word = word.slice(avail);
+                        flush();
+                    }
+                    if (cur.length === 0) cur = word;
+                    else if (cur.length + 1 + word.length <= avail) cur += ' ' + word;
+                    else { flush(); cur = word; }
+                }
+                if (cur.length > 0 || lines.length === 0) flush();
+                return lines.join('\n');
+            };
+            return String(text == null ? '' : text).split('\n').map(wrapLine).join('\n');
         }
         // textContent with icon glyphs / copy buttons / action controls removed.
         function cleanText(node) {
