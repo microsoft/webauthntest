@@ -1259,6 +1259,13 @@ try {
             }
             return out.join('\n');
         }
+        // Break up long continuous hex runs (e.g. COSE key values in pretty JSON)
+        // into space-separated bytes so pdfmake can wrap them like a hex block
+        // instead of treating them as one over-wide unbreakable token (which
+        // renders with enlarged line spacing).
+        function spaceOutLongHex(text) {
+            return String(text == null ? '' : text).replace(/[0-9A-Fa-f]{64,}/g, run => (run.match(/.{1,2}/g) || []).join(' '));
+        }
         // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
         // 32 bytes/line (from their raw data-hex) so they align and fill the column;
         // other content is taken as cleaned text.
@@ -1274,7 +1281,7 @@ try {
                 if (hexPre) {
                     parts.push(formatHexSpaced(hexPre.getAttribute('data-hex') || '', 32));
                 } else {
-                    const t = cleanText(ch);
+                    const t = spaceOutLongHex(cleanText(ch));
                     if (t.replace(/\s+$/, '')) parts.push(t.replace(/\s+$/, ''));
                 }
             });
