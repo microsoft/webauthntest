@@ -1066,8 +1066,14 @@ body#signInPrompt .login-title {
   margin: 0 6px;
 }
 
-/* Keep the Sign out icon on the far right */
+/* Keep the session actions (username + sign out) on the far right */
 .credentials-toolbar-actions #signOutButton {
+  margin-left: auto;
+}
+.credentials-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
 }
 
@@ -2162,7 +2168,7 @@ dialog.modal {
   position: fixed;
   left: 0;
   right: 0;
-  top: 0;
+  bottom: 0;
   z-index: 1000;
   display: flex;
   justify-content: center;
@@ -2204,3 +2210,15 @@ dialog.modal {
   padding: 6px 10px;
 }
 .cookie-consent-ok:hover { text-decoration: underline; }
+
+/* Login: username input with inline refresh button */
+.uid-input-wrap { position: relative; width: 100%; }
+.uid-input-wrap .input { padding-right: 44px; }
+.uid-input-wrap .uid-refresh {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+.uid-input-wrap .uid-refresh:hover { color: #111827; }

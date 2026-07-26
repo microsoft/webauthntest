@@ -772,6 +772,7 @@ try {
             //user is signed out
             // Remove cookie using the same path used when setting it so it is actually cleared
             Cookies.remove('uid', { path: '/' });
+            Cookies.remove('uidDisplay', { path: '/' });
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -789,8 +790,14 @@ try {
         }, 100);
 
         $('#signOutButton').click(() => {
+            // Remember the current username (original casing) so the login page can prefill it.
+            try {
+                var currentUid = Cookies.get('uidDisplay') || Cookies.get('uid');
+                if (currentUid) localStorage.setItem('prefillUid', currentUid);
+            } catch (e) { /* ignore */ }
             // Ensure the persistent cookie is removed by specifying the path
             Cookies.remove('uid', { path: '/' });
+            Cookies.remove('uidDisplay', { path: '/' });
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -799,6 +806,21 @@ try {
                 try { localStorage.removeItem('aaguid_icon_cache'); } catch (e) { }
             } catch (e) { /* ignore */ }
             window.location.href = "./login.html";
+        });
+
+        $('#showUserButton').click(() => {
+            var uid = Cookies.get('uidDisplay') || Cookies.get('uid');
+            if (uid) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(uid)
+                        .then(() => toast('Signed in as: ' + uid + ' (copied to clipboard)'))
+                        .catch(() => toast('Signed in as: ' + uid));
+                } else {
+                    toast('Signed in as: ' + uid);
+                }
+            } else {
+                toast('No signed-in user');
+            }
         });
 
         $('#createButton').click(() => {

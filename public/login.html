@@ -21,7 +21,12 @@
                     <br>
                     <form onsubmit="return handleSubmit()" class="mt-2 space-y-2">
                         <label class="form-control w-full">
-                            <input class="input input-bordered w-full" type="text" id="uid" autofocus placeholder="Username" autocomplete="username">
+                            <div class="uid-input-wrap">
+                                <input class="input input-bordered w-full" type="text" id="uid" autofocus placeholder="Username" autocomplete="username">
+                                <button type="button" class="btn btn-ghost btn-sm btn-circle uid-refresh" id="refreshUsername" title="Generate new username" aria-label="Generate new username">
+                                    <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                                </button>
+                            </div>
                         </label>
                     </form>
                     <br>
@@ -47,6 +52,7 @@
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
     integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+<script src="wordlist.js"></script>
 <script>
     var CONSENT_KEY = 'cookieConsent';
 
@@ -68,6 +74,23 @@
             handleSubmit();
         });
 
+        // Prefill the username box: prefer a name carried over from sign-out,
+        // otherwise auto-fill a random username when the box is empty.
+        if (!String($('#uid').val() || '').trim()) {
+            var prefill = '';
+            try { prefill = localStorage.getItem('prefillUid') || ''; } catch (e) { prefill = ''; }
+            if (prefill) {
+                try { localStorage.removeItem('prefillUid'); } catch (e) { /* ignore */ }
+                $('#uid').val(prefill);
+            } else {
+                $('#uid').val(generateUsername());
+            }
+        }
+        $('#refreshUsername').click(() => {
+            $('#uid').val(generateUsername());
+            try { document.getElementById('uid').focus(); } catch (e) { /* ignore */ }
+        });
+
         $('#cookieAccept').click(() => {
             acknowledgeConsent();
             var el = document.getElementById('cookieConsent');
@@ -75,8 +98,48 @@
         });
     });
 
+    // Generates a readable random username by joining 3 words from the BIP-39
+    // 2048-word list in camelCase (e.g. "braveGardenOtter"). This yields
+    // 2048^3 (~8.6 billion) combinations. Uses crypto-strong randomness with
+    // rejection sampling to avoid modulo bias.
+    function generateUsername() {
+        const words = (window.WORD_LIST && window.WORD_LIST.length) ? window.WORD_LIST : null;
+        if (!words) {
+            // Fallback: unambiguous random letters if the word list failed to load.
+            const alphabet = 'abcdefghjkmnpqrstuvwxyz';
+            const out = [];
+            const maxA = 256 - (256 % alphabet.length);
+            while (out.length < 12) {
+                const b = new Uint8Array(12);
+                (window.crypto || window.msCrypto).getRandomValues(b);
+                for (let i = 0; i < b.length && out.length < 12; i++) {
+                    if (b[i] < maxA) out.push(alphabet[b[i] % alphabet.length]);
+                }
+            }
+            return out.join('');
+        }
+
+        const n = words.length; // 2048
+        const picked = [];
+        while (picked.length < 3) {
+            const buf = new Uint8Array(6);
+            (window.crypto || window.msCrypto).getRandomValues(buf);
+            for (let i = 0; i + 1 < buf.length && picked.length < 3; i += 2) {
+                // Combine two bytes into an 11-bit index (0..2047) via rejection.
+                const val = (buf[i] << 8) | buf[i + 1];
+                const bound = 65536 - (65536 % n);
+                if (val < bound) picked.push(words[val % n]);
+            }
+        }
+
+        return picked
+            .map((w, i) => (i === 0 ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+            .join('');
+    }
+
     function handleSubmit() {
-        const uid = String($('#uid').val() || '').trim().toLowerCase();
+        const raw = String($('#uid').val() || '').trim();
+        const uid = raw.toLowerCase();
 
         if (!uid || uid.length < 3 || uid.includes(" ")) {
             alert("Invalid username");
@@ -86,7 +149,10 @@
         // Persist the uid cookie for 1 year so the user stays logged in across browser restarts.
         // Use a reasonably long expiry and a conservative SameSite/path. In production consider
         // using secure cookies served from the server-side (HttpOnly, Secure).
+        // 'uid' is lowercased for case-insensitive matching; 'uidDisplay' preserves the
+        // original casing purely for display (e.g. camelCase names).
         Cookies.set('uid', uid, { expires: 365, path: '/', sameSite: 'Lax' });
+        Cookies.set('uidDisplay', raw, { expires: 365, path: '/', sameSite: 'Lax' });
         window.location.href = "./";
         return false;
     }
