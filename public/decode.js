@@ -307,18 +307,38 @@ try {
         }
     }
 
-    // Attestation format + certificates (or raw statement) from a decoded attestation object.
+    // Attestation format + statement fields + certificates from a decoded attestation object.
     async function attestationFormatAndCertsHtml(decoded) {
         let html = kvRow('Attestation Format', mono(String(decoded.fmt)));
-        const x5c = decoded.attStmt && decoded.attStmt.x5c;
+        const att = decoded.attStmt || {};
+        const labels = {
+            alg: 'Attestation Algorithm', sig: 'Attestation Signature',
+            ver: 'TPM Version', certInfo: 'TPM certInfo', pubArea: 'TPM pubArea',
+            response: 'Response', ecdaaKeyId: 'ECDAA Key ID'
+        };
+        // Render every statement field except x5c (shown as certificates below).
+        Object.keys(att).forEach(k => {
+            if (k === 'x5c') return;
+            const v = att[k];
+            const label = labels[k] || k;
+            if (k === 'alg' && typeof v === 'number') {
+                const nm = coseAlgName(v);
+                html += kvRow(label, mono(nm ? `${nm} (${v})` : `alg ${v}`));
+            } else if (ArrayBuffer.isView(v)) {
+                html += kvRow(label, hexBlock(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)));
+            } else if (v && typeof v === 'object') {
+                html += kvRow(label, preBlock(JSON.stringify(v, jsonReplacer, 2)));
+            } else {
+                html += kvRow(label, mono(String(v)));
+            }
+        });
+        const x5c = att.x5c;
         if (Array.isArray(x5c) && x5c.length > 0) {
             html += '<div class="decode-subheading">Attestation Certificates</div>';
             for (let i = 0; i < x5c.length; i++) {
                 const der = x5c[i] instanceof Uint8Array ? x5c[i] : new Uint8Array(x5c[i]);
                 html += await renderCertificateSection(der);
             }
-        } else if (decoded.attStmt) {
-            html += kvRow('Attestation Statement', preBlock(JSON.stringify(decoded.attStmt, jsonReplacer, 2)));
         }
         return html;
     }
@@ -817,6 +837,7 @@ try {
         const copyBtn = document.getElementById('copyInputBtn');
         const pasteBtn = document.getElementById('pasteInputBtn');
         const saveBtn = document.getElementById('saveInputBtn');
+        const savePdfBtn = document.getElementById('savePdfBtn');
 
         // Returns the trimmed input if it parses as JSON, else null.
         function inputAsJsonText() {
@@ -854,6 +875,7 @@ try {
             if (clearBtn) clearBtn.style.display = hasContent ? '' : 'none';
             if (copyBtn) copyBtn.style.display = hasContent ? '' : 'none';
             if (saveBtn) saveBtn.style.display = hasContent ? '' : 'none';
+            if (savePdfBtn) savePdfBtn.style.display = hasContent ? '' : 'none';
             if (pasteBtn) { pasteBtn.style.display = hasContent ? 'none' : ''; applyPasteDenied(); }
             if (cborEncodeBtn) cborEncodeBtn.style.display = (hasContent && inputAsJsonText()) ? '' : 'none';
         }
@@ -999,6 +1021,306 @@ try {
             }
         }
         if (saveBtn) saveBtn.addEventListener('click', saveInput);
+
+        // ---- Save as PDF (pdfmake, loaded on demand) ----
+        const PDF_CONTENT_WIDTH = 523; // A4 width (595.28) minus 36pt margins each side
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = src; s.onload = resolve; s.onerror = () => reject(new Error('Failed to load ' + src));
+                document.head.appendChild(s);
+            });
+        }
+        async function ensurePdfMake() {
+            if (!(window.pdfMake && window.pdfMake.createPdf)) {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js');
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js');
+            }
+            return ensureMonoFont();
+        }
+        // ArrayBuffer -> base64 (chunked to avoid call-stack limits).
+        function abToBase64(buf) {
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+            }
+            return btoa(binary);
+        }
+        // Loads the self-hosted Roboto Mono TTFs into pdfmake's VFS and registers a
+        // 'RobotoMono' font family. Returns the font name to use for monospace text,
+        // or 'Roboto' (proportional) if the fonts couldn't be loaded.
+        let monoFontReady = null;
+        async function ensureMonoFont() {
+            if (monoFontReady) return monoFontReady;
+            try {
+                window.pdfMake.vfs = window.pdfMake.vfs || {};
+                window.pdfMake.fonts = window.pdfMake.fonts || {};
+                // Ensure the default Roboto family stays registered.
+                window.pdfMake.fonts.Roboto = window.pdfMake.fonts.Roboto || {
+                    normal: 'Roboto-Regular.ttf', bold: 'Roboto-Medium.ttf',
+                    italics: 'Roboto-Italic.ttf', bolditalics: 'Roboto-MediumItalic.ttf'
+                };
+                if (!window.pdfMake.vfs['RobotoMono-Regular.ttf']) {
+                    const [reg, bold] = await Promise.all([
+                        fetch('./fonts/RobotoMono-Regular.ttf').then(r => { if (!r.ok) throw new Error('font ' + r.status); return r.arrayBuffer(); }),
+                        fetch('./fonts/RobotoMono-Bold.ttf').then(r => { if (!r.ok) throw new Error('font ' + r.status); return r.arrayBuffer(); })
+                    ]);
+                    window.pdfMake.vfs['RobotoMono-Regular.ttf'] = abToBase64(reg);
+                    window.pdfMake.vfs['RobotoMono-Bold.ttf'] = abToBase64(bold);
+                }
+                window.pdfMake.fonts.RobotoMono = {
+                    normal: 'RobotoMono-Regular.ttf',
+                    bold: 'RobotoMono-Bold.ttf',
+                    italics: 'RobotoMono-Regular.ttf',
+                    bolditalics: 'RobotoMono-Bold.ttf'
+                };
+                monoFontReady = 'RobotoMono';
+            } catch (e) {
+                monoFontReady = 'Roboto'; // graceful fallback (proportional)
+            }
+            return monoFontReady;
+        }
+        // Hard-wrap long unbreakable lines so pdfmake doesn't clip them.
+        function hardWrap(text, width) {
+            width = width || 95;
+            return String(text == null ? '' : text).split('\n').map(line => {
+                if (line.length <= width) return line;
+                const parts = [];
+                for (let i = 0; i < line.length; i += width) parts.push(line.slice(i, i + width));
+                return parts.join('\n');
+            }).join('\n');
+        }
+        // textContent with icon glyphs / copy buttons / action controls removed.
+        function cleanText(node) {
+            if (!node) return '';
+            const clone = node.cloneNode(true);
+            clone.querySelectorAll('.material-symbols-outlined, button, .decode-copy, .decode-actions, .decode-hexcopy, .cert-inline-copy, .cert-dump-toolbar').forEach(el => el.remove());
+            return clone.textContent.replace(/\u00a0/g, ' ');
+        }
+        // Reformat plain hex to uppercase colon-separated, `perLine` bytes per line.
+        function formatHexColon(hex, perLine) {
+            const pairs = (String(hex || '').match(/.{1,2}/g) || []);
+            const lines = [];
+            for (let i = 0; i < pairs.length; i += perLine) lines.push(pairs.slice(i, i + perLine).join(':').toUpperCase());
+            return lines.join('\n');
+        }
+        // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
+        // 32 bytes/line (from their raw data-hex) so they align and fill the column;
+        // other content is taken as cleaned text.
+        function valueToPdfText(valContent) {
+            if (!valContent) return '';
+            const parts = [];
+            Array.from(valContent.childNodes).forEach(ch => {
+                if (ch.nodeType === 3) { const t = ch.textContent.replace(/\u00a0/g, ' ').trim(); if (t) parts.push(t); return; }
+                if (ch.nodeType !== 1) return;
+                let hexPre = null;
+                if (ch.classList && ch.classList.contains('decode-hexblock')) hexPre = ch.querySelector('.decode-hex[data-hex]');
+                else if (ch.matches && ch.matches('.decode-hex[data-hex]')) hexPre = ch;
+                if (hexPre) {
+                    parts.push(formatHexColon(hexPre.getAttribute('data-hex') || '', 32));
+                } else {
+                    const t = cleanText(ch);
+                    if (t.replace(/\s+$/, '')) parts.push(t.replace(/\s+$/, ''));
+                }
+            });
+            return parts.join('\n');
+        }
+        // A subtle key/value table layout: light horizontal separators only.
+        const kvLayout = {
+            hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 0 : 0.5,
+            vLineWidth: () => 0,
+            hLineColor: () => '#e8e8e8',
+            paddingLeft: () => 0,
+            paddingRight: () => 6,
+            paddingTop: () => 3,
+            paddingBottom: () => 3
+        };
+        function kvTable(rows) {
+            return {
+                table: { widths: [112, '*'], body: rows },
+                layout: kvLayout,
+                margin: [0, 2, 0, 6]
+            };
+        }
+        function sectionDivider(color) {
+            return { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 0.7, lineColor: color || '#dddddd' }], margin: [0, 2, 0, 6] };
+        }
+
+        // Build pdfmake content from the rendered decode output. Consecutive
+        // key/value rows are grouped into a single table for a clean look.
+        function pdfFromResult() {
+            const out = [];
+            const result = document.getElementById('decodeResult');
+            if (!result) return out;
+            let kvBuffer = [];
+            const flush = () => { if (kvBuffer.length) { out.push(kvTable(kvBuffer)); kvBuffer = []; } };
+
+            Array.from(result.children).forEach(node => {
+                const cls = node.classList;
+                if (cls.contains('decode-row')) {
+                    const label = node.querySelector('.decode-label');
+                    const valContent = node.querySelector('.decode-value-content') || node.querySelector('.decode-value');
+                    kvBuffer.push([
+                        { text: label ? label.textContent.trim() : '', style: 'label' },
+                        { text: hardWrap(valueToPdfText(valContent), 96), style: 'mono', preserveLeadingSpaces: true }
+                    ]);
+                    return;
+                }
+                flush();
+                if (cls.contains('decode-heading')) {
+                    out.push({ text: cleanText(node).trim(), style: 'h2', margin: [0, 10, 0, 2] });
+                    out.push(sectionDivider('#c9c9c9'));
+                } else if (cls.contains('decode-subheading')) {
+                    out.push({ text: cleanText(node).trim(), style: 'h3', margin: [0, 8, 0, 3] });
+                } else if (cls.contains('decode-cert-index')) {
+                    out.push({ text: cleanText(node).trim(), bold: true, margin: [0, 4, 0, 2] });
+                } else if (cls.contains('cert-dump')) {
+                    out.push({ text: hardWrap(cleanText(node).replace(/\s+$/, ''), 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
+                } else if (cls.contains('decode-value')) {
+                    out.push({ text: hardWrap(cleanText(node), 114), style: 'monoBlock', preserveLeadingSpaces: true });
+                } else {
+                    const t = cleanText(node).trim();
+                    if (t) out.push({ text: t });
+                }
+            });
+            flush();
+            return out;
+        }
+
+        // Derive a context-specific document title from the decoded result + input.
+        function derivePdfTitle() {
+            const result = document.getElementById('decodeResult');
+            const headingEl = result ? result.querySelector('.decode-heading') : null;
+            const heading = headingEl ? headingEl.textContent.trim() : '';
+            if (heading === 'PublicKeyCredential') {
+                const jsonText = inputAsJsonText();
+                if (jsonText) {
+                    try {
+                        const resp = (JSON.parse(jsonText) || {}).response || {};
+                        if (typeof resp.attestationObject === 'string') return 'WebAuthn Registration Response';
+                        if (typeof resp.authenticatorData === 'string') return 'WebAuthn Authentication Response';
+                    } catch (e) { /* ignore */ }
+                }
+                return 'WebAuthn PublicKeyCredential';
+            }
+            if (heading === 'Attestation Object') return 'WebAuthn Attestation Object';
+            if (heading === 'Authenticator Data') return 'WebAuthn Authenticator Data';
+            if (heading === 'X.509 certificate' || heading === 'Certificate') return 'X.509 Certificate';
+            if (heading === 'CBOR') return 'CBOR Structure';
+            return heading || 'WebAuthn Decoder Output';
+        }
+
+        // Derive a PDF filename. Uses the credential ID when known:
+        //   WebAuthn_<CredId16>_Registration.pdf
+        //   WebAuthn_<CredId16>_Authentication_<Sig8>.pdf
+        //   WebAuthn_<CredId16>_AttestationObject.pdf
+        //   WebAuthn_<CredId16>_AuthenticatorData.pdf
+        // Fallbacks: Certificate_<Fingerprint16>.pdf, WebAuthn_AuthenticatorData_<hash12>.pdf,
+        // WebAuthnDecode_<hash12>.pdf.
+        async function derivePdfFilename(raw) {
+            const first16 = (u8) => Array.from(u8).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+            // 1. PublicKeyCredential JSON.
+            const jsonText = inputAsJsonText();
+            if (jsonText) {
+                try {
+                    const cred = JSON.parse(jsonText);
+                    if (isPublicKeyCredentialJSON(cred)) {
+                        const resp = cred.response || {};
+                        let credId16 = '';
+                        if (cred.id) { try { credId16 = first16(CBOR.base64ToBytes(cred.id)); } catch (e) { /* ignore */ } }
+                        if (typeof resp.attestationObject === 'string' && credId16) {
+                            return 'WebAuthn_' + credId16 + '_Registration.pdf';
+                        }
+                        if (typeof resp.authenticatorData === 'string' && credId16) {
+                            let sig8 = '';
+                            if (typeof resp.signature === 'string') {
+                                try { sig8 = (await sha256Hex(CBOR.base64ToBytes(resp.signature))).slice(0, 8).toUpperCase(); } catch (e) { /* ignore */ }
+                            }
+                            return 'WebAuthn_' + credId16 + '_Authentication' + (sig8 ? '_' + sig8 : '') + '.pdf';
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }
+            // 2. Byte-based inputs.
+            let bytes = null;
+            try { bytes = parseInput(raw); } catch (e) { bytes = null; }
+            if (bytes) {
+                let det = null;
+                try { det = detect(bytes); } catch (e) { det = null; }
+                const type = det ? det.type : null;
+                if (type === 'certificate') {
+                    const fp = (await sha256Hex(bytes)).slice(0, 16).toUpperCase();
+                    return 'Certificate_' + fp + '.pdf';
+                }
+                if (type === 'attestationObject' && det.decoded) {
+                    try {
+                        const authData = det.decoded.authData instanceof Uint8Array ? det.decoded.authData : new Uint8Array(det.decoded.authData);
+                        const ad = parseAuthenticatorData(authData);
+                        if (ad.attested && ad.attested.credentialId) return 'WebAuthn_' + first16(ad.attested.credentialId) + '_AttestationObject.pdf';
+                    } catch (e) { /* ignore */ }
+                }
+                if (type === 'authenticatorData') {
+                    try {
+                        const ad = parseAuthenticatorData(bytes);
+                        if (ad.attested && ad.attested.credentialId) return 'WebAuthn_' + first16(ad.attested.credentialId) + '_AuthenticatorData.pdf';
+                    } catch (e) { /* ignore */ }
+                    return 'WebAuthn_AuthenticatorData_' + (await sha256Hex(bytes)).slice(0, 12) + '.pdf';
+                }
+            }
+            // 3. Generic fallback.
+            return 'WebAuthnDecode_' + (await sha256Hex(raw)).slice(0, 12) + '.pdf';
+        }
+
+        async function saveAsPdf() {
+            const raw = input.value || '';
+            if (!raw.trim()) { toast('Nothing to save'); return; }
+            try {
+                await runDecode();
+                const monoFont = await ensurePdfMake();
+                const title = derivePdfTitle();
+                const body = pdfFromResult();
+                const pageUrl = window.location.origin + window.location.pathname;
+                const docDefinition = {
+                    info: { title: title },
+                    pageSize: 'A4',
+                    pageMargins: [36, 44, 36, 40],
+                    footer: (currentPage, pageCount) => ({
+                        columns: [
+                            { text: pageUrl, fontSize: 7, color: '#aaaaaa', margin: [36, 0, 0, 0] },
+                            { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 36, 0] }
+                        ],
+                        margin: [0, 8, 0, 0]
+                    }),
+                    content: [
+                        { text: title, style: 'title' },
+                        { text: 'Generated ' + new Date().toLocaleString(), style: 'meta' },
+                        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 1.4, lineColor: '#4f46e5' }], margin: [0, 6, 0, 12] },
+                        { text: 'Input', style: 'h2', margin: [0, 0, 0, 2] },
+                        sectionDivider('#c9c9c9'),
+                        { text: hardWrap(raw, 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] },
+                        { text: 'Decoded Output', style: 'h2', margin: [0, 0, 0, 2] },
+                        sectionDivider('#c9c9c9')
+                    ].concat(body),
+                    styles: {
+                        title: { fontSize: 17, bold: true, color: '#1f2937' },
+                        meta: { fontSize: 8, color: '#9ca3af' },
+                        h2: { fontSize: 12.5, bold: true, color: '#4f46e5' },
+                        h3: { fontSize: 10, bold: true, color: '#374151' },
+                        label: { fontSize: 8.5, bold: true, color: '#374151' },
+                        mono: { fontSize: 7, font: monoFont, color: '#1f2937' },
+                        monoBlock: { fontSize: 7.5, font: monoFont, color: '#374151' }
+                    },
+                    defaultStyle: { font: 'Roboto', fontSize: 9, lineHeight: 1.15 }
+                };
+                const filename = await derivePdfFilename(raw);
+                window.pdfMake.createPdf(docDefinition).download(filename);
+            } catch (e) {
+                toast('PDF export failed: ' + (e && e.message ? e.message : e));
+            }
+        }
+        if (savePdfBtn) savePdfBtn.addEventListener('click', saveAsPdf);
 
         // Import a file: text-like files (JSON / PEM / hex / base64) are used as-is;
         // binary files (CBOR / DER / raw bytes) are converted to hex. Then decoded.
