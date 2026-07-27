@@ -145,6 +145,75 @@ try {
         return value && typeof value === 'object' && !ArrayBuffer.isView(value) && !Array.isArray(value);
     }
 
+    // Find the exact byte length of the first complete CBOR item at the start of
+    // `u8`, returning { value, len } or null if no valid prefix decodes. CBOR is
+    // self-delimiting, so the smallest prefix that decodes is the item length.
+    function decodeCborPrefix(u8) {
+        for (let n = 1; n <= u8.length; n++) {
+            try {
+                const value = CBOR.decodeCbor(u8.slice(0, n));
+                return { value, len: n };
+            } catch (e) { /* keep growing */ }
+        }
+        return null;
+    }
+
+    // Strictly validate that `bytes` is a plausible authenticator data structure,
+    // so we don't blindly treat any >=37-byte blob as authenticator data. Checks
+    // that the attested-credential-data (AT flag) and extensions (ED flag) regions
+    // are well-formed and that no stray trailing bytes remain.
+    function isValidAuthenticatorData(bytes) {
+        if (bytes.length < 37) return false;
+        const flags = bytes[32];
+        const be = !!(flags & 0x08); // backup eligible
+        const bs = !!(flags & 0x10); // backup state (currently backed up)
+        const at = !!(flags & 0x40); // attested credential data present
+        const ed = !!(flags & 0x80); // extension data present
+
+        // Reserved flag bit 5 (0x20, RFU2) is reserved for future use and MUST be 0.
+        if (flags & 0x20) return false;
+        // Backup State implies Backup Eligibility: BS can only be set when BE is
+        // set (a non-backup-eligible credential cannot be backed up).
+        if (bs && !be) return false;
+
+        // Signature counter: backup-eligible (multi-device / synced passkey)
+        // credentials do not maintain a per-authenticator counter, so signCount
+        // is 0. When the credential is backup eligible, a non-zero counter here
+        // indicates this is very likely not authenticator data. (Device-bound
+        // credentials with BE=0, e.g. security keys, may have a non-zero counter.)
+        const signCount = ((bytes[33] << 24) | (bytes[34] << 16) | (bytes[35] << 8) | bytes[36]) >>> 0;
+        if (be && signCount !== 0) return false;
+
+        let offset = 37;
+
+        if (at) {
+            // aaguid(16) + credentialIdLength(2)
+            if (bytes.length < offset + 18) return false;
+            const credIdLen = (bytes[offset + 16] << 8) | bytes[offset + 17];
+            offset += 18;
+            // Per spec, credential id length is 1..1023 bytes.
+            if (credIdLen < 1 || credIdLen > 1023) return false;
+            if (bytes.length < offset + credIdLen) return false;
+            offset += credIdLen;
+
+            // COSE key: must be a CBOR map with a key type (label 1).
+            const cose = decodeCborPrefix(bytes.slice(offset));
+            if (!cose || !looksLikeCbor(cose.value) || typeof cose.value['1'] === 'undefined') return false;
+            offset += cose.len;
+        }
+
+        if (ed) {
+            // Extensions: a CBOR map immediately following.
+            const ext = decodeCborPrefix(bytes.slice(offset));
+            if (!ext || !looksLikeCbor(ext.value)) return false;
+            offset += ext.len;
+        }
+
+        // Everything must be consumed exactly — no stray trailing bytes. When
+        // neither AT nor ED is set this enforces the canonical 37-byte length.
+        return offset === bytes.length;
+    }
+
     // ------------------------------------------------------------- detection
     function detect(bytes) {
         // 1) X.509 certificate: DER starts with SEQUENCE (0x30) and parses with PKIJS.
@@ -170,12 +239,14 @@ try {
             return { type: 'cbor', bytes, decoded };
         } catch (e) { /* not top-level CBOR */ }
 
-        // 3) Authenticator data: at least rpIdHash(32) + flags(1) + signCount(4).
-        if (bytes.length >= 37) {
+        // 3) Authenticator data: validate structure rather than accepting any
+        // >=37-byte blob (rpIdHash(32) + flags(1) + signCount(4) + optional
+        // attested credential data / extensions).
+        if (isValidAuthenticatorData(bytes)) {
             return { type: 'authenticatorData', bytes };
         }
 
-        throw new Error('Could not detect data type. Provide an attestation object, authenticator data, or X.509 certificate.');
+        throw new Error('Could not confidently detect the data type. Provide a PublicKeyCredential JSON, attestation object, authenticator data, or X.509 certificate (hex, base64, base64url, or PEM).');
     }
 
     // ---------------------------------------------------- authenticator data
