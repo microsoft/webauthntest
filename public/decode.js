@@ -124,6 +124,23 @@ try {
         return CBOR.base64ToBytes(compact);
     }
 
+    // Classify the input encoding: 'pem', 'json', 'hex', 'base64', 'base64url',
+    // 'empty', or 'unknown'. Used to decide whether to show an input-hex section.
+    function classifyInput(text) {
+        const raw = String(text || '').trim();
+        if (!raw) return 'empty';
+        if (/-----BEGIN [^-]+-----/.test(raw)) return 'pem';
+        if (raw.charAt(0) === '{' || raw.charAt(0) === '[') return 'json';
+        const compact = raw.replace(/\s+/g, '');
+        const hexCandidate = compact.replace(/^0x/i, '');
+        if (/^[0-9a-fA-F]+$/.test(hexCandidate) && hexCandidate.length % 2 === 0) return 'hex';
+        if (/[+/]|=$/.test(compact) && /^[A-Za-z0-9+/]+={0,2}$/.test(compact)) return 'base64';
+        if (/[-_]/.test(compact) && /^[A-Za-z0-9\-_]+$/.test(compact)) return 'base64url';
+        if (/^[A-Za-z0-9+/]+={0,2}$/.test(compact)) return 'base64';
+        if (/^[A-Za-z0-9\-_]+$/.test(compact)) return 'base64url';
+        return 'unknown';
+    }
+
     function looksLikeCbor(value) {
         return value && typeof value === 'object' && !ArrayBuffer.isView(value) && !Array.isArray(value);
     }
@@ -282,7 +299,8 @@ try {
                 const algName = coseAlgName(alg);
                 html += kvRow('Key Algorithm', mono(algName ? `${algName} (${alg})` : `alg ${alg}`));
                 const pkHex = a.coseKeyBytes ? hexBlock(a.coseKeyBytes) : '';
-                html += kvRow('Public Key', pkHex + preBlock(JSON.stringify(coseMapToDisplay(a.coseKey), null, 2)));
+                if (pkHex) html += kvRow('Public Key (CBOR)', pkHex);
+                html += kvRow('Public Key (COSE)', preBlock(JSON.stringify(coseMapToDisplay(a.coseKey), null, 2)));
             }
         }
         const extHex = ad.extensionsBytes ? hexBlock(ad.extensionsBytes) : '';
@@ -626,7 +644,7 @@ try {
         const out = [];
         for (let i = 0; i < u8.length; i += per) {
             const slice = Array.from(u8.slice(i, i + per)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
-            out.push(indent + slice + (i + per < u8.length ? ':' : ''));
+            out.push(indent + slice);
         }
         return out.length ? out.join('\n') : (indent + '(empty)');
     }
@@ -854,7 +872,12 @@ try {
         const errEl = document.getElementById('decodeError');
         const card = document.getElementById('decodeResultCard');
         const result = document.getElementById('decodeResult');
+        const inputHexCard = document.getElementById('decodeInputHexCard');
+        const inputHex = document.getElementById('decodeInputHex');
         errEl.style.display = 'none';
+        // Input-hex section is shown only for base64/base64url byte inputs.
+        if (inputHexCard) inputHexCard.style.display = 'none';
+        if (inputHex) inputHex.innerHTML = '';
 
         // A PublicKeyCredential JSON (toJSON output) is handled before byte parsing.
         const rawInput = (input.value || '').trim();
@@ -911,6 +934,17 @@ try {
             else if (detected.type === 'authenticatorData') rendered = await renderAuthenticatorDataOnly(bytes);
             else if (detected.type === 'certificate') rendered = await renderCertificate(bytes);
             else rendered = renderRawCbor(detected.decoded, bytes);
+
+            // When the input was base64/base64url, show the raw input decoded to
+            // hex in a separate section above the decoded output.
+            const enc = classifyInput(input.value);
+            if ((enc === 'base64' || enc === 'base64url') && inputHex && inputHexCard) {
+                inputHex.innerHTML = '<div class="decode-heading">Input (Hex)</div>'
+                    + kvRow('Length', mono(bytes.length + ' bytes'))
+                    + kvRow('Bytes', hexBlock(bytes));
+                inputHexCard.style.display = 'block';
+                formatHexBlocks(inputHex);
+            }
 
             result.innerHTML = rendered.html;
             card.style.display = 'block';
@@ -1003,6 +1037,8 @@ try {
             autoResize();
             updateButtons();
             document.getElementById('decodeResultCard').style.display = 'none';
+            const ihc = document.getElementById('decodeInputHexCard');
+            if (ihc) ihc.style.display = 'none';
             document.getElementById('decodeError').style.display = 'none';
         });
         input.addEventListener('paste', () => setTimeout(() => { autoResize(); updateButtons(); runDecode(); }, 0));
@@ -1116,7 +1152,7 @@ try {
         if (saveBtn) saveBtn.addEventListener('click', saveInput);
 
         // ---- Save as PDF (pdfmake, loaded on demand) ----
-        const PDF_CONTENT_WIDTH = 523; // A4 width (595.28) minus 36pt margins each side
+        const PDF_CONTENT_WIDTH = 547.28; // A4 width (595.28) minus 24pt margins each side
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
@@ -1212,17 +1248,25 @@ try {
             clone.querySelectorAll('.material-symbols-outlined, button, .decode-copy, .decode-actions, .decode-hexcopy, .cert-inline-copy, .cert-dump-toolbar').forEach(el => el.remove());
             return clone.textContent.replace(/\u00a0/g, ' ');
         }
-        // Reformat plain hex to uppercase space-separated (no colons), `perLine`
-        // bytes per line. Used for value-cell hex in the exported PDF.
+        // Shared hex formatter: turns a hex string into aligned rows of at most
+        // `perRow` (default 32) uppercase space-separated bytes, each row prefixed
+        // with `indent`. This single helper drives every hex output in the PDF so
+        // the layout is consistent: max 32 bytes/row, continuation rows aligned.
+        function formatHexRows(hexStr, perRow, indent) {
+            perRow = perRow || 32;
+            indent = indent || '';
+            const bytes = (String(hexStr || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase().match(/.{1,2}/g)) || [];
+            const rows = [];
+            for (let i = 0; i < bytes.length; i += perRow) rows.push(indent + bytes.slice(i, i + perRow).join(' '));
+            return rows.join('\n');
+        }
+        // Reformat plain hex to uppercase space-separated (no colons), 32 bytes/row.
         function formatHexSpaced(hex, perLine) {
-            const pairs = (String(hex || '').match(/.{1,2}/g) || []);
-            const lines = [];
-            for (let i = 0; i < pairs.length; i += perLine) lines.push(pairs.slice(i, i + perLine).join(' ').toUpperCase());
-            return lines.join('\n');
+            return formatHexRows(hex, perLine || 32, '');
         }
         // Reformat the colon-separated hex runs inside an OpenSSL-style certificate
-        // dump into space-separated, `perLine` bytes-per-row hex (preserving each
-        // block's indentation). Non-hex lines (labels, fingerprints) are untouched.
+        // dump into space-separated, 32 bytes-per-row hex (preserving each block's
+        // indentation). Non-hex lines (labels, fingerprints) are untouched.
         function reformatCertDumpHex(text, perLine) {
             perLine = perLine || 32;
             const lines = String(text || '').split('\n');
@@ -1235,16 +1279,14 @@ try {
                 const m = lines[i].match(hexLineRe);
                 if (m) {
                     const indent = m[1];
-                    const bytes = [];
+                    let hex = '';
                     while (i < lines.length) {
                         const mm = lines[i].match(hexLineRe);
                         if (!mm || mm[1] !== indent) break;
-                        mm[2].replace(/:$/, '').split(':').forEach(b => bytes.push(b.toUpperCase()));
+                        hex += mm[2].replace(/:$/, '').replace(/:/g, '');
                         i++;
                     }
-                    for (let j = 0; j < bytes.length; j += perLine) {
-                        out.push(indent + bytes.slice(j, j + perLine).join(' '));
-                    }
+                    out.push(formatHexRows(hex, perLine, indent));
                     continue;
                 }
                 const inl = lines[i].match(inlineHexRe);
@@ -1260,24 +1302,28 @@ try {
             return out.join('\n');
         }
         // Reformat long continuous hex runs (e.g. COSE key values in pretty JSON)
-        // into aligned, fixed 32-bytes-per-row space-separated hex. The JSON key
-        // and opening quote stay on their own line; the bytes then start fresh on
-        // the next line (indented to the JSON nesting) so a full 32 bytes fit per
-        // row and every row aligns. Avoids both the enlarged line spacing of an
-        // over-wide unbreakable token and pdfmake's ragged re-wrapping.
+        // into aligned rows of up to 32 space-separated bytes. The first row stays
+        // inline with the JSON key/opening quote; continuation rows are indented to
+        // line up under the first byte; and the closing quote/comma is appended to
+        // the last row. The page/table widths are sized so a full 32-byte first
+        // row (prefix + 95 chars) fits without pdfmake re-wrapping.
         function wrapLongHexInJson(text, perRow) {
             perRow = perRow || 32;
             return String(text == null ? '' : text).split('\n').map(line => {
                 const m = line.match(/[0-9A-Fa-f]{64,}/);
                 if (!m) return line;
-                const before = line.slice(0, m.index);          // e.g. '  "-1": "'
-                const after = line.slice(m.index + m[0].length); // e.g. '",'
+                const before = line.slice(0, m.index);            // e.g. '  "-2": "'
+                const after = line.slice(m.index + m[0].length);  // e.g. '",'
                 const bytes = m[0].toUpperCase().match(/.{1,2}/g) || [];
-                const indent = (line.match(/^\s*/) || [''])[0] + '  ';
+                const contIndent = ' '.repeat(before.length);
                 const rows = [];
-                for (let i = 0; i < bytes.length; i += perRow) rows.push(indent + bytes.slice(i, i + perRow).join(' '));
-                if (rows.length) rows[rows.length - 1] += after;
-                return before + '\n' + rows.join('\n');
+                for (let i = 0; i < bytes.length; i += perRow) {
+                    const chunk = bytes.slice(i, i + perRow).join(' ');
+                    rows.push((i === 0 ? before : contIndent) + chunk);
+                }
+                if (rows.length === 0) rows.push(before);
+                rows[rows.length - 1] += after;
+                return rows.join('\n');
             }).join('\n');
         }
         // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
@@ -1313,7 +1359,7 @@ try {
         };
         function kvTable(rows) {
             return {
-                table: { widths: [88, '*'], body: rows },
+                table: { widths: [80, '*'], body: rows },
                 layout: kvLayout,
                 margin: [0, 2, 0, 6]
             };
@@ -1322,23 +1368,22 @@ try {
             return { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 0.7, lineColor: color || '#dddddd' }], margin: [0, 2, 0, 6] };
         }
 
-        // Build pdfmake content from the rendered decode output. Consecutive
+        // Build pdfmake content from a rendered decode container. Consecutive
         // key/value rows are grouped into a single table for a clean look.
-        function pdfFromResult() {
+        function pdfFromNode(root) {
             const out = [];
-            const result = document.getElementById('decodeResult');
-            if (!result) return out;
+            if (!root) return out;
             let kvBuffer = [];
             const flush = () => { if (kvBuffer.length) { out.push(kvTable(kvBuffer)); kvBuffer = []; } };
 
-            Array.from(result.children).forEach(node => {
+            Array.from(root.children).forEach(node => {
                 const cls = node.classList;
                 if (cls.contains('decode-row')) {
                     const label = node.querySelector('.decode-label');
                     const valContent = node.querySelector('.decode-value-content') || node.querySelector('.decode-value');
                     kvBuffer.push([
                         { text: label ? label.textContent.trim() : '', style: 'label' },
-                        { text: hardWrap(valueToPdfText(valContent), 100), style: 'mono', preserveLeadingSpaces: true }
+                        { text: hardWrap(valueToPdfText(valContent), 108), style: 'mono', preserveLeadingSpaces: true }
                     ]);
                     return;
                 }
@@ -1454,16 +1499,19 @@ try {
                 await runDecode();
                 const monoFont = await ensurePdfMake();
                 const title = derivePdfTitle();
-                const body = pdfFromResult();
+                const inputHexCard = document.getElementById('decodeInputHexCard');
+                const inputHexBody = (inputHexCard && inputHexCard.style.display !== 'none')
+                    ? pdfFromNode(document.getElementById('decodeInputHex')) : [];
+                const body = pdfFromNode(document.getElementById('decodeResult'));
                 const pageUrl = window.location.origin + window.location.pathname;
                 const docDefinition = {
                     info: { title: title },
                     pageSize: 'A4',
-                    pageMargins: [36, 44, 36, 40],
+                    pageMargins: [24, 44, 24, 40],
                     footer: (currentPage, pageCount) => ({
                         columns: [
-                            { text: pageUrl, fontSize: 7, color: '#aaaaaa', margin: [36, 0, 0, 0] },
-                            { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 36, 0] }
+                            { text: pageUrl, fontSize: 7, color: '#aaaaaa', margin: [24, 0, 0, 0] },
+                            { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 24, 0] }
                         ],
                         margin: [0, 8, 0, 0]
                     }),
@@ -1473,10 +1521,8 @@ try {
                         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 1.4, lineColor: '#4f46e5' }], margin: [0, 6, 0, 12] },
                         { text: 'Input', style: 'h2', margin: [0, 0, 0, 2] },
                         sectionDivider('#c9c9c9'),
-                        { text: hardWrap(raw, 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] },
-                        { text: 'Decoded Output', style: 'h2', margin: [0, 0, 0, 2] },
-                        sectionDivider('#c9c9c9')
-                    ].concat(body),
+                        { text: hardWrap(raw, 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] }
+                    ].concat(inputHexBody, body),
                     styles: {
                         title: { fontSize: 17, bold: true, color: '#1f2937' },
                         meta: { fontSize: 8, color: '#9ca3af' },
