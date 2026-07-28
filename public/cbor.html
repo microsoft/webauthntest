@@ -399,8 +399,10 @@ Notes: Keys may be unquoted (including negative integers like -1:), h'HEX' or h"
             if(dq % 2 === 0) return before; // remove comment part
             return line; // leave line untouched if inside string
         }).join('\n');
-        // Support h'HEX' or h"HEX" or h'hex' forms -> {"@bytes":"HEX"}
-        s = s.replace(/h['"]([0-9a-fA-F]+)['"]/g, (_,hex)=> '{"@bytes":"'+hex+'"}');
+        // Support h'HEX' or h"HEX" forms (whitespace/newlines inside the hex are
+        // allowed per CBOR diagnostic notation, e.g. the space-separated, wrapped
+        // byte strings copied from the PDF export) -> {"@bytes":"HEX"}
+        s = s.replace(/h['"]([0-9a-fA-F\s]*)['"]/g, (_, hex) => '{"@bytes":"' + hex.replace(/\s+/g, '') + '"}');
         // Quote unquoted keys: match start of object member after { or ,
         s = s.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*):/g, '$1"$2"$3:');
         // Replace single quoted strings with double (not perfect; avoids interfering with already double quoted)

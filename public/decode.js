@@ -124,8 +124,94 @@ try {
         return CBOR.base64ToBytes(compact);
     }
 
+    // Classify the input encoding: 'pem', 'json', 'hex', 'base64', 'base64url',
+    // 'empty', or 'unknown'. Used to decide whether to show an input-hex section.
+    function classifyInput(text) {
+        const raw = String(text || '').trim();
+        if (!raw) return 'empty';
+        if (/-----BEGIN [^-]+-----/.test(raw)) return 'pem';
+        if (raw.charAt(0) === '{' || raw.charAt(0) === '[') return 'json';
+        const compact = raw.replace(/\s+/g, '');
+        const hexCandidate = compact.replace(/^0x/i, '');
+        if (/^[0-9a-fA-F]+$/.test(hexCandidate) && hexCandidate.length % 2 === 0) return 'hex';
+        if (/[+/]|=$/.test(compact) && /^[A-Za-z0-9+/]+={0,2}$/.test(compact)) return 'base64';
+        if (/[-_]/.test(compact) && /^[A-Za-z0-9\-_]+$/.test(compact)) return 'base64url';
+        if (/^[A-Za-z0-9+/]+={0,2}$/.test(compact)) return 'base64';
+        if (/^[A-Za-z0-9\-_]+$/.test(compact)) return 'base64url';
+        return 'unknown';
+    }
+
     function looksLikeCbor(value) {
         return value && typeof value === 'object' && !ArrayBuffer.isView(value) && !Array.isArray(value);
+    }
+
+    // Find the exact byte length of the first complete CBOR item at the start of
+    // `u8`, returning { value, len } or null if no valid prefix decodes. CBOR is
+    // self-delimiting, so the smallest prefix that decodes is the item length.
+    function decodeCborPrefix(u8) {
+        for (let n = 1; n <= u8.length; n++) {
+            try {
+                const value = CBOR.decodeCbor(u8.slice(0, n));
+                return { value, len: n };
+            } catch (e) { /* keep growing */ }
+        }
+        return null;
+    }
+
+    // Strictly validate that `bytes` is a plausible authenticator data structure,
+    // so we don't blindly treat any >=37-byte blob as authenticator data. Checks
+    // that the attested-credential-data (AT flag) and extensions (ED flag) regions
+    // are well-formed and that no stray trailing bytes remain.
+    function isValidAuthenticatorData(bytes) {
+        if (bytes.length < 37) return false;
+        const flags = bytes[32];
+        const be = !!(flags & 0x08); // backup eligible
+        const bs = !!(flags & 0x10); // backup state (currently backed up)
+        const at = !!(flags & 0x40); // attested credential data present
+        const ed = !!(flags & 0x80); // extension data present
+
+        // Reserved flag bit 5 (0x20, RFU2) is reserved for future use and MUST be 0.
+        if (flags & 0x20) return false;
+        // Backup State implies Backup Eligibility: BS can only be set when BE is
+        // set (a non-backup-eligible credential cannot be backed up).
+        if (bs && !be) return false;
+
+        // Signature counter: backup-eligible (multi-device / synced passkey)
+        // credentials do not maintain a per-authenticator counter, so signCount
+        // is 0. When the credential is backup eligible, a non-zero counter here
+        // indicates this is very likely not authenticator data. (Device-bound
+        // credentials with BE=0, e.g. security keys, may have a non-zero counter.)
+        const signCount = ((bytes[33] << 24) | (bytes[34] << 16) | (bytes[35] << 8) | bytes[36]) >>> 0;
+        if (be && signCount !== 0) return false;
+
+        let offset = 37;
+
+        if (at) {
+            // aaguid(16) + credentialIdLength(2)
+            if (bytes.length < offset + 18) return false;
+            const credIdLen = (bytes[offset + 16] << 8) | bytes[offset + 17];
+            offset += 18;
+            // Per spec, credential id length is 1..1023 bytes.
+            if (credIdLen < 1 || credIdLen > 1023) return false;
+            if (bytes.length < offset + credIdLen) return false;
+            offset += credIdLen;
+
+            // COSE key: must be a CBOR map with a key type (label 1).
+            const cose = decodeCborPrefix(bytes.slice(offset));
+            if (!cose || !looksLikeCbor(cose.value) || typeof cose.value['1'] === 'undefined') return false;
+            offset += cose.len;
+        }
+
+        if (ed) {
+            // Extensions: a CBOR map immediately following.
+            const ext = decodeCborPrefix(bytes.slice(offset));
+            if (!ext || !looksLikeCbor(ext.value)) return false;
+            offset += ext.len;
+        }
+
+        // Everything must be consumed exactly — no stray trailing bytes. When
+        // neither AT nor ED is set this enforces the canonical 37-byte length.
+        return offset === bytes.length;
     }
 
     // ------------------------------------------------------------- detection
@@ -153,12 +239,14 @@ try {
             return { type: 'cbor', bytes, decoded };
         } catch (e) { /* not top-level CBOR */ }
 
-        // 3) Authenticator data: at least rpIdHash(32) + flags(1) + signCount(4).
-        if (bytes.length >= 37) {
+        // 3) Authenticator data: validate structure rather than accepting any
+        // >=37-byte blob (rpIdHash(32) + flags(1) + signCount(4) + optional
+        // attested credential data / extensions).
+        if (isValidAuthenticatorData(bytes)) {
             return { type: 'authenticatorData', bytes };
         }
 
-        throw new Error('Could not detect data type. Provide an attestation object, authenticator data, or X.509 certificate.');
+        throw new Error('Could not confidently detect the data type. Provide a PublicKeyCredential JSON, attestation object, authenticator data, or X.509 certificate (hex, base64, base64url, or PEM).');
     }
 
     // ---------------------------------------------------- authenticator data
@@ -176,17 +264,6 @@ try {
             '-48': 'ML-DSA-44', '-49': 'ML-DSA-65', '-50': 'ML-DSA-87',
         };
         return names[String(alg)] || null;
-    }
-
-    // Convert a decoded COSE_Key map (string keys, Uint8Array values) into a
-    // display object where byte strings are shown as hex, like the Yubico tool.
-    function coseMapToDisplay(map) {
-        const out = {};
-        Object.keys(map).forEach(k => {
-            const v = map[k];
-            out[k] = ArrayBuffer.isView(v) ? bytesToHex(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)).toUpperCase() : v;
-        });
-        return out;
     }
 
     function parseAuthenticatorData(authData) {
@@ -255,6 +332,12 @@ try {
     function mono(text) { return `<span class="decode-mono">${escapeHtml(text)}</span>`; }
     function preBlock(text) { return `<pre class="decode-block">${escapeHtml(text)}</pre>`; }
 
+    // Action button that opens the CBOR Playground's "Encode JSON to CBOR" panel
+    // pre-filled with the sibling diagnostic-notation block (read at click time).
+    function encodeCborBtn() {
+        return `<button class="btn btn-ghost btn-xs btn-square decode-encode" title="Encode as CBOR (open CBOR Playground)"><span class="material-symbols-outlined" aria-hidden="true">data_object</span></button>`;
+    }
+
     // A responsive hex block (colon-separated uppercase, wrapped to fit width) with
     // a copy button pinned to the top-right (aligned with the first line).
     function hexBlock(u8) {
@@ -281,20 +364,13 @@ try {
                 const alg = a.coseKey['3'];
                 const algName = coseAlgName(alg);
                 html += kvRow('Key Algorithm', mono(algName ? `${algName} (${alg})` : `alg ${alg}`));
-                const pkHex = a.coseKeyBytes ? hexBlock(a.coseKeyBytes) : '';
-                html += kvRow('Public Key', pkHex + preBlock(JSON.stringify(coseMapToDisplay(a.coseKey), null, 2)));
+                html += kvRow('Public Key (COSE)', preBlock(CBOR.formatDiagnostic(a.coseKey)), { extra: encodeCborBtn() });
             }
         }
-        const extHex = ad.extensionsBytes ? hexBlock(ad.extensionsBytes) : '';
         html += kvRow('Authenticator Extensions', ad.extensions
-            ? (extHex + preBlock(JSON.stringify(ad.extensions, jsonReplacer, 2)))
-            : mono('(none)'));
+            ? preBlock(CBOR.formatDiagnostic(ad.extensions))
+            : mono('(none)'), ad.extensions ? { extra: encodeCborBtn() } : undefined);
         return html;
-    }
-
-    function jsonReplacer(key, value) {
-        if (ArrayBuffer.isView(value)) return bytesToHex(new Uint8Array(value.buffer, value.byteOffset, value.byteLength)).toUpperCase();
-        return value;
     }
 
     // Authenticator-data section from a decoded attestation object.
@@ -311,23 +387,26 @@ try {
     async function attestationFormatAndCertsHtml(decoded) {
         let html = kvRow('Attestation Format', mono(String(decoded.fmt)));
         const att = decoded.attStmt || {};
+        // Full attestation statement in diagnostic notation, with an encode icon so
+        // the whole attStmt map can be round-tripped back to CBOR. Shown alongside
+        // the friendly per-field breakdown below.
+        if (att && typeof att === 'object' && Object.keys(att).length) {
+            html += kvRow('Attestation Statement', preBlock(CBOR.formatDiagnostic(att)), { extra: encodeCborBtn() });
+        }
         const labels = {
-            alg: 'Attestation Algorithm', sig: 'Attestation Signature',
             ver: 'TPM Version', certInfo: 'TPM certInfo', pubArea: 'TPM pubArea',
             response: 'Response', ecdaaKeyId: 'ECDAA Key ID'
         };
-        // Render every statement field except x5c (shown as certificates below).
+        // Render statement fields except: x5c (shown as certificates below) and
+        // alg/sig (already covered by the Attestation Statement row above).
         Object.keys(att).forEach(k => {
-            if (k === 'x5c') return;
+            if (k === 'x5c' || k === 'alg' || k === 'sig') return;
             const v = att[k];
             const label = labels[k] || k;
-            if (k === 'alg' && typeof v === 'number') {
-                const nm = coseAlgName(v);
-                html += kvRow(label, mono(nm ? `${nm} (${v})` : `alg ${v}`));
-            } else if (ArrayBuffer.isView(v)) {
+            if (ArrayBuffer.isView(v)) {
                 html += kvRow(label, hexBlock(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)));
             } else if (v && typeof v === 'object') {
-                html += kvRow(label, preBlock(JSON.stringify(v, jsonReplacer, 2)));
+                html += kvRow(label, preBlock(CBOR.formatDiagnostic(v)), { extra: encodeCborBtn() });
             } else {
                 html += kvRow(label, mono(String(v)));
             }
@@ -386,9 +465,6 @@ try {
         const resp = cred.response || {};
         const b64 = (s) => CBOR.base64ToBytes(s);
 
-        // Top-level credential field.
-        if (cred.id) html += kvRow('Credential ID (Base64URL)', mono(String(cred.id)), { copy: String(cred.id) });
-
         if (typeof resp.attestationObject === 'string') {
             // Registration. Group credential/key summary fields together (near the
             // top-level metadata), then authenticator data, then Client Extensions +
@@ -400,9 +476,6 @@ try {
             if (typeof resp.publicKeyAlgorithm === 'number') {
                 const nm = coseAlgName(resp.publicKeyAlgorithm);
                 html += kvRow('Public Key Algorithm', mono(nm ? `${nm} (${resp.publicKeyAlgorithm})` : `alg ${resp.publicKeyAlgorithm}`));
-            }
-            if (typeof resp.publicKey === 'string' && resp.publicKey) {
-                html += kvRow('Public Key (DER)', hexBlock(b64(resp.publicKey)));
             }
             html += clientDataHtml(resp);
             html += clientExtensionsHtml(cred);
@@ -425,7 +498,10 @@ try {
             } catch (e) {
                 html += kvRow('Authenticator Data', mono('Failed to parse: ' + e.message));
             }
-            if (typeof resp.signature === 'string') html += kvRow('Signature', hexBlock(b64(resp.signature)));
+            if (typeof resp.signature === 'string') {
+                const sigBytes = b64(resp.signature);
+                html += kvRow('Signature (' + sigBytes.length + ' bytes)', hexBlock(sigBytes));
+            }
         }
 
         return { html };
@@ -436,6 +512,87 @@ try {
         let html = '<div class="decode-heading">Authenticator Data</div>';
         html += renderAuthenticatorDataSection(ad);
         return { html, raw: bytesToHex(bytes) };
+    }
+
+    // Is this parsed JSON a WebAuthn request-options object (the argument passed to
+    // navigator.credentials.create()/get(), as captured for the request preview)?
+    function isWebAuthnRequestOptions(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+        const pk = obj.publicKey;
+        if (!pk || typeof pk !== 'object' || Array.isArray(pk)) return false;
+        return typeof pk.challenge === 'string' && pk.challenge.length > 0;
+    }
+
+    // Render a hex string as a hex block, falling back to mono text if not valid hex.
+    function hexStringBlock(hexStr) {
+        try {
+            const s = String(hexStr || '').trim();
+            if (s && /^[0-9a-fA-F]*$/.test(s) && s.length % 2 === 0) {
+                return hexBlock(CBOR.hexToBytes(s));
+            }
+        } catch (e) { /* fall through */ }
+        return mono(String(hexStr));
+    }
+
+    // Render a list of PublicKeyCredentialDescriptors (exclude/allow credentials).
+    function credentialDescriptorsHtml(label, list) {
+        if (!Array.isArray(list) || list.length === 0) return '';
+        let html = '';
+        list.forEach((d, i) => {
+            const id = d && typeof d.id === 'string' ? d.id : '';
+            const transports = d && Array.isArray(d.transports) && d.transports.length ? ' [' + d.transports.join(', ') + ']' : '';
+            html += kvRow(label + ' #' + (i + 1) + transports, id ? hexStringBlock(id) : mono('(no id)'));
+        });
+        return html;
+    }
+
+    // Renders a WebAuthn request-options object (create() or get() argument).
+    async function renderWebAuthnRequestOptions(obj) {
+        const pk = obj.publicKey || {};
+        const isCreate = !!(pk.pubKeyCredParams || pk.user || pk.rp);
+        let html = '<div class="decode-heading">' + (isCreate
+            ? 'PublicKeyCredential Creation Request'
+            : 'PublicKeyCredential Request (Assertion)') + '</div>';
+
+        html += kvRow('Operation', mono(isCreate ? 'navigator.credentials.create()' : 'navigator.credentials.get()'));
+        if (typeof obj.mediation === 'string') html += kvRow('Mediation', mono(obj.mediation));
+        if (typeof pk.challenge === 'string') html += kvRow('Challenge', hexStringBlock(pk.challenge));
+
+        if (isCreate) {
+            if (pk.rp && typeof pk.rp === 'object') {
+                if (pk.rp.id) html += kvRow('RP ID', mono(String(pk.rp.id)));
+                if (pk.rp.name) html += kvRow('RP Name', mono(String(pk.rp.name)));
+            }
+            if (pk.user && typeof pk.user === 'object') {
+                if (typeof pk.user.id === 'string') html += kvRow('User ID', hexStringBlock(pk.user.id));
+                if (pk.user.name) html += kvRow('User Name', mono(String(pk.user.name)));
+                if (pk.user.displayName) html += kvRow('User Display Name', mono(String(pk.user.displayName)));
+            }
+            if (Array.isArray(pk.pubKeyCredParams) && pk.pubKeyCredParams.length) {
+                const lines = pk.pubKeyCredParams.map(p => {
+                    const alg = p && typeof p.alg === 'number' ? p.alg : null;
+                    const nm = alg !== null ? coseAlgName(alg) : null;
+                    return nm ? `${nm} (${alg})` : (alg !== null ? `alg ${alg}` : 'unknown');
+                });
+                html += kvRow('Pub Key Cred Params', preBlock(lines.join('\n')));
+            }
+            if (pk.authenticatorSelection && typeof pk.authenticatorSelection === 'object') {
+                html += kvRow('Authenticator Selection', preBlock(JSON.stringify(pk.authenticatorSelection, null, 2)));
+            }
+            if (typeof pk.attestation === 'string') html += kvRow('Attestation', mono(pk.attestation));
+            html += credentialDescriptorsHtml('Exclude Credentials', pk.excludeCredentials);
+        } else {
+            if (typeof pk.rpId === 'string') html += kvRow('RP ID', mono(pk.rpId));
+            if (typeof pk.userVerification === 'string') html += kvRow('User Verification', mono(pk.userVerification));
+            html += credentialDescriptorsHtml('Allow Credentials', pk.allowCredentials);
+        }
+
+        if (typeof pk.timeout === 'number') html += kvRow('Timeout', mono(String(pk.timeout) + ' ms'));
+        if (pk.extensions && typeof pk.extensions === 'object' && Object.keys(pk.extensions).length) {
+            html += kvRow('Extensions', preBlock(JSON.stringify(pk.extensions, null, 2)));
+        }
+
+        return { html };
     }
 
     // -------------------------------------------------------- certificate
@@ -539,13 +696,13 @@ try {
         return buf instanceof Uint8Array ? buf : new Uint8Array(buf);
     }
 
-    // Wrap bytes as colon-separated uppercase hex, 18 bytes per line, indented.
+    // Wrap bytes as colon-separated uppercase hex, 32 bytes per line, indented.
     function wrapHexColon(u8, indent) {
-        const per = 18;
+        const per = 32;
         const out = [];
         for (let i = 0; i < u8.length; i += per) {
             const slice = Array.from(u8.slice(i, i + per)).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(':');
-            out.push(indent + slice + (i + per < u8.length ? ':' : ''));
+            out.push(indent + slice);
         }
         return out.length ? out.join('\n') : (indent + '(empty)');
     }
@@ -773,7 +930,12 @@ try {
         const errEl = document.getElementById('decodeError');
         const card = document.getElementById('decodeResultCard');
         const result = document.getElementById('decodeResult');
+        const inputHexCard = document.getElementById('decodeInputHexCard');
+        const inputHex = document.getElementById('decodeInputHex');
         errEl.style.display = 'none';
+        // Input-hex section is shown only for base64/base64url byte inputs.
+        if (inputHexCard) inputHexCard.style.display = 'none';
+        if (inputHex) inputHex.innerHTML = '';
 
         // A PublicKeyCredential JSON (toJSON output) is handled before byte parsing.
         const rawInput = (input.value || '').trim();
@@ -787,7 +949,19 @@ try {
                     card.style.display = 'block';
                     formatHexBlocks(result);
                 } catch (e) {
-                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
+                    card.style.display = 'none';
+                }
+                return;
+            }
+            if (obj && isWebAuthnRequestOptions(obj)) {
+                try {
+                    const rendered = await renderWebAuthnRequestOptions(obj);
+                    result.innerHTML = rendered.html;
+                    card.style.display = 'block';
+                    formatHexBlocks(result);
+                } catch (e) {
+                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
                     card.style.display = 'none';
                 }
                 return;
@@ -798,7 +972,7 @@ try {
         try {
             bytes = parseInput(input.value);
         } catch (e) {
-            errEl.textContent = e.message; errEl.style.display = 'inline';
+            errEl.textContent = e.message; errEl.style.display = 'block';
             card.style.display = 'none';
             return;
         }
@@ -807,7 +981,7 @@ try {
         try {
             detected = detect(bytes);
         } catch (e) {
-            errEl.textContent = e.message; errEl.style.display = 'inline';
+            errEl.textContent = e.message; errEl.style.display = 'block';
             card.style.display = 'none';
             return;
         }
@@ -819,11 +993,22 @@ try {
             else if (detected.type === 'certificate') rendered = await renderCertificate(bytes);
             else rendered = renderRawCbor(detected.decoded, bytes);
 
+            // When the input was base64/base64url, show the raw input decoded to
+            // hex in a separate section above the decoded output.
+            const enc = classifyInput(input.value);
+            if ((enc === 'base64' || enc === 'base64url') && inputHex && inputHexCard) {
+                inputHex.innerHTML = '<div class="decode-heading">Input (Hex)</div>'
+                    + kvRow('Length', mono(bytes.length + ' bytes'))
+                    + kvRow('Bytes', hexBlock(bytes));
+                inputHexCard.style.display = 'block';
+                formatHexBlocks(inputHex);
+            }
+
             result.innerHTML = rendered.html;
             card.style.display = 'block';
             formatHexBlocks(result);
         } catch (e) {
-            errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+            errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
             card.style.display = 'none';
         }
     }
@@ -831,7 +1016,6 @@ try {
     // ------------------------------------------------------------------ wiring
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('decodeInput');
-        const cborEncodeBtn = document.getElementById('cborEncodeBtn');
         const decodeBtn = document.getElementById('decodeBtn');
         const clearBtn = document.getElementById('clearBtn');
         const copyBtn = document.getElementById('copyInputBtn');
@@ -877,7 +1061,6 @@ try {
             if (saveBtn) saveBtn.style.display = hasContent ? '' : 'none';
             if (savePdfBtn) savePdfBtn.style.display = hasContent ? '' : 'none';
             if (pasteBtn) { pasteBtn.style.display = hasContent ? 'none' : ''; applyPasteDenied(); }
-            if (cborEncodeBtn) cborEncodeBtn.style.display = (hasContent && inputAsJsonText()) ? '' : 'none';
         }
 
         // Grow/shrink the input textarea to fit its content (bounded).
@@ -910,6 +1093,8 @@ try {
             autoResize();
             updateButtons();
             document.getElementById('decodeResultCard').style.display = 'none';
+            const ihc = document.getElementById('decodeInputHexCard');
+            if (ihc) ihc.style.display = 'none';
             document.getElementById('decodeError').style.display = 'none';
         });
         input.addEventListener('paste', () => setTimeout(() => { autoResize(); updateButtons(); runDecode(); }, 0));
@@ -938,22 +1123,6 @@ try {
                     }
                     toast('Paste failed; paste manually (Ctrl+V)');
                     input.focus();
-                }
-            });
-        }
-
-        // Open the CBOR Playground to encode the current JSON input into CBOR.
-        if (cborEncodeBtn) {
-            cborEncodeBtn.addEventListener('click', () => {
-                const jsonText = inputAsJsonText();
-                if (!jsonText) { toast('Input is not valid JSON'); return; }
-                try {
-                    const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
-                    sessionStorage.setItem(key, jsonText);
-                    window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
-                } catch (e) {
-                    try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(jsonText), '_blank'); }
-                    catch (e2) { toast('Failed to open CBOR encoder'); }
                 }
             });
         }
@@ -1023,7 +1192,7 @@ try {
         if (saveBtn) saveBtn.addEventListener('click', saveInput);
 
         // ---- Save as PDF (pdfmake, loaded on demand) ----
-        const PDF_CONTENT_WIDTH = 523; // A4 width (595.28) minus 36pt margins each side
+        const PDF_CONTENT_WIDTH = 547.28; // A4 width (595.28) minus 24pt margins each side
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
@@ -1082,15 +1251,35 @@ try {
             }
             return monoFontReady;
         }
-        // Hard-wrap long unbreakable lines so pdfmake doesn't clip them.
+        // Wrap long lines for pdfmake. Breaks at word boundaries (spaces) when
+        // possible so URLs/words aren't split mid-token; falls back to a hard
+        // character break only for single tokens longer than the available width.
+        // Leading indentation is preserved on continuation lines.
         function hardWrap(text, width) {
             width = width || 95;
-            return String(text == null ? '' : text).split('\n').map(line => {
+            const wrapLine = (line) => {
                 if (line.length <= width) return line;
-                const parts = [];
-                for (let i = 0; i < line.length; i += width) parts.push(line.slice(i, i + width));
-                return parts.join('\n');
-            }).join('\n');
+                const indent = (line.match(/^[ \t]*/) || [''])[0];
+                const avail = Math.max(8, width - indent.length);
+                const words = line.slice(indent.length).split(' ');
+                const lines = [];
+                let cur = '';
+                const flush = () => { lines.push(indent + cur); cur = ''; };
+                for (let word of words) {
+                    while (word.length > avail) {
+                        if (cur.length > 0) flush();
+                        cur = word.slice(0, avail);
+                        word = word.slice(avail);
+                        flush();
+                    }
+                    if (cur.length === 0) cur = word;
+                    else if (cur.length + 1 + word.length <= avail) cur += ' ' + word;
+                    else { flush(); cur = word; }
+                }
+                if (cur.length > 0 || lines.length === 0) flush();
+                return lines.join('\n');
+            };
+            return String(text == null ? '' : text).split('\n').map(wrapLine).join('\n');
         }
         // textContent with icon glyphs / copy buttons / action controls removed.
         function cleanText(node) {
@@ -1099,12 +1288,83 @@ try {
             clone.querySelectorAll('.material-symbols-outlined, button, .decode-copy, .decode-actions, .decode-hexcopy, .cert-inline-copy, .cert-dump-toolbar').forEach(el => el.remove());
             return clone.textContent.replace(/\u00a0/g, ' ');
         }
-        // Reformat plain hex to uppercase colon-separated, `perLine` bytes per line.
-        function formatHexColon(hex, perLine) {
-            const pairs = (String(hex || '').match(/.{1,2}/g) || []);
-            const lines = [];
-            for (let i = 0; i < pairs.length; i += perLine) lines.push(pairs.slice(i, i + perLine).join(':').toUpperCase());
-            return lines.join('\n');
+        // Shared hex formatter: turns a hex string into aligned rows of at most
+        // `perRow` (default 32) uppercase space-separated bytes, each row prefixed
+        // with `indent`. This single helper drives every hex output in the PDF so
+        // the layout is consistent: max 32 bytes/row, continuation rows aligned.
+        function formatHexRows(hexStr, perRow, indent) {
+            perRow = perRow || 32;
+            indent = indent || '';
+            const bytes = (String(hexStr || '').replace(/[^0-9A-Fa-f]/g, '').toUpperCase().match(/.{1,2}/g)) || [];
+            const rows = [];
+            for (let i = 0; i < bytes.length; i += perRow) rows.push(indent + bytes.slice(i, i + perRow).join(' '));
+            return rows.join('\n');
+        }
+        // Reformat plain hex to uppercase space-separated (no colons), 32 bytes/row.
+        function formatHexSpaced(hex, perLine) {
+            return formatHexRows(hex, perLine || 32, '');
+        }
+        // Reformat the colon-separated hex runs inside an OpenSSL-style certificate
+        // dump into space-separated, 32 bytes-per-row hex (preserving each block's
+        // indentation). Non-hex lines (labels, fingerprints) are untouched.
+        function reformatCertDumpHex(text, perLine) {
+            perLine = perLine || 32;
+            const lines = String(text || '').split('\n');
+            const hexLineRe = /^(\s+)((?:[0-9A-Fa-f]{2}:)*[0-9A-Fa-f]{2}:?)\s*$/;
+            // Inline labeled hex on one line, e.g. "        SHA256: AA:BB:CC".
+            const inlineHexRe = /^(.*?:[ \t]*)((?:[0-9A-Fa-f]{2}:)+[0-9A-Fa-f]{2})[ \t]*$/;
+            const out = [];
+            let i = 0;
+            while (i < lines.length) {
+                const m = lines[i].match(hexLineRe);
+                if (m) {
+                    const indent = m[1];
+                    let hex = '';
+                    while (i < lines.length) {
+                        const mm = lines[i].match(hexLineRe);
+                        if (!mm || mm[1] !== indent) break;
+                        hex += mm[2].replace(/:$/, '').replace(/:/g, '');
+                        i++;
+                    }
+                    out.push(formatHexRows(hex, perLine, indent));
+                    continue;
+                }
+                const inl = lines[i].match(inlineHexRe);
+                if (inl) {
+                    const spaced = inl[2].split(':').map(b => b.toUpperCase()).join(' ');
+                    out.push(inl[1] + spaced);
+                    i++;
+                    continue;
+                }
+                out.push(lines[i]);
+                i++;
+            }
+            return out.join('\n');
+        }
+        // Reformat long continuous hex runs (e.g. COSE key values in pretty JSON)
+        // into aligned rows of up to 32 space-separated bytes. The first row stays
+        // inline with the JSON key/opening quote; continuation rows are indented to
+        // line up under the first byte; and the closing quote/comma is appended to
+        // the last row. The page/table widths are sized so a full 32-byte first
+        // row (prefix + 95 chars) fits without pdfmake re-wrapping.
+        function wrapLongHexInJson(text, perRow) {
+            perRow = perRow || 32;
+            return String(text == null ? '' : text).split('\n').map(line => {
+                const m = line.match(/[0-9A-Fa-f]{64,}/);
+                if (!m) return line;
+                const before = line.slice(0, m.index);            // e.g. '  "-2": "'
+                const after = line.slice(m.index + m[0].length);  // e.g. '",'
+                const bytes = m[0].toUpperCase().match(/.{1,2}/g) || [];
+                const contIndent = ' '.repeat(before.length);
+                const rows = [];
+                for (let i = 0; i < bytes.length; i += perRow) {
+                    const chunk = bytes.slice(i, i + perRow).join(' ');
+                    rows.push((i === 0 ? before : contIndent) + chunk);
+                }
+                if (rows.length === 0) rows.push(before);
+                rows[rows.length - 1] += after;
+                return rows.join('\n');
+            }).join('\n');
         }
         // Extract a value cell's text for the PDF. Hex blocks are re-wrapped to
         // 32 bytes/line (from their raw data-hex) so they align and fill the column;
@@ -1119,13 +1379,19 @@ try {
                 if (ch.classList && ch.classList.contains('decode-hexblock')) hexPre = ch.querySelector('.decode-hex[data-hex]');
                 else if (ch.matches && ch.matches('.decode-hex[data-hex]')) hexPre = ch;
                 if (hexPre) {
-                    parts.push(formatHexColon(hexPre.getAttribute('data-hex') || '', 32));
+                    parts.push(formatHexSpaced(hexPre.getAttribute('data-hex') || '', 32));
                 } else {
-                    const t = cleanText(ch);
+                    const t = wrapLongHexInJson(cleanText(ch));
                     if (t.replace(/\s+$/, '')) parts.push(t.replace(/\s+$/, ''));
                 }
             });
             return parts.join('\n');
+        }
+        // Append a trailing space to every line. Works around a PDF text-layer
+        // quirk (pdfmake / PDF.js) where the last glyph of a run is dropped from a
+        // left-to-right selection, so the final hex byte wasn't copied.
+        function trailPad(text) {
+            return String(text == null ? '' : text).split('\n').map(l => l + ' ').join('\n');
         }
         // A subtle key/value table layout: light horizontal separators only.
         const kvLayout = {
@@ -1139,7 +1405,7 @@ try {
         };
         function kvTable(rows) {
             return {
-                table: { widths: [112, '*'], body: rows },
+                table: { widths: [80, '*'], body: rows },
                 layout: kvLayout,
                 margin: [0, 2, 0, 6]
             };
@@ -1148,23 +1414,22 @@ try {
             return { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 0.7, lineColor: color || '#dddddd' }], margin: [0, 2, 0, 6] };
         }
 
-        // Build pdfmake content from the rendered decode output. Consecutive
+        // Build pdfmake content from a rendered decode container. Consecutive
         // key/value rows are grouped into a single table for a clean look.
-        function pdfFromResult() {
+        function pdfFromNode(root) {
             const out = [];
-            const result = document.getElementById('decodeResult');
-            if (!result) return out;
+            if (!root) return out;
             let kvBuffer = [];
             const flush = () => { if (kvBuffer.length) { out.push(kvTable(kvBuffer)); kvBuffer = []; } };
 
-            Array.from(result.children).forEach(node => {
+            Array.from(root.children).forEach(node => {
                 const cls = node.classList;
                 if (cls.contains('decode-row')) {
                     const label = node.querySelector('.decode-label');
                     const valContent = node.querySelector('.decode-value-content') || node.querySelector('.decode-value');
                     kvBuffer.push([
                         { text: label ? label.textContent.trim() : '', style: 'label' },
-                        { text: hardWrap(valueToPdfText(valContent), 96), style: 'mono', preserveLeadingSpaces: true }
+                        { text: trailPad(hardWrap(valueToPdfText(valContent), 108)), style: 'mono', preserveLeadingSpaces: true }
                     ]);
                     return;
                 }
@@ -1173,13 +1438,14 @@ try {
                     out.push({ text: cleanText(node).trim(), style: 'h2', margin: [0, 10, 0, 2] });
                     out.push(sectionDivider('#c9c9c9'));
                 } else if (cls.contains('decode-subheading')) {
+                    out.push(sectionDivider('#c9c9c9'));
                     out.push({ text: cleanText(node).trim(), style: 'h3', margin: [0, 8, 0, 3] });
                 } else if (cls.contains('decode-cert-index')) {
                     out.push({ text: cleanText(node).trim(), bold: true, margin: [0, 4, 0, 2] });
                 } else if (cls.contains('cert-dump')) {
-                    out.push({ text: hardWrap(cleanText(node).replace(/\s+$/, ''), 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
+                    out.push({ text: trailPad(hardWrap(reformatCertDumpHex(cleanText(node).replace(/\s+$/, ''), 32), 114)), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
                 } else if (cls.contains('decode-value')) {
-                    out.push({ text: hardWrap(cleanText(node), 114), style: 'monoBlock', preserveLeadingSpaces: true });
+                    out.push({ text: trailPad(hardWrap(cleanText(node), 114)), style: 'monoBlock', preserveLeadingSpaces: true });
                 } else {
                     const t = cleanText(node).trim();
                     if (t) out.push({ text: t });
@@ -1280,35 +1546,35 @@ try {
                 await runDecode();
                 const monoFont = await ensurePdfMake();
                 const title = derivePdfTitle();
-                const body = pdfFromResult();
+                const inputHexCard = document.getElementById('decodeInputHexCard');
+                const inputHexBody = (inputHexCard && inputHexCard.style.display !== 'none')
+                    ? pdfFromNode(document.getElementById('decodeInputHex')) : [];
+                const body = pdfFromNode(document.getElementById('decodeResult'));
                 const pageUrl = window.location.origin + window.location.pathname;
+                const pageUrlText = pageUrl;
+                const generatedStr = 'Generated ' + new Date().toLocaleString();
                 const docDefinition = {
                     info: { title: title },
                     pageSize: 'A4',
-                    pageMargins: [36, 44, 36, 40],
+                    pageMargins: [24, 44, 24, 40],
                     footer: (currentPage, pageCount) => ({
                         columns: [
-                            { text: pageUrl, fontSize: 7, color: '#aaaaaa', margin: [36, 0, 0, 0] },
-                            { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 36, 0] }
+                            { text: pageUrlText, fontSize: 7, color: '#aaaaaa', margin: [24, 0, 0, 0] },
+                            { text: generatedStr, alignment: 'center', fontSize: 7, color: '#aaaaaa' },
+                            { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 24, 0] }
                         ],
                         margin: [0, 8, 0, 0]
                     }),
                     content: [
                         { text: title, style: 'title' },
-                        { text: 'Generated ' + new Date().toLocaleString(), style: 'meta' },
                         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 1.4, lineColor: '#4f46e5' }], margin: [0, 6, 0, 12] },
-                        { text: 'Input', style: 'h2', margin: [0, 0, 0, 2] },
-                        sectionDivider('#c9c9c9'),
-                        { text: hardWrap(raw, 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] },
-                        { text: 'Decoded Output', style: 'h2', margin: [0, 0, 0, 2] },
-                        sectionDivider('#c9c9c9')
-                    ].concat(body),
+                        { text: trailPad(hardWrap(raw, 114)), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] }
+                    ].concat(inputHexBody, body),
                     styles: {
                         title: { fontSize: 17, bold: true, color: '#1f2937' },
-                        meta: { fontSize: 8, color: '#9ca3af' },
                         h2: { fontSize: 12.5, bold: true, color: '#4f46e5' },
                         h3: { fontSize: 10, bold: true, color: '#374151' },
-                        label: { fontSize: 8.5, bold: true, color: '#374151' },
+                        label: { fontSize: 8, bold: true, color: '#374151' },
                         mono: { fontSize: 7, font: monoFont, color: '#1f2937' },
                         monoBlock: { fontSize: 7.5, font: monoFont, color: '#374151' }
                     },
@@ -1347,12 +1613,12 @@ try {
                     runDecode();
                 } catch (err) {
                     document.getElementById('decodeError').textContent = 'Import failed: ' + err.message;
-                    document.getElementById('decodeError').style.display = 'inline';
+                    document.getElementById('decodeError').style.display = 'block';
                 }
             };
             reader.onerror = () => {
                 document.getElementById('decodeError').textContent = 'File read failed.';
-                document.getElementById('decodeError').style.display = 'inline';
+                document.getElementById('decodeError').style.display = 'block';
             };
             reader.readAsArrayBuffer(file);
             importFileInput.value = '';
@@ -1405,6 +1671,25 @@ try {
             const val = btn.getAttribute('data-copy') || '';
             if (!val) return;
             navigator.clipboard.writeText(val).then(() => toast('Copied to clipboard')).catch(() => toast('Copy failed'));
+        });
+
+        // Delegated "Encode as CBOR": open the CBOR Playground encoder pre-filled
+        // with the sibling diagnostic-notation block's text.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest ? e.target.closest('.decode-encode') : null;
+            if (!btn) return;
+            const valueEl = btn.closest('.decode-value');
+            const pre = valueEl ? valueEl.querySelector('.decode-block:not(.decode-hex)') : null;
+            const text = pre ? (pre.textContent || '').trim() : '';
+            if (!text) { toast('Nothing to encode'); return; }
+            try {
+                const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
+                sessionStorage.setItem(key, text);
+                window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
+            } catch (err) {
+                try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(text), '_blank'); }
+                catch (e2) { toast('Failed to open CBOR encoder'); }
+            }
         });
     });
 })();
