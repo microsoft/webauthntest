@@ -1438,6 +1438,7 @@ try {
                     out.push({ text: cleanText(node).trim(), style: 'h2', margin: [0, 10, 0, 2] });
                     out.push(sectionDivider('#c9c9c9'));
                 } else if (cls.contains('decode-subheading')) {
+                    out.push(sectionDivider('#c9c9c9'));
                     out.push({ text: cleanText(node).trim(), style: 'h3', margin: [0, 8, 0, 3] });
                 } else if (cls.contains('decode-cert-index')) {
                     out.push({ text: cleanText(node).trim(), bold: true, margin: [0, 4, 0, 2] });
@@ -1550,28 +1551,27 @@ try {
                     ? pdfFromNode(document.getElementById('decodeInputHex')) : [];
                 const body = pdfFromNode(document.getElementById('decodeResult'));
                 const pageUrl = window.location.origin + window.location.pathname;
+                const pageUrlText = pageUrl;
+                const generatedStr = 'Generated ' + new Date().toLocaleString();
                 const docDefinition = {
                     info: { title: title },
                     pageSize: 'A4',
                     pageMargins: [24, 44, 24, 40],
                     footer: (currentPage, pageCount) => ({
                         columns: [
-                            { text: pageUrl, fontSize: 7, color: '#aaaaaa', margin: [24, 0, 0, 0] },
+                            { text: pageUrlText, fontSize: 7, color: '#aaaaaa', margin: [24, 0, 0, 0] },
+                            { text: generatedStr, alignment: 'center', fontSize: 7, color: '#aaaaaa' },
                             { text: currentPage + ' / ' + pageCount, alignment: 'right', fontSize: 7, color: '#aaaaaa', margin: [0, 0, 24, 0] }
                         ],
                         margin: [0, 8, 0, 0]
                     }),
                     content: [
                         { text: title, style: 'title' },
-                        { text: 'Generated ' + new Date().toLocaleString(), style: 'meta' },
                         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 1.4, lineColor: '#4f46e5' }], margin: [0, 6, 0, 12] },
-                        { text: 'Input', style: 'h2', margin: [0, 0, 0, 2] },
-                        sectionDivider('#c9c9c9'),
                         { text: trailPad(hardWrap(raw, 114)), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] }
                     ].concat(inputHexBody, body),
                     styles: {
                         title: { fontSize: 17, bold: true, color: '#1f2937' },
-                        meta: { fontSize: 8, color: '#9ca3af' },
                         h2: { fontSize: 12.5, bold: true, color: '#4f46e5' },
                         h3: { fontSize: 10, bold: true, color: '#374151' },
                         label: { fontSize: 8, bold: true, color: '#374151' },
