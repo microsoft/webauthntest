@@ -498,7 +498,10 @@ try {
             } catch (e) {
                 html += kvRow('Authenticator Data', mono('Failed to parse: ' + e.message));
             }
-            if (typeof resp.signature === 'string') html += kvRow('Signature', hexBlock(b64(resp.signature)));
+            if (typeof resp.signature === 'string') {
+                const sigBytes = b64(resp.signature);
+                html += kvRow('Signature (' + sigBytes.length + ' bytes)', hexBlock(sigBytes));
+            }
         }
 
         return { html };
