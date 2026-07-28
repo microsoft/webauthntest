@@ -42,8 +42,7 @@
                             <textarea id="decodeInput" class="textarea textarea-bordered w-full cbor-mono" rows="6"
                                 placeholder="Paste a PublicKeyCredential JSON, attestation object, authenticator data, or X.509 certificate (hex, base64, base64url, or PEM)."></textarea>
                             <div class="flex items-center flex-wrap gap-2">
-                                <button id="decodeBtn" class="btn btn-link btn-sm">WebAuthn Decode</button>
-                                <button id="cborEncodeBtn" class="btn btn-link btn-sm" style="display:none;">CBOR Encode</button>
+                                <button id="decodeBtn" class="btn btn-link btn-sm">Decode</button>
                                 <button id="clearBtn" class="btn btn-link btn-sm">Clear</button>
                                 <button id="copyInputBtn" class="btn btn-link btn-sm">Copy</button>
                                 <button id="pasteInputBtn" class="btn btn-link btn-sm">Paste</button>
@@ -51,8 +50,8 @@
                                 <button id="savePdfBtn" class="btn btn-link btn-sm">Export Output</button>
                                 <label class="btn btn-link btn-sm" for="importDecodeFile">Import File</label>
                                 <input type="file" id="importDecodeFile" accept=".json,.cbor,.der,.pem,.crt,.cer,.bin,.txt,application/json,application/cbor,application/octet-stream" style="display:none;" />
-                                <span id="decodeError" class="text-xs text-error" style="display:none;"></span>
                             </div>
+                            <div id="decodeError" class="text-xs text-error" style="display:none;"></div>
                         </div>
                     </div>
                 </section>

@@ -273,7 +273,7 @@
             if(entries.length === 0) return '{}';
             const formatted = entries.map(([k,v])=>{
                 let keyOut;
-                if(/^[0-9]+$/.test(k)) keyOut = k; // numeric key
+                if(/^-?[0-9]+$/.test(k)) keyOut = k; // integer key (incl. negative, e.g. COSE labels)
                 else if(/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k)) keyOut = k; // identifier-like
                 else keyOut = JSON.stringify(k);
                 return pad(indent+2) + keyOut + ': ' + formatDiagnostic(v, indent+2);

@@ -2135,6 +2135,7 @@ dialog.modal {
   overflow: auto !important;
 }
 .decode-copy .material-symbols-outlined { font-size: 16px; vertical-align: middle; }
+.decode-encode .material-symbols-outlined { font-size: 16px; vertical-align: middle; }
 
 @media (max-width: 640px) {
   .decode-row { grid-template-columns: 1fr; gap: 2px; }

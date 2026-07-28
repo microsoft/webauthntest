@@ -266,17 +266,6 @@ try {
         return names[String(alg)] || null;
     }
 
-    // Convert a decoded COSE_Key map (string keys, Uint8Array values) into a
-    // display object where byte strings are shown as hex, like the Yubico tool.
-    function coseMapToDisplay(map) {
-        const out = {};
-        Object.keys(map).forEach(k => {
-            const v = map[k];
-            out[k] = ArrayBuffer.isView(v) ? bytesToHex(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)).toUpperCase() : v;
-        });
-        return out;
-    }
-
     function parseAuthenticatorData(authData) {
         if (authData.length < 37) throw new Error('Authenticator data too short');
         const rpIdHash = authData.slice(0, 32);
@@ -343,6 +332,12 @@ try {
     function mono(text) { return `<span class="decode-mono">${escapeHtml(text)}</span>`; }
     function preBlock(text) { return `<pre class="decode-block">${escapeHtml(text)}</pre>`; }
 
+    // Action button that opens the CBOR Playground's "Encode JSON to CBOR" panel
+    // pre-filled with the sibling diagnostic-notation block (read at click time).
+    function encodeCborBtn() {
+        return `<button class="btn btn-ghost btn-xs btn-square decode-encode" title="Encode as CBOR (open CBOR Playground)"><span class="material-symbols-outlined" aria-hidden="true">data_object</span></button>`;
+    }
+
     // A responsive hex block (colon-separated uppercase, wrapped to fit width) with
     // a copy button pinned to the top-right (aligned with the first line).
     function hexBlock(u8) {
@@ -369,21 +364,13 @@ try {
                 const alg = a.coseKey['3'];
                 const algName = coseAlgName(alg);
                 html += kvRow('Key Algorithm', mono(algName ? `${algName} (${alg})` : `alg ${alg}`));
-                const pkHex = a.coseKeyBytes ? hexBlock(a.coseKeyBytes) : '';
-                if (pkHex) html += kvRow('Public Key (CBOR)', pkHex);
-                html += kvRow('Public Key (COSE)', preBlock(JSON.stringify(coseMapToDisplay(a.coseKey), null, 2)));
+                html += kvRow('Public Key (COSE)', preBlock(CBOR.formatDiagnostic(a.coseKey)), { extra: encodeCborBtn() });
             }
         }
-        const extHex = ad.extensionsBytes ? hexBlock(ad.extensionsBytes) : '';
         html += kvRow('Authenticator Extensions', ad.extensions
-            ? (extHex + preBlock(JSON.stringify(ad.extensions, jsonReplacer, 2)))
-            : mono('(none)'));
+            ? preBlock(CBOR.formatDiagnostic(ad.extensions))
+            : mono('(none)'), ad.extensions ? { extra: encodeCborBtn() } : undefined);
         return html;
-    }
-
-    function jsonReplacer(key, value) {
-        if (ArrayBuffer.isView(value)) return bytesToHex(new Uint8Array(value.buffer, value.byteOffset, value.byteLength)).toUpperCase();
-        return value;
     }
 
     // Authenticator-data section from a decoded attestation object.
@@ -400,23 +387,26 @@ try {
     async function attestationFormatAndCertsHtml(decoded) {
         let html = kvRow('Attestation Format', mono(String(decoded.fmt)));
         const att = decoded.attStmt || {};
+        // Full attestation statement in diagnostic notation, with an encode icon so
+        // the whole attStmt map can be round-tripped back to CBOR. Shown alongside
+        // the friendly per-field breakdown below.
+        if (att && typeof att === 'object' && Object.keys(att).length) {
+            html += kvRow('Attestation Statement', preBlock(CBOR.formatDiagnostic(att)), { extra: encodeCborBtn() });
+        }
         const labels = {
-            alg: 'Attestation Algorithm', sig: 'Attestation Signature',
             ver: 'TPM Version', certInfo: 'TPM certInfo', pubArea: 'TPM pubArea',
             response: 'Response', ecdaaKeyId: 'ECDAA Key ID'
         };
-        // Render every statement field except x5c (shown as certificates below).
+        // Render statement fields except: x5c (shown as certificates below) and
+        // alg/sig (already covered by the Attestation Statement row above).
         Object.keys(att).forEach(k => {
-            if (k === 'x5c') return;
+            if (k === 'x5c' || k === 'alg' || k === 'sig') return;
             const v = att[k];
             const label = labels[k] || k;
-            if (k === 'alg' && typeof v === 'number') {
-                const nm = coseAlgName(v);
-                html += kvRow(label, mono(nm ? `${nm} (${v})` : `alg ${v}`));
-            } else if (ArrayBuffer.isView(v)) {
+            if (ArrayBuffer.isView(v)) {
                 html += kvRow(label, hexBlock(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)));
             } else if (v && typeof v === 'object') {
-                html += kvRow(label, preBlock(JSON.stringify(v, jsonReplacer, 2)));
+                html += kvRow(label, preBlock(CBOR.formatDiagnostic(v)), { extra: encodeCborBtn() });
             } else {
                 html += kvRow(label, mono(String(v)));
             }
@@ -475,9 +465,6 @@ try {
         const resp = cred.response || {};
         const b64 = (s) => CBOR.base64ToBytes(s);
 
-        // Top-level credential field.
-        if (cred.id) html += kvRow('Credential ID (Base64URL)', mono(String(cred.id)), { copy: String(cred.id) });
-
         if (typeof resp.attestationObject === 'string') {
             // Registration. Group credential/key summary fields together (near the
             // top-level metadata), then authenticator data, then Client Extensions +
@@ -489,9 +476,6 @@ try {
             if (typeof resp.publicKeyAlgorithm === 'number') {
                 const nm = coseAlgName(resp.publicKeyAlgorithm);
                 html += kvRow('Public Key Algorithm', mono(nm ? `${nm} (${resp.publicKeyAlgorithm})` : `alg ${resp.publicKeyAlgorithm}`));
-            }
-            if (typeof resp.publicKey === 'string' && resp.publicKey) {
-                html += kvRow('Public Key (DER)', hexBlock(b64(resp.publicKey)));
             }
             html += clientDataHtml(resp);
             html += clientExtensionsHtml(cred);
@@ -962,7 +946,7 @@ try {
                     card.style.display = 'block';
                     formatHexBlocks(result);
                 } catch (e) {
-                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
                     card.style.display = 'none';
                 }
                 return;
@@ -974,7 +958,7 @@ try {
                     card.style.display = 'block';
                     formatHexBlocks(result);
                 } catch (e) {
-                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+                    errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
                     card.style.display = 'none';
                 }
                 return;
@@ -985,7 +969,7 @@ try {
         try {
             bytes = parseInput(input.value);
         } catch (e) {
-            errEl.textContent = e.message; errEl.style.display = 'inline';
+            errEl.textContent = e.message; errEl.style.display = 'block';
             card.style.display = 'none';
             return;
         }
@@ -994,7 +978,7 @@ try {
         try {
             detected = detect(bytes);
         } catch (e) {
-            errEl.textContent = e.message; errEl.style.display = 'inline';
+            errEl.textContent = e.message; errEl.style.display = 'block';
             card.style.display = 'none';
             return;
         }
@@ -1021,7 +1005,7 @@ try {
             card.style.display = 'block';
             formatHexBlocks(result);
         } catch (e) {
-            errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'inline';
+            errEl.textContent = 'Failed to render: ' + e.message; errEl.style.display = 'block';
             card.style.display = 'none';
         }
     }
@@ -1029,7 +1013,6 @@ try {
     // ------------------------------------------------------------------ wiring
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('decodeInput');
-        const cborEncodeBtn = document.getElementById('cborEncodeBtn');
         const decodeBtn = document.getElementById('decodeBtn');
         const clearBtn = document.getElementById('clearBtn');
         const copyBtn = document.getElementById('copyInputBtn');
@@ -1075,7 +1058,6 @@ try {
             if (saveBtn) saveBtn.style.display = hasContent ? '' : 'none';
             if (savePdfBtn) savePdfBtn.style.display = hasContent ? '' : 'none';
             if (pasteBtn) { pasteBtn.style.display = hasContent ? 'none' : ''; applyPasteDenied(); }
-            if (cborEncodeBtn) cborEncodeBtn.style.display = (hasContent && inputAsJsonText()) ? '' : 'none';
         }
 
         // Grow/shrink the input textarea to fit its content (bounded).
@@ -1138,22 +1120,6 @@ try {
                     }
                     toast('Paste failed; paste manually (Ctrl+V)');
                     input.focus();
-                }
-            });
-        }
-
-        // Open the CBOR Playground to encode the current JSON input into CBOR.
-        if (cborEncodeBtn) {
-            cborEncodeBtn.addEventListener('click', () => {
-                const jsonText = inputAsJsonText();
-                if (!jsonText) { toast('Input is not valid JSON'); return; }
-                try {
-                    const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
-                    sessionStorage.setItem(key, jsonText);
-                    window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
-                } catch (e) {
-                    try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(jsonText), '_blank'); }
-                    catch (e2) { toast('Failed to open CBOR encoder'); }
                 }
             });
         }
@@ -1418,6 +1384,12 @@ try {
             });
             return parts.join('\n');
         }
+        // Append a trailing space to every line. Works around a PDF text-layer
+        // quirk (pdfmake / PDF.js) where the last glyph of a run is dropped from a
+        // left-to-right selection, so the final hex byte wasn't copied.
+        function trailPad(text) {
+            return String(text == null ? '' : text).split('\n').map(l => l + ' ').join('\n');
+        }
         // A subtle key/value table layout: light horizontal separators only.
         const kvLayout = {
             hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 0 : 0.5,
@@ -1454,7 +1426,7 @@ try {
                     const valContent = node.querySelector('.decode-value-content') || node.querySelector('.decode-value');
                     kvBuffer.push([
                         { text: label ? label.textContent.trim() : '', style: 'label' },
-                        { text: hardWrap(valueToPdfText(valContent), 108), style: 'mono', preserveLeadingSpaces: true }
+                        { text: trailPad(hardWrap(valueToPdfText(valContent), 108)), style: 'mono', preserveLeadingSpaces: true }
                     ]);
                     return;
                 }
@@ -1467,9 +1439,9 @@ try {
                 } else if (cls.contains('decode-cert-index')) {
                     out.push({ text: cleanText(node).trim(), bold: true, margin: [0, 4, 0, 2] });
                 } else if (cls.contains('cert-dump')) {
-                    out.push({ text: hardWrap(reformatCertDumpHex(cleanText(node).replace(/\s+$/, ''), 32), 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
+                    out.push({ text: trailPad(hardWrap(reformatCertDumpHex(cleanText(node).replace(/\s+$/, ''), 32), 114)), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 6] });
                 } else if (cls.contains('decode-value')) {
-                    out.push({ text: hardWrap(cleanText(node), 114), style: 'monoBlock', preserveLeadingSpaces: true });
+                    out.push({ text: trailPad(hardWrap(cleanText(node), 114)), style: 'monoBlock', preserveLeadingSpaces: true });
                 } else {
                     const t = cleanText(node).trim();
                     if (t) out.push({ text: t });
@@ -1592,7 +1564,7 @@ try {
                         { canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_CONTENT_WIDTH, y2: 0, lineWidth: 1.4, lineColor: '#4f46e5' }], margin: [0, 6, 0, 12] },
                         { text: 'Input', style: 'h2', margin: [0, 0, 0, 2] },
                         sectionDivider('#c9c9c9'),
-                        { text: hardWrap(raw, 114), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] }
+                        { text: trailPad(hardWrap(raw, 114)), style: 'monoBlock', preserveLeadingSpaces: true, margin: [0, 0, 0, 14] }
                     ].concat(inputHexBody, body),
                     styles: {
                         title: { fontSize: 17, bold: true, color: '#1f2937' },
@@ -1638,12 +1610,12 @@ try {
                     runDecode();
                 } catch (err) {
                     document.getElementById('decodeError').textContent = 'Import failed: ' + err.message;
-                    document.getElementById('decodeError').style.display = 'inline';
+                    document.getElementById('decodeError').style.display = 'block';
                 }
             };
             reader.onerror = () => {
                 document.getElementById('decodeError').textContent = 'File read failed.';
-                document.getElementById('decodeError').style.display = 'inline';
+                document.getElementById('decodeError').style.display = 'block';
             };
             reader.readAsArrayBuffer(file);
             importFileInput.value = '';
@@ -1696,6 +1668,25 @@ try {
             const val = btn.getAttribute('data-copy') || '';
             if (!val) return;
             navigator.clipboard.writeText(val).then(() => toast('Copied to clipboard')).catch(() => toast('Copy failed'));
+        });
+
+        // Delegated "Encode as CBOR": open the CBOR Playground encoder pre-filled
+        // with the sibling diagnostic-notation block's text.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest ? e.target.closest('.decode-encode') : null;
+            if (!btn) return;
+            const valueEl = btn.closest('.decode-value');
+            const pre = valueEl ? valueEl.querySelector('.decode-block:not(.decode-hex)') : null;
+            const text = pre ? (pre.textContent || '').trim() : '';
+            if (!text) { toast('Nothing to encode'); return; }
+            try {
+                const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
+                sessionStorage.setItem(key, text);
+                window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
+            } catch (err) {
+                try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(text), '_blank'); }
+                catch (e2) { toast('Failed to open CBOR encoder'); }
+            }
         });
     });
 })();
