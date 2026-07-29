@@ -17,7 +17,7 @@
         "cbor-x": "^1.6.0"
     },
     "devDependencies": {
-        "wrangler": "^4.59.2"
+        "wrangler": "^4.115.0"
     },
     "engines": {
         "node": ">=24.11.0"
