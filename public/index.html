@@ -557,11 +557,7 @@
                         <dt>Attestation Verification</dt>
                         <dd id="creationData_attestationVerification"></dd>
 
-                        <dt>Public Key (CBOR)
-                            <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_publicKeyCbor" title="CBOR to JSON Decoding">CBOR DECODE</a>
-                            </div>
-                        </dt>
+                        <dt>Public Key (CBOR)</dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_publicKeyCbor"></pre>
@@ -601,11 +597,7 @@
                             </div>
                         </dd>
 
-                        <dt>Extensions
-                            <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="creationData_extensionData" title="CBOR to JSON Decoding">CBOR DECODE</a>
-                            </div>
-                        </dt>
+                        <dt>Extensions</dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="creationData_extensionData"></pre>
@@ -759,11 +751,7 @@
                             </div>
                         </dd>
 
-                        <dt>Extensions
-                            <div class="decode-action-left">
-                                <a href="#" class="btn btn-link btn-xs openCborButton" data-target-span="authenticationData_extensionData" title="CBOR to JSON Decoding">CBOR DECODE</a>
-                            </div>
-                        </dt>
+                        <dt>Extensions</dt>
                         <dd>
                             <div class="mono-block">
                                 <pre class="mono hex-mono" id="authenticationData_extensionData"></pre>
@@ -973,12 +961,6 @@
                             <a class="btn btn-ghost btn-sm btn-circle" href="decode.html" title="WebAuthn Decoder" aria-label="WebAuthn Decoder">
                                 <span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>
                             </a>
-                            <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
-                                <span class="material-symbols-outlined" aria-hidden="true">code</span>
-                            </a>
-                            <a class="btn btn-ghost btn-sm btn-circle" href="mds.html" title="Authenticator Metadata" aria-label="Authenticator Metadata">
-                                <span class="material-symbols-outlined" aria-hidden="true">badge</span>
-                            </a>
                             <span class="toolbar-divider"></span>
                             <button class="btn btn-ghost btn-sm btn-circle" id="createButton" title="Create" aria-label="Register">
                                 <span class="material-symbols-outlined" aria-hidden="true">add</span>
@@ -1013,7 +995,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dialog-polyfill/0.4.9/dialog-polyfill.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
     <script src="cbor.js"></script>
     <!-- Load app as an ES module which imports PKIJS directly from the CDN -->
     <script type="module" src="index.js"></script>

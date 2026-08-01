@@ -332,12 +332,6 @@ try {
     function mono(text) { return `<span class="decode-mono">${escapeHtml(text)}</span>`; }
     function preBlock(text) { return `<pre class="decode-block">${escapeHtml(text)}</pre>`; }
 
-    // Action button that opens the CBOR Playground's "Encode JSON to CBOR" panel
-    // pre-filled with the sibling diagnostic-notation block (read at click time).
-    function encodeCborBtn() {
-        return `<button class="btn btn-ghost btn-xs btn-square decode-encode" title="Encode as CBOR (open CBOR Playground)"><span class="material-symbols-outlined" aria-hidden="true">data_object</span></button>`;
-    }
-
     // A responsive hex block (colon-separated uppercase, wrapped to fit width) with
     // a copy button pinned to the top-right (aligned with the first line).
     function hexBlock(u8) {
@@ -357,19 +351,18 @@ try {
         if (ad.attested) {
             const a = ad.attested;
             const uuid = formatUuid(a.aaguid).toUpperCase();
-            const mdsBtn = `<a class="btn btn-ghost btn-xs btn-square" href="./mds.html?aaguid=${encodeURIComponent(uuid)}" target="_blank" rel="noopener" title="View Authenticator Metadata"><span class="material-symbols-outlined" aria-hidden="true">badge</span></a>`;
-            html += kvRow('AAGUID', mono(uuid), { copy: uuid, extra: mdsBtn });
+            html += kvRow('AAGUID', mono(uuid), { copy: uuid });
             html += kvRow('Credential ID', hexBlock(a.credentialId));
             if (a.coseKey && looksLikeCbor(a.coseKey)) {
                 const alg = a.coseKey['3'];
                 const algName = coseAlgName(alg);
                 html += kvRow('Key Algorithm', mono(algName ? `${algName} (${alg})` : `alg ${alg}`));
-                html += kvRow('Public Key (COSE)', preBlock(CBOR.formatDiagnostic(a.coseKey)), { extra: encodeCborBtn() });
+                html += kvRow('Public Key (COSE)', preBlock(CBOR.formatDiagnostic(a.coseKey)));
             }
         }
         html += kvRow('Authenticator Extensions', ad.extensions
             ? preBlock(CBOR.formatDiagnostic(ad.extensions))
-            : mono('(none)'), ad.extensions ? { extra: encodeCborBtn() } : undefined);
+            : mono('(none)'));
         return html;
     }
 
@@ -387,11 +380,9 @@ try {
     async function attestationFormatAndCertsHtml(decoded) {
         let html = kvRow('Attestation Format', mono(String(decoded.fmt)));
         const att = decoded.attStmt || {};
-        // Full attestation statement in diagnostic notation, with an encode icon so
-        // the whole attStmt map can be round-tripped back to CBOR. Shown alongside
-        // the friendly per-field breakdown below.
+        // Show the full attestation statement alongside the friendly per-field breakdown.
         if (att && typeof att === 'object' && Object.keys(att).length) {
-            html += kvRow('Attestation Statement', preBlock(CBOR.formatDiagnostic(att)), { extra: encodeCborBtn() });
+            html += kvRow('Attestation Statement', preBlock(CBOR.formatDiagnostic(att)));
         }
         const labels = {
             ver: 'TPM Version', certInfo: 'TPM certInfo', pubArea: 'TPM pubArea',
@@ -406,7 +397,7 @@ try {
             if (ArrayBuffer.isView(v)) {
                 html += kvRow(label, hexBlock(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)));
             } else if (v && typeof v === 'object') {
-                html += kvRow(label, preBlock(CBOR.formatDiagnostic(v)), { extra: encodeCborBtn() });
+                html += kvRow(label, preBlock(CBOR.formatDiagnostic(v)));
             } else {
                 html += kvRow(label, mono(String(v)));
             }
@@ -1625,7 +1616,7 @@ try {
         });
 
         // Accept a payload from an opener window (e.g. the certificate dialog) or
-        // via ?key= / ?input= and auto-decode it. Mirrors the CBOR playground flow.
+        // via ?key= / ?input= and auto-decode it.
         (function receiveIncoming() {
             try {
                 const params = new URLSearchParams(window.location.search);
@@ -1673,23 +1664,5 @@ try {
             navigator.clipboard.writeText(val).then(() => toast('Copied to clipboard')).catch(() => toast('Copy failed'));
         });
 
-        // Delegated "Encode as CBOR": open the CBOR Playground encoder pre-filled
-        // with the sibling diagnostic-notation block's text.
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest ? e.target.closest('.decode-encode') : null;
-            if (!btn) return;
-            const valueEl = btn.closest('.decode-value');
-            const pre = valueEl ? valueEl.querySelector('.decode-block:not(.decode-hex)') : null;
-            const text = pre ? (pre.textContent || '').trim() : '';
-            if (!text) { toast('Nothing to encode'); return; }
-            try {
-                const key = 'cbor_encode_payload_' + Math.random().toString(36).slice(2, 10);
-                sessionStorage.setItem(key, text);
-                window.open('./cbor.html?mode=encode&key=' + encodeURIComponent(key), '_blank');
-            } catch (err) {
-                try { window.open('./cbor.html?mode=encode&input=' + encodeURIComponent(text), '_blank'); }
-                catch (e2) { toast('Failed to open CBOR encoder'); }
-            }
-        });
     });
 })();

@@ -7,6 +7,15 @@ import * as asn1js from 'https://cdn.skypack.dev/asn1js@3.0.6';
 import * as pvutils from 'https://cdn.skypack.dev/pvutils@1.1.3';
 import * as pvtsutils from 'https://cdn.skypack.dev/pvtsutils@1.3.6';
 import * as pkijs from 'https://cdn.skypack.dev/pkijs@3.3.0';
+import {
+    createChallenge as createLocalChallenge,
+    deleteCredential as deleteLocalCredential,
+    listCredentials as listLocalCredentials,
+    saveAssertion as saveLocalAssertion,
+    saveRegistration as saveLocalRegistration,
+    updateCredentialEnabled as updateLocalCredentialEnabled,
+    updateCredentialTransports as updateLocalCredentialTransports
+} from './client-backend.js';
 
 // Expose commonly used libs on window for compatibility with the rest of the app
 window.asn1js = asn1js;
@@ -768,11 +777,8 @@ try {
             document.addEventListener('touchcancel', (e) => { /* no-op */ }, { capture: true });
         })();
 
-        if (!Cookies.get("uid")) {
+        if (!getLocalUsername()) {
             //user is signed out
-            // Remove cookie using the same path used when setting it so it is actually cleared
-            Cookies.remove('uid', { path: '/' });
-            Cookies.remove('uidDisplay', { path: '/' });
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -792,12 +798,13 @@ try {
         $('#signOutButton').click(() => {
             // Remember the current username (original casing) so the login page can prefill it.
             try {
-                var currentUid = Cookies.get('uidDisplay') || Cookies.get('uid');
+                var currentUid = getLocalUsername();
                 if (currentUid) localStorage.setItem('prefillUid', currentUid);
             } catch (e) { /* ignore */ }
-            // Ensure the persistent cookie is removed by specifying the path
-            Cookies.remove('uid', { path: '/' });
-            Cookies.remove('uidDisplay', { path: '/' });
+            try {
+                localStorage.removeItem('uid');
+                localStorage.removeItem('uidDisplay');
+            } catch (e) { /* ignore */ }
             // Clear AAGUID caches (in-memory + persisted localStorage mirror)
             try {
                 aaguidNameCache = {};
@@ -809,7 +816,7 @@ try {
         });
 
         $('#showUserButton').click(() => {
-            var uid = Cookies.get('uidDisplay') || Cookies.get('uid');
+            var uid = getLocalUsername();
             if (uid) {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(uid)
@@ -1074,18 +1081,6 @@ try {
             }
             moreDialog.showModal();
         });
-
-        // AAGUID button may be removed; only attach handler if element exists
-        const aaguidBtn = document.getElementById('aaguidButton');
-        if (aaguidBtn) {
-            aaguidBtn.addEventListener('click', () => {
-                try {
-                    window.open("./aaguid.html", "_blank");
-                } catch (e) {
-                    window.location.href = "./aaguid.html";
-                }
-            });
-        }
 
         $('#createDialog_createButton').click(() => {
             var id;
@@ -2168,7 +2163,7 @@ try {
     }
 
     /**
-    * Deletes a credential on the server
+    * Deletes a credential from this browser
     * @param {string} id id of credential to delete 
     * @return {Promise<any>} awaitable promise
     */
@@ -2237,7 +2232,7 @@ try {
             allowCred.transports = credential.transports.slice();
         }
 
-        // Get a fresh challenge from server
+        // Generate a fresh one-time challenge in this browser.
         const challenge = await getChallenge(window.location.hostname, 'webauthn.get');
 
         const getOptions = {
@@ -2339,68 +2334,6 @@ try {
             const id = $(e.currentTarget).attr("data-value");
             try { e.preventDefault(); } catch(_) {}
             showAuthenticationData(id);
-        });
-
-        $(".aaguid-mds-button").click(e => {
-            try { e.preventDefault(); } catch(_) {}
-            try { e.stopPropagation(); } catch(_) {}
-
-            const spanId = $(e.currentTarget).attr('data-aaguid-span');
-            if (!spanId) {
-                toast('AAGUID not available');
-                return;
-            }
-
-            let raw = '';
-            try {
-                const el = document.getElementById(spanId);
-                raw = (el && el.getAttribute) ? (el.getAttribute('data-raw') || el.textContent || '') : '';
-            } catch(err) { raw = ''; }
-
-            const formatted = formatAaguidForUrl(raw);
-            if (!formatted) {
-                toast('AAGUID not available');
-                return;
-            }
-
-            // Use postMessage handshake to transfer AAGUID to mds.html (similar to cbor.html)
-            try {
-                var nonce = Math.random().toString(36).slice(2, 12);
-                var child = window.open('./mds.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
-                if (!child) throw new Error('Popup blocked');
-                var handshakeDone = false;
-                var replyListener = function(ev) {
-                    try {
-                        if (ev.origin !== window.location.origin) return;
-                        if (ev.source !== child) return;
-                        var d = ev.data || {};
-                        if (d && d.type === 'mds-ready' && d.nonce === nonce) {
-                            try { child.postMessage({ type: 'mds-payload', nonce: nonce, aaguid: formatted }, window.location.origin); } catch(e) { console.warn('postMessage failed', e); }
-                            handshakeDone = true;
-                            window.removeEventListener('message', replyListener);
-                        }
-                    } catch(e) { console.warn('handshake listener error', e); }
-                };
-                window.addEventListener('message', replyListener);
-                // Fallback after timeout
-                setTimeout(function() {
-                    if (handshakeDone) return;
-                    try { window.removeEventListener('message', replyListener); } catch(e) {}
-                    // Fallback to query parameter if postMessage fails
-                    try {
-                        if (child && !child.closed) child.location.href = './mds.html?aaguid=' + encodeURIComponent(formatted);
-                        else window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank');
-                    } catch(navErr) { window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank'); }
-                }, 5000);
-                return;
-            } catch(pmErr) {
-                console.warn('postMessage/open failed, falling back to query param', pmErr);
-                try {
-                    window.open('./mds.html?aaguid=' + encodeURIComponent(formatted), '_blank');
-                } catch(err) {
-                    window.location.href = './mds.html?aaguid=' + encodeURIComponent(formatted);
-                }
-            }
         });
 
         $(".updateTransportsButton").click(e => {
@@ -2514,9 +2447,8 @@ try {
     html += '<div class="mono-block"><pre class="mono hex-mono" id="' + credIdSpanId + '"></pre>';
     html += '<div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard cred-copy-id" data-copy-span="' + credIdSpanId + '" data-copy-label="Credential ID" title="Copy Credential ID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div>';
     html += '</div></dd>';
-    // Add a small img container to the mono-block for AAGUID icon.
-    // Arrange as: text | icon | mds | copy
-    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions aaguid-mds-actions"><button type="button" class="btn btn-ghost btn-xs btn-square aaguid-mds-button" data-aaguid-span="' + aaguidSpanId + '" title="View Authenticator Metadata"><span class="material-symbols-outlined" aria-hidden="true">badge</span></button></div><div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div></div></dd>';
+    // Add a small img container to the mono-block for the authenticator icon.
+    html += '             <dt>AAGUID</dt><dd><div class="mono-block aaguid-mono-block"><pre class="mono hex-mono" id="' + aaguidSpanId + '"></pre><div class="aaguid-icon-wrap"><img alt="authenticator icon" class="aaguid-icon" id="' + aaguidSpanId + '_icon" src="" style="display:none;" /></div><div class="mono-actions"><button type="button" class="btn btn-ghost btn-xs btn-square copy-to-clipboard aaguid-copy-id" data-copy-span="' + aaguidSpanId + '" data-copy-label="AAGUID" title="Copy AAGUID"><span class="material-symbols-outlined" aria-hidden="true">content_copy</span></button></div></div></dd>';
     html += '             <dt>Key Type</dt><dd><span class="mono">' + escapeHtml((credential.creationData.publicKeySummary || '') + ' (' + (credential.creationData.publicKeyAlgorithm || '') + ')') + '</span></dd>';
     html += '             <dt>Attestation Type</dt><dd><span class="mono">' + escapeHtml(credential.creationData.attestationStatementSummary || '') + '</span></dd>';
     html += '             <dt>Attachment</dt><dd><span class="mono">' + escapeHtml(credential.creationData.authenticatorAttachment || '') + '</span></dd>';
@@ -2879,15 +2811,6 @@ try {
 
     // NOTE: attachResponsiveHex helpers were moved to top-level helpers so they are
     // available to all UI renderers (creation, authentication, certificates, etc.).
-        // Hide DECODE button if there's no extension data
-        try {
-            var creationExtText = (credential.creationData.extensionDataHex || '').toString().trim();
-            var btn = document.querySelector('.openCborButton[data-target-span="creationData_extensionData"]');
-            if (btn) {
-                if (!creationExtText || creationExtText === 'No extension data') btn.style.display = 'none';
-                else btn.style.display = 'inline-block';
-            }
-        } catch (e) { /* non-fatal */ }
     $("#creationData_residentKey").text(sanitizeForDisplay(credential.metadata.residentKey));
     try {
         var creationFullJson = credential.creationData.fullResponseJSON;
@@ -3030,81 +2953,6 @@ try {
         } catch (err) {
             console.error('Download failed', err);
             toast('Download failed');
-        }
-    });
-
-    // Open CBOR playground in new tab with provided CBOR input (reads span textContent)
-    $(document).on('click', '.openCborButton', function(e){
-        e.preventDefault();
-        try {
-            var targetSpan = $(this).attr('data-target-span');
-            if(!targetSpan) return;
-            var el = document.getElementById(targetSpan);
-            if(!el) { toast('CBOR input not available'); return; }
-            // Prefer raw unformatted value stored on the element (data-raw)
-            var raw = null;
-            try { raw = el.getAttribute && el.getAttribute('data-raw'); } catch (e) { raw = null; }
-            if (!raw) raw = el.textContent || el.innerText || '';
-            if(!raw || !raw.trim()) { toast('No CBOR data to open'); return; }
-            raw = raw.trim();
-            // Try postMessage handshake first. Open cbor.html with a pm flag and a nonce so the child posts a 'cbor-ready' message back including the nonce.
-            try {
-                var nonce = Math.random().toString(36).slice(2,12);
-                var child = window.open('./cbor.html?pm=1&nonce=' + encodeURIComponent(nonce), '_blank');
-                if(!child) throw new Error('Popup blocked');
-                var handshakeDone = false;
-                var replyListener = function(ev){
-                    try {
-                        // only accept messages from same origin and from the opened window
-                        if(ev.origin !== window.location.origin) return;
-                        if(ev.source !== child) return;
-                        var d = ev.data || {};
-                        // require nonce match to avoid message hijacking
-                        if(d && d.type === 'cbor-ready' && d.nonce === nonce){
-                            // Child is ready and nonce matches; send payload along with nonce
-                            try { child.postMessage({ type: 'cbor-payload', nonce: nonce, payload: raw }, window.location.origin); } catch(e) { console.warn('postMessage failed', e); }
-                            handshakeDone = true;
-                            window.removeEventListener('message', replyListener);
-                        }
-                    } catch(e) { console.warn('handshake listener error', e); }
-                };
-                window.addEventListener('message', replyListener);
-                // Wait up to 10000ms for handshake; if not completed, fallback to sessionStorage/key method
-                setTimeout(function(){
-                    if(handshakeDone) return;
-                    try { window.removeEventListener('message', replyListener); } catch(e){}
-                    // Try sessionStorage fallback: store payload and open playground with key
-                    try {
-                        var key = 'cbor_payload_' + Math.random().toString(36).slice(2,10);
-                        sessionStorage.setItem(key, raw);
-                        // If possible, try to navigate the already opened child to the key URL; otherwise open a new tab
-                        try {
-                            if(child && !child.closed) child.location.href = './cbor.html?key=' + encodeURIComponent(key);
-                            else window.open('./cbor.html?key=' + encodeURIComponent(key), '_blank');
-                        } catch(navErr){ window.open('./cbor.html?key=' + encodeURIComponent(key), '_blank'); }
-                    } catch(storageErr){
-                        // Last resort: fall back to query param (may fail for large payloads)
-                        try { window.open('./cbor.html?input=' + encodeURIComponent(raw), '_blank'); } catch(e){ console.error('All transfer methods failed', e); toast('Failed to open CBOR playground'); }
-                    }
-                }, 10000);
-                return;
-            } catch(pmErr){
-                // Popup blocked or other error; fall back to sessionStorage-based approach
-                console.warn('postMessage/open failed, falling back', pmErr);
-                try {
-                    var key2 = 'cbor_payload_' + Math.random().toString(36).slice(2,10);
-                    sessionStorage.setItem(key2, raw);
-                    window.open('./cbor.html?key=' + encodeURIComponent(key2), '_blank');
-                    return;
-                } catch(storageErr2){
-                    console.warn('sessionStorage fallback failed, falling back to query param', storageErr2);
-                    try { window.open('./cbor.html?input=' + encodeURIComponent(raw), '_blank'); } catch(e){ console.error('All transfer methods failed', e); toast('Failed to open CBOR playground'); }
-                    return;
-                }
-            }
-        } catch (err) {
-            console.error('Failed to open CBOR playground', err);
-            toast('Failed to open CBOR playground');
         }
     });
 
@@ -3513,7 +3361,7 @@ try {
     /**
      * Opens decode.html in a new tab and passes a payload (e.g. a certificate PEM)
      * to be auto-decoded there. Uses a postMessage handshake with a sessionStorage
-     * fallback, mirroring the CBOR playground opener.
+     * fallback.
      * @param {string} payload text to decode (PEM / hex / base64)
      */
     function openInDecoder(payload) {
@@ -4043,25 +3891,6 @@ try {
     }
 
     /**
-     * Format an AAGUID value into a lowercase dashed GUID suitable for URLs.
-     * Accepts either 32-hex (with/without separators) or an already dashed GUID.
-     * @param {string} v
-     */
-    function formatAaguidForUrl(v) {
-        if (v === undefined || v === null) return '';
-        var raw = String(v || '').trim().toLowerCase();
-        if (!raw) return '';
-
-        // If already dashed GUID, validate and return.
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(raw)) return raw;
-
-        // Strip non-hex and attempt to build dashed GUID.
-        var hex = raw.replace(/[^0-9a-f]/g, '');
-        if (hex.length !== 32) return '';
-        return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' + hex.slice(16, 20) + '-' + hex.slice(20);
-    }
-
-    /**
      * Format a hex string into colon-separated byte pairs and break into lines of perRow pairs.
      * Example: "AABBCCDDEEFF" -> "AA:BB:CC:DD\nEE:FF" when perRow=4
      */
@@ -4333,8 +4162,6 @@ try {
                     try { if (el.removeAttribute) el.removeAttribute('data-raw'); } catch (e) {}
                 } catch (e) { /* ignore per-span */ }
             });
-            // Also hide decode button until we decide to show it below
-            try { var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]'); if (btn2) btn2.style.display = 'none'; } catch (e) {}
         } catch (e) { /* non-fatal */ }
 
         // Render hex blobs nicely (colon-separated pairs, multi-line) similar to certificates view
@@ -4407,16 +4234,6 @@ try {
                 console.warn('renderAuthHex failed:', e);
             }
         })();
-        // Hide DECODE button if there's no extension data
-        try {
-            var authExtText = (credential.authenticationData.extensionDataHex || '').toString().trim();
-            var authExtLower = authExtText.toLowerCase();
-            var btn2 = document.querySelector('.openCborButton[data-target-span="authenticationData_extensionData"]');
-            if (btn2) {
-                if (!authExtText || authExtLower === 'no extension data' || authExtLower === 'none') btn2.style.display = 'none';
-                else btn2.style.display = 'inline-block';
-            }
-        } catch (e) { /* non-fatal */ }
     $("#authenticationData_clientDataJSON").text(sanitizeForDisplay(credential.authenticationData.clientDataJSON));
     $("#authenticationData_authenticatorAttachment").text(sanitizeForDisplay(credential.authenticationData.authenticatorAttachment));
         var authenticationDataDialog = document.querySelector('#authenticationDataDialog');
@@ -4699,17 +4516,49 @@ try {
         return Uint8Array.from(str, c => c.charCodeAt(0)).buffer;
     }
 
+    function getLocalUsername() {
+        try {
+            return localStorage.getItem('uidDisplay') || localStorage.getItem('uid') || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function requireLocalUsername() {
+        var username = getLocalUsername();
+        if (!username) throw new Error('You need to sign out and sign back in again.');
+        return username;
+    }
+
+    function localJsonResponse(body, status) {
+        return new Response(JSON.stringify(body), {
+            status: status || 200,
+            headers: { 'content-type': 'application/json; charset=utf-8' }
+        });
+    }
+
     /**
-     * Helper: Performs an HTTP get operation
+     * Compatibility adapter for the former HTTP API, now backed entirely by
+     * browser storage and local WebAuthn verification.
      * @param {string} endpoint endpoint URL
      * @returns {Promise} Promise resolving to javascript object received back
      */
-    function rest_get(endpoint) {
-        return fetch(endpoint, {
-            method: "GET",
-            credentials: "same-origin",
-            cache: "no-store"
-        });
+    async function rest_get(endpoint) {
+        try {
+            var url = new URL(endpoint, window.location.href);
+            if (url.pathname === '/challenge') {
+                var challenge = createLocalChallenge(url.searchParams.get('type') || 'webauthn.get');
+                return localJsonResponse({ result: arrayBufferToBase64(challenge) });
+            }
+            if (url.pathname === '/credentials') {
+                var rpId = url.searchParams.get('clientHostname') || window.location.hostname;
+                var result = await listLocalCredentials(requireLocalUsername(), rpId);
+                return localJsonResponse({ result: result });
+            }
+            return localJsonResponse({ error: 'Not found' }, 404);
+        } catch (e) {
+            return localJsonResponse({ error: e && e.message ? e.message : String(e) });
+        }
     }
 
     /**
@@ -4718,15 +4567,24 @@ try {
      * @param {any} object 
      * @returns {Promise} Promise resolving to javascript object received back
      */
-    function rest_put(endpoint, object) {
-        return fetch(endpoint, {
-            method: "PUT",
-            credentials: "same-origin",
-            body: JSON.stringify(object),
-            headers: {
-                "content-type": "application/json"
+    async function rest_put(endpoint, object) {
+        try {
+            var url = new URL(endpoint, window.location.href);
+            var username = requireLocalUsername();
+            if (url.pathname === '/credentials') {
+                return localJsonResponse({
+                    result: await saveLocalRegistration(username, object, window.location.hostname)
+                });
             }
-        });
+            if (url.pathname === '/assertion') {
+                return localJsonResponse({
+                    result: await saveLocalAssertion(username, object, window.location.hostname)
+                });
+            }
+            return localJsonResponse({ error: 'Not found' }, 404);
+        } catch (e) {
+            return localJsonResponse({ error: e && e.message ? e.message : String(e) });
+        }
     }
 
     /**
@@ -4735,15 +4593,15 @@ try {
      * @param {any} object 
      * @returns {Promise} Promise resolving to javascript object received back
      */
-    function rest_delete(endpoint, object) {
-        return fetch(endpoint, {
-            method: "DELETE",
-            credentials: "same-origin",
-            body: JSON.stringify(object),
-            headers: {
-                "content-type": "application/json"
-            }
-        });
+    async function rest_delete(endpoint, object) {
+        try {
+            var url = new URL(endpoint, window.location.href);
+            if (url.pathname !== '/credentials') return localJsonResponse({ error: 'Not found' }, 404);
+            await deleteLocalCredential(requireLocalUsername(), object.id);
+            return localJsonResponse({});
+        } catch (e) {
+            return localJsonResponse({ error: e && e.message ? e.message : String(e) });
+        }
     }
 
     /**
@@ -4752,16 +4610,24 @@ try {
      * @param {any} object 
      * @returns {Promise} Promise resolving to javascript object received back
      */
-    function rest_patch(endpoint, object) {
-        return fetch(endpoint, {
-            method: "PATCH",
-            credentials: "same-origin",
-            body: JSON.stringify(object),
-            headers: {
-                "content-type": "application/json"
-            },
-            cache: "no-store"
-        });
+    async function rest_patch(endpoint, object) {
+        try {
+            var url = new URL(endpoint, window.location.href);
+            var username = requireLocalUsername();
+            if (url.pathname === '/credentials/transports') {
+                return localJsonResponse({
+                    result: await updateLocalCredentialTransports(username, object.id, object.transports)
+                });
+            }
+            if (url.pathname === '/credentials/enabled') {
+                return localJsonResponse({
+                    result: await updateLocalCredentialEnabled(username, object.id, object.enabled)
+                });
+            }
+            return localJsonResponse({ error: 'Not found' }, 404);
+        } catch (e) {
+            return localJsonResponse({ error: e && e.message ? e.message : String(e) });
+        }
     }
 
     /**
@@ -4804,4 +4670,3 @@ try {
 
     //#endregion Helpers
 })();
-

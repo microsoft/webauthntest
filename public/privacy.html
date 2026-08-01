@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <title>Privacy &amp; Cookie Policy - Passkey Playground</title>
+    <title>Privacy &amp; Local Storage - Passkey Playground</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 
-<body class="min-h-screen bg-base-200 text-base-content cbor-page">
+<body class="min-h-screen bg-base-200 text-base-content tool-page">
     <div class="min-h-screen flex flex-col">
         <header class="navbar bg-primary text-primary-content px-4">
             <div class="navbar-start">
@@ -21,19 +21,13 @@
             </div>
         </header>
 
-        <div class="credentials-toolbar cbor-nav-toolbar">
-            <div class="credentials-toolbar-actions cbor-nav-toolbar-actions" aria-label="Navigation actions">
+        <div class="credentials-toolbar tool-nav-toolbar">
+            <div class="credentials-toolbar-actions tool-nav-toolbar-actions" aria-label="Navigation actions">
                 <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Home" aria-label="Home">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>
                 </a>
                 <a class="btn btn-ghost btn-sm btn-circle" href="decode.html" title="WebAuthn Decoder" aria-label="WebAuthn Decoder">
                     <span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>
-                </a>
-                <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
-                    <span class="material-symbols-outlined" aria-hidden="true">code</span>
-                </a>
-                <a class="btn btn-ghost btn-sm btn-circle" href="mds.html" title="Authenticator Metadata" aria-label="Authenticator Metadata">
-                    <span class="material-symbols-outlined" aria-hidden="true">badge</span>
                 </a>
             </div>
         </div>
@@ -45,7 +39,7 @@
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-primary" style="font-size:2rem;" aria-hidden="true">shield_person</span>
                             <div>
-                                <h1 class="text-2xl font-bold leading-tight">Privacy &amp; Cookie Policy</h1>
+                                <h1 class="text-2xl font-bold leading-tight">Privacy &amp; Local Storage</h1>
                                 <p class="text-sm opacity-70 mt-1">Passkey Playground — a public testing tool for the WebAuthn / passkey APIs.</p>
                             </div>
                         </div>
@@ -62,10 +56,9 @@
                                 What this tool is
                             </h2>
                             <p class="mt-2 opacity-90">
-                                This site lets developers experiment with the WebAuthn / FIDO2 passkey APIs. It uses only
-                                strictly necessary cookies required for the sign-in and passkey flows to function. We do
-                                <strong>not</strong> use cookies or similar technologies for tracking, analytics, profiling,
-                                or advertising, and we do not share data with third parties for those purposes.
+                                This site lets developers experiment with the WebAuthn / FIDO2 passkey APIs. The application
+                                runs entirely in your browser and does not use a server-side credential database. We do
+                                <strong>not</strong> use browser storage for tracking, analytics, profiling, or advertising.
                             </p>
                         </section>
 
@@ -77,10 +70,10 @@
                                 Data we store
                             </h2>
                             <p class="mt-2 opacity-90">
-                                When you register or authenticate a passkey, the credential details (such as the public key,
-                                credential ID, and authenticator metadata) are stored against your chosen username so the tool
-                                can display and reuse them. Your username is stored in hashed form on the server. No passwords
-                                or private keys ever leave your authenticator.
+                                Your chosen username is stored in localStorage. Credential details such as the public key,
+                                credential ID, authenticator metadata, and latest assertion details are stored in IndexedDB
+                                on this device. Challenges are generated locally and temporarily kept in sessionStorage.
+                                No passwords or private keys ever leave your authenticator.
                             </p>
                         </section>
 
@@ -94,13 +87,13 @@
                             <ul class="mt-2 space-y-2 opacity-90">
                                 <li class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-success" style="font-size:1.25rem;" aria-hidden="true">check_circle</span>
-                                    <span>These cookies are strictly necessary for the sign-in and passkey flows to work.
-                                        By continuing to browse and sign in, you consent to their use.</span>
+                                    <span>The stored data is scoped to this browser profile and website origin. It does not
+                                        synchronize to another browser, device, or hostname.</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-success" style="font-size:1.25rem;" aria-hidden="true">check_circle</span>
-                                    <span>You can withdraw consent at any time by clearing this site's cookies and site data
-                                        in your browser, or by blocking cookies for this site in your browser settings.</span>
+                                    <span>You can remove all locally stored data at any time by clearing this site's data in
+                                        your browser settings.</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <span class="material-symbols-outlined text-success" style="font-size:1.25rem;" aria-hidden="true">check_circle</span>

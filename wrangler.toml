@@ -1,13 +1,5 @@
-name = "webauthntest"
-compatibility_date = "2026-01-19"
+name = "passkey"
+compatibility_date = "2026-07-15"
 
-main = "src/worker.js"
-
-# Serve static UI from ./public (Workers + Assets)
-assets = { directory = "public", binding = "ASSETS" }
-
-# D1 binding (create DB then update database_id)
-[[d1_databases]]
-binding = "DB"
-database_name = "webauthntest"
-database_id = "e9be8827-afdc-4d3d-ab4a-ad504b1c8ba5"
+[assets]
+directory = "./public"

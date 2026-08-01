@@ -6,21 +6,9 @@ import {
   bytesToBase64,
   bytesToBase64Url,
   bytesToHex,
-  normalizeBase64Url,
   utf8ToBytes,
-  jsonToBase64Url,
-  base64UrlToJson,
 } from './base64.js';
-import { sha256Utf8, sha256Bytes, hmacSha256Base64Url, timingSafeEqual } from './crypto.js';
-
-const CHALLENGE_COOKIE = 'webauthn_chal';
-const CHALLENGE_EXPIRY_MS = 5 * 60 * 1000;
-
-function randomChallengeBase64Url() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return bytesToBase64Url(bytes);
-}
+import { sha256Utf8, sha256Bytes } from './crypto.js';
 
 function formatUuidFromBytes(u8) {
   const b = u8 instanceof Uint8Array ? u8 : new Uint8Array(u8);
@@ -406,49 +394,6 @@ export function getValidHostname(request, env, clientHostname) {
 
   // For Pages/Workers, the request hostname is the only safe default.
   return valid.includes(reqHost) ? reqHost : reqHost;
-}
-
-export async function issueChallenge(uid, hostname, type, env) {
-  const challenge = randomChallengeBase64Url();
-  const expiresAt = Date.now() + CHALLENGE_EXPIRY_MS;
-
-  const payload = { c: challenge, u: uid, h: hostname, t: type, e: expiresAt };
-  const payloadB64u = jsonToBase64Url(payload);
-
-  const secret = env?.CHALLENGE_HMAC_SECRET;
-  if (!secret) throw new Error('CHALLENGE_HMAC_SECRET is not configured');
-
-  const sigB64u = await hmacSha256Base64Url(secret, utf8ToBytes(payloadB64u));
-  const token = `${payloadB64u}.${sigB64u}`;
-
-  return { challenge, token, expiresAt };
-}
-
-export async function verifyChallengeFromCookie(cookieValue, clientChallenge, uid, hostname, type, env) {
-  if (!cookieValue) throw new Error('No challenge stored');
-
-  const parts = String(cookieValue).split('.');
-  if (parts.length !== 2) throw new Error('Invalid challenge token');
-
-  const [payloadB64u, sigB64u] = parts;
-  const secret = env?.CHALLENGE_HMAC_SECRET;
-  if (!secret) throw new Error('CHALLENGE_HMAC_SECRET is not configured');
-
-  const expectedSig = await hmacSha256Base64Url(secret, utf8ToBytes(payloadB64u));
-  if (!timingSafeEqual(expectedSig, sigB64u)) throw new Error('Invalid challenge token');
-
-  const payload = base64UrlToJson(payloadB64u);
-  if (!payload || typeof payload !== 'object') throw new Error('Invalid challenge token');
-
-  if (payload.u !== uid) throw new Error('Invalid challenge token');
-  if (payload.h !== hostname) throw new Error('Invalid challenge token');
-  if (payload.t !== type) throw new Error('Invalid challenge token');
-  if (!payload.e || Date.now() > payload.e) throw new Error('Challenge expired');
-
-  const clientB64u = normalizeBase64Url(clientChallenge);
-  if (payload.c !== clientB64u) throw new Error('Invalid challenge in collectedClientData');
-
-  return true;
 }
 
 function concatBytes(a, b) {
@@ -1096,14 +1041,4 @@ export async function verifyAssertion(credential, assertion, hostname) {
   };
 
   return credential;
-}
-
-export async function validateClientDataFromCookie(clientData, uid, hostname, type, cookies, env) {
-  if (clientData.type !== type) throw new Error(`collectedClientData type was expected to be ${type}`);
-  const token = cookies[CHALLENGE_COOKIE];
-  await verifyChallengeFromCookie(token, clientData.challenge, uid, hostname, type, env);
-}
-
-export function challengeCookieName() {
-  return CHALLENGE_COOKIE;
 }
