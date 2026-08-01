@@ -38,12 +38,12 @@
         </div>
     </main>
 
-    <!-- Cookie consent banner (implied consent) -->
-    <div id="cookieConsent" class="cookie-consent" role="note" aria-label="Cookie notice" hidden>
+    <!-- Local storage notice -->
+    <div id="cookieConsent" class="cookie-consent" role="note" aria-label="Local storage notice" hidden>
         <div class="cookie-consent-bar">
             <p class="cookie-consent-text">
-                By browsing this site without restricting the use of cookies, you consent to our use of cookies as set
-                out in our <a href="privacy.html" target="_blank" rel="noopener">Cookie Notice</a>.
+                This website stores your username and credential details in this browser.
+                See the <a href="privacy.html" target="_blank" rel="noopener">Local Storage Notice</a>.
             </p>
             <button type="button" class="cookie-consent-ok" id="cookieAccept">OK</button>
         </div>
@@ -51,10 +51,9 @@
 </body>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
     integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
 <script src="wordlist.js"></script>
 <script>
-    var CONSENT_KEY = 'cookieConsent';
+    var CONSENT_KEY = 'localStorageNotice';
 
     function consentAcknowledged() {
         try { return localStorage.getItem(CONSENT_KEY) === 'acknowledged'; } catch (e) { return false; }
@@ -146,13 +145,15 @@
             return false;
         }
 
-        // Persist the uid cookie for 1 year so the user stays logged in across browser restarts.
-        // Use a reasonably long expiry and a conservative SameSite/path. In production consider
-        // using secure cookies served from the server-side (HttpOnly, Secure).
-        // 'uid' is lowercased for case-insensitive matching; 'uidDisplay' preserves the
-        // original casing purely for display (e.g. camelCase names).
-        Cookies.set('uid', uid, { expires: 365, path: '/', sameSite: 'Lax' });
-        Cookies.set('uidDisplay', raw, { expires: 365, path: '/', sameSite: 'Lax' });
+        // Keep the local profile name on this device. uidDisplay preserves the
+        // original casing purely for display (for example, camelCase names).
+        try {
+            localStorage.setItem('uid', uid);
+            localStorage.setItem('uidDisplay', raw);
+        } catch (e) {
+            alert('Local browser storage is unavailable. Enable site storage and try again.');
+            return false;
+        }
         window.location.href = "./";
         return false;
     }

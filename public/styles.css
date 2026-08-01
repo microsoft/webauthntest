@@ -156,7 +156,7 @@ input[type="reset"]:not(:disabled):focus-visible,
   visibility: hidden;
 }
 
-/* Header title link (used in index.html and cbor.html) */
+/* Header title link */
 .title-link {
   color: inherit; /* match surrounding header text */
   text-decoration: none; /* remove underline */
@@ -1077,43 +1077,10 @@ body#signInPrompt .login-title {
   margin-left: auto;
 }
 
-/* CBOR page: center the navigation icons in the toolbar */
-.cbor-page .cbor-nav-toolbar-actions {
+/* Center navigation icons on standalone tool pages. */
+.tool-page .tool-nav-toolbar-actions {
   justify-content: center;
 }
-
-/* MDS: Selected authenticator header row (icons + name) */
-.mds-selected-label-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.mds-selected-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-}
-
-.mds-selected-icons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mds-selected-icons img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-/* Show the appropriate icon for the current theme */
-html[data-theme="dark"] #selectedIconDark { display: inline-block; }
-html[data-theme="dark"] #selectedIconLight { display: none; }
-
-html:not([data-theme="dark"]) #selectedIconLight { display: inline-block; }
-html:not([data-theme="dark"]) #selectedIconDark { display: none; }
 
 /* Icon buttons in the Credentials toolbar */
 .credentials-toolbar-actions .btn {
@@ -1230,11 +1197,10 @@ body#signInPrompt #signInButton {
   height: 0;
 }
 
-/* AAGUID mono-block layout: four columns — text | icon | mds | copy
-   Make icon/actions columns fixed-width so buttons line up. */
+/* AAGUID mono-block layout: text | icon | copy. */
 .aaguid-mono-block {
   display: grid;
-  grid-template-columns: 1fr 44px 44px 44px; /* text (fluid) | icon | mds | copy */
+  grid-template-columns: 1fr 44px 44px;
   gap: 8px; /* match .mono-block default */
   align-items: center;
 }
@@ -1266,10 +1232,10 @@ body#signInPrompt #signInButton {
   width: 100%;
 }
 
-/* Ensure AAGUID mono-block uses a three-column grid even though .mono-block sets a different template.
+/* Ensure AAGUID mono-block uses a compact grid even though .mono-block sets a different template.
    Specific selector (.mono-block.aaguid-mono-block) ensures this rule wins. */
 .mono-block.aaguid-mono-block {
-  grid-template-columns: 1fr 44px 44px 44px !important;
+  grid-template-columns: 1fr 44px 44px !important;
   display: grid;
   gap: 8px;
   align-items: center;
@@ -1278,9 +1244,7 @@ body#signInPrompt #signInButton {
 /* Force column placement so order is guaranteed regardless of DOM or inherited styles */
 .aaguid-mono-block > pre.mono { grid-column: 1 / 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; writing-mode: horizontal-tb; }
 .aaguid-mono-block > .aaguid-icon-wrap { grid-column: 2 / 3; }
-.aaguid-mono-block > .aaguid-mds-actions { grid-column: 3 / 4; }
-/* Place only the copy action in the last column; don't override the MDS action. */
-.aaguid-mono-block > .mono-actions:not(.aaguid-mds-actions) { grid-column: 4 / 5; }
+.aaguid-mono-block > .mono-actions { grid-column: 3 / 4; }
 /* allow the text column to shrink inside the grid instead of forcing wrapping */
 .aaguid-mono-block > pre.mono { min-width: 0; }
 
@@ -1319,7 +1283,7 @@ body#signInPrompt #signInButton {
     grid-template-rows: auto auto !important;
     grid-template-areas: 
       "text text text"
-      "icon mds actions";
+      "icon icon actions";
     gap: 8px;
     width: 100%;
   }
@@ -1330,8 +1294,7 @@ body#signInPrompt #signInButton {
     min-width: 0;
   }
   .aaguid-mono-block > .aaguid-icon-wrap { grid-area: icon; justify-content: flex-start; }
-  .aaguid-mono-block > .aaguid-mds-actions { grid-area: mds; justify-content: center; }
-  .aaguid-mono-block > .mono-actions:not(.aaguid-mds-actions) { grid-area: actions; justify-content: center; }
+  .aaguid-mono-block > .mono-actions { grid-area: actions; justify-content: center; }
 }
 
 /* Algorithm priority list */
@@ -1520,8 +1483,7 @@ body#signInPrompt #signInButton {
 .cert-actions .material-symbols-outlined { vertical-align: middle; }
 
 /* Make per-cert action buttons visually consistent */
-#certsDialog .cert-actions .btn,
-#mdsCertsDialog .cert-actions .btn {
+#certsDialog .cert-actions .btn {
   display: inline-flex !important;
   align-items: center;
   gap: 8px;
@@ -1534,25 +1496,21 @@ body#signInPrompt #signInButton {
   min-width: 0 !important;
 }
 
-#certsDialog .cert-actions .btn .material-symbols-outlined,
-#mdsCertsDialog .cert-actions .btn .material-symbols-outlined {
+#certsDialog .cert-actions .btn .material-symbols-outlined {
   color: inherit !important;
   font-size: 20px !important;
   line-height: 20px !important;
 }
 
 /* hover effect to match other action links/buttons */
-#certsDialog .cert-actions .btn:hover,
-#mdsCertsDialog .cert-actions .btn:hover {
+#certsDialog .cert-actions .btn:hover {
   background: var(--btn-hover-bg) !important;
 }
 
 /* Icon-only copy buttons next to fingerprint/serial */
 /* Match per-cert action buttons */
 #certsDialog .cert-copy-fingerprint,
-#certsDialog .cert-copy-serial,
-#mdsCertsDialog .cert-copy-fingerprint,
-#mdsCertsDialog .cert-copy-serial {
+#certsDialog .cert-copy-serial {
   width: 44px !important;
   min-width: 44px !important;
   height: 44px !important;
@@ -1565,13 +1523,10 @@ body#signInPrompt #signInButton {
   border: none !important;
 }
 #certsDialog .cert-copy-fingerprint .material-symbols-outlined,
-#certsDialog .cert-copy-serial .material-symbols-outlined,
-#mdsCertsDialog .cert-copy-fingerprint .material-symbols-outlined,
-#mdsCertsDialog .cert-copy-serial .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
+#certsDialog .cert-copy-serial .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
 
 /* Public key copy button: same style as other copy icons */
-#certsDialog .cert-copy-publickey,
-#mdsCertsDialog .cert-copy-publickey {
+#certsDialog .cert-copy-publickey {
   width: 44px !important;
   min-width: 44px !important;
   height: 44px !important;
@@ -1583,8 +1538,7 @@ body#signInPrompt #signInButton {
   color: #1a73e8 !important;
   border: none !important;
 }
-#certsDialog .cert-copy-publickey .material-symbols-outlined,
-#mdsCertsDialog .cert-copy-publickey .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
+#certsDialog .cert-copy-publickey .material-symbols-outlined { font-size:24px !important; color: inherit !important; }
 
 /* Responsive adjustments: allow per-cert action buttons to wrap and
    use a compact icon-first layout on narrow screens so label text doesn't
@@ -1598,8 +1552,7 @@ body#signInPrompt #signInButton {
   }
 
   /* Make each button a bit more compact and allow it to shrink */
-    #certsDialog .cert-actions .btn,
-    #mdsCertsDialog .cert-actions .btn {
+    #certsDialog .cert-actions .btn {
     padding: 6px 6px !important;
     font-size: 13px !important;
     gap: 6px !important;
@@ -1609,8 +1562,7 @@ body#signInPrompt #signInButton {
   /* When space is very narrow, show an icon-first style where label can wrap
      onto the next line; ensure icons remain left-aligned and visible. */
   @media (max-width: 380px) {
-    #certsDialog .cert-actions .btn,
-    #mdsCertsDialog .cert-actions .btn {
+    #certsDialog .cert-actions .btn {
       display: inline-flex !important;
       flex-direction: row !important;
       align-items: center !important;
@@ -1620,15 +1572,13 @@ body#signInPrompt #signInButton {
     /* If necessary, hide the text on ultra-narrow screens but keep title accessible
        via title attribute (handled in JS if desired). We prefer to keep text when possible,
        so only reduce visibility using a subtle technique: shrink text and allow wrapping. */
-    #certsDialog .cert-actions .btn,
-    #mdsCertsDialog .cert-actions .btn { white-space: normal !important; }
+    #certsDialog .cert-actions .btn { white-space: normal !important; }
   }
 }
 
 /* Make certificates dialog wider on larger screens */
 /* Certificates dialog: prefer content-width but cap at a reasonable max */
-dialog#certsDialog,
-dialog#mdsCertsDialog {
+dialog#certsDialog {
   width: auto;
   max-width: 1100px;
   /* add bottom padding so footer buttons aren't flush to the dialog edge */
@@ -1638,8 +1588,7 @@ dialog#mdsCertsDialog {
 /* Layout certificate cards as a single column (top-to-bottom). Each card
    stretches to fill the dialog content width so available space on the right
    is used. This keeps the vertical flow but makes entries flexible. */
-#certsDialog .app-dialog-content,
-#mdsCertsDialog .app-dialog-content {
+#certsDialog .app-dialog-content {
   display: flex !important;
   flex-direction: column;
   gap: 16px;
@@ -1647,8 +1596,7 @@ dialog#mdsCertsDialog {
 }
 
 /* Ensure each cert card uses the full width of the dialog content area */
-#certsDialog .cert-card,
-#mdsCertsDialog .cert-card { width: 100%; box-sizing: border-box; }
+#certsDialog .cert-card { width: 100%; box-sizing: border-box; }
 
 .cert-dialog-actions { display:flex; gap:8px; align-items:center; }
 /* Ensure actions sit at the bottom-right of the dialog and force LTR ordering
@@ -1781,20 +1729,17 @@ dialog#mdsCertsDialog {
 
 /* In certificate dialogs, keep label emphasis consistent across all rows.
    Let the row inherit base text color; .cert-value keeps its own grey. */
-#certsDialog .cert-card small,
-#mdsCertsDialog .cert-card small {
+#certsDialog .cert-card small {
   color: inherit !important;
 }
 
 /* Certificate dialog typography: values use the same font as public-key bytes */
-#certsDialog .cert-label,
-#mdsCertsDialog .cert-label {
+#certsDialog .cert-label {
   font-family: inherit;
   font-weight: 600;
 }
 
-#certsDialog .cert-value,
-#mdsCertsDialog .cert-value {
+#certsDialog .cert-value {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
   font-size: inherit;
   font-weight: 400;
@@ -1805,38 +1750,30 @@ dialog#mdsCertsDialog {
 }
 
 /* Main certificate fields (Subject/Issuer/Serial/Validity/etc.): keep labels same size as values */
-#certsDialog .cert-card .text-sm .cert-label,
-#mdsCertsDialog .cert-card .text-sm .cert-label { font-size: inherit; }
+#certsDialog .cert-card .text-sm .cert-label { font-size: inherit; }
 
 /* Force Tailwind/DaisyUI utility sizing to inherit our unified cert-card size */
-#certsDialog .cert-card .text-sm,
-#mdsCertsDialog .cert-card .text-sm {
+#certsDialog .cert-card .text-sm {
   font-size: inherit !important;
   line-height: inherit !important;
 }
 
 /* Extension rows: keep same size as main fields (override UA 'small') */
-#certsDialog .cert-card .cert-ext,
-#mdsCertsDialog .cert-card .cert-ext { font-size: inherit; }
+#certsDialog .cert-card .cert-ext { font-size: inherit; }
 
-#certsDialog .cert-card small,
-#mdsCertsDialog .cert-card small {
+#certsDialog .cert-card small {
   font-size: inherit !important;
   line-height: inherit !important;
 }
 
 #certsDialog .cert-card .cert-ext small .cert-label,
-#certsDialog .cert-card .cert-ext small .cert-value,
-#mdsCertsDialog .cert-card .cert-ext small .cert-label,
-#mdsCertsDialog .cert-card .cert-ext small .cert-value {
+#certsDialog .cert-card .cert-ext small .cert-value {
   font-size: inherit;
 }
 
 /* Force wrapping for long certificate fields so text doesn't overflow the card */
 #certsDialog .cert-card,
-#certsDialog .cert-card *,
-#mdsCertsDialog .cert-card,
-#mdsCertsDialog .cert-card * {
+#certsDialog .cert-card * {
   box-sizing: border-box;
 }
 
@@ -1963,12 +1900,6 @@ dialog#mdsCertsDialog {
 /* Make dialog content tighter */
 .app-dialog-content { padding: 12px 16px 0 16px; }
 
-/* Styling for the Decode CBOR button in the creation data dialog */
-.openCborButton {
-  margin-left: 8px; /* keep spacing but defer visual style to MDL */
-}
-.openCborButton.btn { min-width: 0; }
-
 /* --------------------------------------------------------------------------
    Tailwind/DaisyUI migration overrides
    -------------------------------------------------------------------------- */
@@ -1996,31 +1927,31 @@ textarea {
   max-width: 100%;
 }
 
-/* CBOR Playground: keep editor inputs monospace like other value blocks */
-.cbor-mono {
+/* Decoder input uses the same monospace treatment as value blocks. */
+.decoder-input {
   min-height: 180px;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', 'Liberation Mono', monospace;
   font-size: 13px;
   color: #555;
 }
 
-/* CBOR Playground: constrain line lengths on wide monitors */
-.cbor-page .cbor-container {
+/* Constrain decoder line lengths on wide monitors. */
+.tool-page .decoder-container {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
 
-/* CBOR Playground: space between major sections */
-.cbor-page .cbor-section {
+/* Space between major decoder sections. */
+.tool-page .decoder-section {
   margin-top: 16px;
 }
-.cbor-page .cbor-section + .cbor-section {
+.tool-page .decoder-section + .decoder-section {
   margin-top: 28px;
 }
 
 /* Space between cards within a section (e.g., Decode -> Decoded) */
-.cbor-page .cbor-section .card + .card {
+.tool-page .decoder-section .card + .card {
   margin-top: 18px;
 }
 
@@ -2135,8 +2066,6 @@ dialog.modal {
   overflow: auto !important;
 }
 .decode-copy .material-symbols-outlined { font-size: 16px; vertical-align: middle; }
-.decode-encode .material-symbols-outlined { font-size: 16px; vertical-align: middle; }
-
 @media (max-width: 640px) {
   .decode-row { grid-template-columns: 1fr; gap: 2px; }
   .decode-label { text-align: left; }
@@ -2164,7 +2093,7 @@ dialog.modal {
 }
 .cert-inline-copy .material-symbols-outlined { font-size: 15px; color: #2563eb; }
 
-/* Cookie consent banner (implied consent, login page) */
+/* Local storage notice (login page) */
 .cookie-consent {
   position: fixed;
   left: 0;

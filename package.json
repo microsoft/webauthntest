@@ -4,19 +4,17 @@
     "license": "MIT",
     "author": "Akshay Kumar",
     "version": "2026.01.16",
-    "main": "src/worker.js",
     "scripts": {
-        "dev:worker": "wrangler dev",
-        "db:apply": "wrangler d1 execute webauthntest --file=./schema.sql",
-        "db:apply:remote": "wrangler d1 execute webauthntest --file=./schema.sql --remote",
-        "deploy:worker": "wrangler deploy --name webauthntest",
-        "bootstrap:cf": "node scripts/bootstrap-cloudflare.mjs"
+        "build": "esbuild src/client-backend.js --bundle --format=esm --platform=browser --target=es2022 --outfile=public/client-backend.js",
+        "dev:worker": "npm run build && wrangler dev",
+        "deploy:worker": "npm run build && wrangler deploy"
     },
     "dependencies": {
         "@noble/post-quantum": "^0.6.1",
         "cbor-x": "^1.6.0"
     },
     "devDependencies": {
+        "esbuild": "^0.28.1",
         "wrangler": "^4.115.0"
     },
     "engines": {

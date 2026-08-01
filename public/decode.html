@@ -9,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen bg-base-200 text-base-content cbor-page">
+<body class="min-h-screen bg-base-200 text-base-content tool-page">
     <div class="min-h-screen flex flex-col">
         <header class="navbar bg-primary text-primary-content px-4">
             <div class="navbar-start">
@@ -17,29 +17,23 @@
             </div>
         </header>
 
-        <div class="credentials-toolbar cbor-nav-toolbar">
-            <div class="credentials-toolbar-actions cbor-nav-toolbar-actions" aria-label="Navigation actions">
+        <div class="credentials-toolbar tool-nav-toolbar">
+            <div class="credentials-toolbar-actions tool-nav-toolbar-actions" aria-label="Navigation actions">
                 <a class="btn btn-ghost btn-sm btn-circle" href="index.html" title="Home" aria-label="Home">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>
                 </a>
                 <a class="btn btn-ghost btn-sm btn-circle" href="decode.html" title="WebAuthn Decoder" aria-label="WebAuthn Decoder">
                     <span class="material-symbols-outlined" aria-hidden="true">frame_inspect</span>
                 </a>
-                <a class="btn btn-ghost btn-sm btn-circle" href="cbor.html" title="CBOR Playground" aria-label="CBOR Playground">
-                    <span class="material-symbols-outlined" aria-hidden="true">code</span>
-                </a>
-                <a class="btn btn-ghost btn-sm btn-circle" href="mds.html" title="Authenticator Metadata" aria-label="Authenticator Metadata">
-                    <span class="material-symbols-outlined" aria-hidden="true">badge</span>
-                </a>
             </div>
         </div>
 
         <main class="flex-1 p-4">
-            <div class="cbor-container">
-                <section class="cbor-section">
+            <div class="decoder-container">
+                <section class="decoder-section">
                     <div class="card bg-base-100 shadow-xl border border-base-300">
                         <div class="card-body gap-3">
-                            <textarea id="decodeInput" class="textarea textarea-bordered w-full cbor-mono" rows="6"
+                            <textarea id="decodeInput" class="textarea textarea-bordered w-full decoder-input" rows="6"
                                 placeholder="Paste a PublicKeyCredential JSON, attestation object, authenticator data, or X.509 certificate (hex, base64, base64url, or PEM)."></textarea>
                             <div class="flex items-center flex-wrap gap-2">
                                 <button id="decodeBtn" class="btn btn-link btn-sm">Decode</button>
@@ -56,7 +50,7 @@
                     </div>
                 </section>
 
-                <section class="cbor-section">
+                <section class="decoder-section">
                     <div id="decodeInputHexCard" class="card bg-base-100 shadow-xl border border-base-300" style="display:none;">
                         <div class="card-body gap-2">
                             <div id="decodeInputHex" class="decode-result"></div>
@@ -64,7 +58,7 @@
                     </div>
                 </section>
 
-                <section class="cbor-section">
+                <section class="decoder-section">
                     <div id="decodeResultCard" class="card bg-base-100 shadow-xl border border-base-300" style="display:none;">
                         <div class="card-body gap-2">
                             <div id="decodeResult" class="decode-result"></div>
