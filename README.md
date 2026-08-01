@@ -1,5 +1,5 @@
 ## Live instance
-A live instance of this code is available at [aka.ms/ctap](https://aka.ms/ctap) or [ctap.dev](https://ctap.dev). This instance is for testing the WebAuthn API only. Do not submit personal data.
+A live instance of this code is available at [passkey.ctap.dev](https://passkey.ctap.dev/). This instance is for testing the WebAuthn API only. Do not submit personal data.
 
 This project is a client-only WebAuthn playground. Cloudflare Workers Static Assets serves the files in `public/`, while challenges, credential parsing, assertion verification, and credential storage all run in the browser.
 
