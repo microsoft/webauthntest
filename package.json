@@ -15,7 +15,7 @@
     },
     "devDependencies": {
         "esbuild": "^0.28.1",
-        "wrangler": "^4.115.0"
+        "wrangler": "^4.124.0"
     },
     "engines": {
         "node": ">=24.11.0"
